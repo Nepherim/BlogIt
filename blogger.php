@@ -75,8 +75,7 @@ if ($action=='pmform' && $_POST['target']==$Blogger_BlogForm) {
 		$PmFormPostPatterns = array();
 
 	saveTags();
-	$_POST['ptv_entrydate'] = strftime($TimeISOZFmt, strtotime($_POST['ptv_displaydate']));
-//  debugLog('$FeedISOTime: '. gmstrftime($Blogger_DateEntryFormat, time()));	//$_POST['ptv_displaydate'])
+	$_POST['ptv_entrydate'] = strtotime($_POST['ptv_displaydate']); #Store dates in Unix format
 }
 if ($entryType == $Blogger_Type_BLOG) {
 	$GroupHeaderFmt = '(:include ' .$Blogger_Templates .'#single-entry-view:)';  #Required for action=browse AND comments when redirected on error.
