@@ -1,23 +1,24 @@
 <?php if (!defined('PmWiki')) exit();
 $RecipeInfo['Blogger']['Version'] = '2009-01-10';
 
-# User settable
+# Common user settable
 SDV($Blogger_DefaultGroup, 'Blog');	#Pre-populates the Pagename field; blogs can exist in *any* group, not simply the default defined here.
 SDV($Blogger_CommentGroup, 'Comments');
-SDV($Blogger_BlogGroups, 'Blog');			# OPTIONAL: Comma separated list of Blog groups. This is purely to speed up pagelists. Defining this list does not mean all pages in the group are 'blog-pages'.
-SDV($Blogger_CategoryGroup, 'Category');
+SDV($Blogger_BlogGroups, 'Blog');	#OPTIONAL: Comma separated list of Blog groups. This is purely to speed up pagelists. Defining this list does not mean all pages in the group are 'blog-pages'.
+SDV($Blogger_CategoryGroup, 'Tags');
 SDV($Blogger_AuthorGroup, $AuthorGroup); #Defaults to 'Profiles'
 SDV($Blogger_ReadMore, '%readmore%[[{$FullName}#break | Read more...]]');
 SDV($Blogger_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($Blogger_DateDisplayFormat, $TimeFmt);
 SDV($Blogger_BodyBreak, '[[#break]]');
 SDV($Blogger_Templates, $SiteGroup .'.Blogger-Templates');
-SDV($Blogger_EnablePostDirectives, true); # set to true to allow posting of directives of form (: :)
+SDV($Blogger_EnablePostDirectives, true); #Set to true to allow posting of directives of form (: :) in blog entries.
 SDV($Blogger_TagSeparator, ', ');
 SDVA($Blogger_StatusType, array('draft'=>'draft', 'publish'=>'publish'));
 SDVA($Blogger_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
-SDVA($Blogger_BlogList, array('blog1'=>'blog'));
+SDVA($Blogger_BlogList, array('blog1'=>'blog1'));
 
+#$FPLTemplatePageFmt
 # Usable on wiki pages
 setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_CommentGroup','Blogger_CategoryGroup','Blogger_DateEntryFormat',
 	'Blogger_DateDisplayFormat','Blogger_Templates','Blogger_BlogForm','Blogger_CommentForm','Blogger_Type_BLOG'));
@@ -97,8 +98,9 @@ function bloggerMarkupHandler($action, $options, $text){
 		list($found,$null) = explode($GLOBALS['Blogger_BodyBreak'], $text);
 		return $found;
 	} elseif ($action == 'select') {
+		$i = count($GLOBALS[$text]);
 		foreach ($GLOBALS[$text] as $k => $v)
-			$t .= '(:input select ' .$options .' "' .$k .'" "' .$v .'":)';
+			$t .= '(:input '. ($i==1?'hidden':'select') .' ' .$options .' "' .$k .'" "' .$v .'":)';
 		return $t;
 	} elseif ($action == 'multiline') {
 		return preg_replace('/\n/', '<br />', $text);
@@ -115,6 +117,7 @@ $Conditions['blogger_isdate'] = 'bloggerIsDate($condparm)';
 function bloggerIsDate($d){
 	return false;
 }
+$MarkupExpr['bloggerIfVar'] = '($args[1]?"if=\\"equal {=\\$:$args[0]} $args[1]\\"":"")';
 $MarkupExpr['bloggerBlogGroups'] = (empty($GLOBALS['Blogger_BlogGroups']) ? '""' : '"group=\"' .$GLOBALS['Blogger_BlogGroups'] .'\""');
 $MarkupExpr['bloggerBasePage'] = 'bloggerBasePage($args[0])';
 function bloggerBasePage($pn){
