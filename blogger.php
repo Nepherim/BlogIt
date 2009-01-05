@@ -59,8 +59,7 @@ $PmForm[$Blogger_CommentForm] = 'saveto="' .$Blogger_CommentGroup .'/{$Group}-{$
 
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s';
-# Prevent (::...:...::) markup from being displayed.
-Markup('textvar::', '<split', '/\(::\w[-\w]*:(?!\)).*?::\)/s', '');
+Markup('textvar::', '<split', '/\(::\w[-\w]*:(?!\)).*?::\)/s', '');  #Prevent (::...:...::) markup from being displayed.
 
 $entryType = PageVar($pagename,'$:entrytype');
 #foreach ($_POST as $p=>$k) debugLog($p .'=' .$k, true);
@@ -93,26 +92,24 @@ if ($entryType == $Blogger_Type_BLOG) {
 Markup('blogger', 'fulltext',	'/\(:blogger ([more,intro,select,multiline]+)\s?(.*?):\)(.*?)\(:bloggerend:\)/esi',
 	"bloggerMarkupHandler(PSS('$1'), PSS('$2'), PSS('$3'))");
 function bloggerMarkupHandler($action, $options, $text){
-	global $Blogger_ReadMore, $Blogger_BodyBreak, $Blogger_TagSeparator, $FmtPV;
 	if ($action == 'more') {
-		return (strpos($text, $Blogger_BodyBreak) !== false ? preg_replace('/{\$FullName}/', $options, $Blogger_ReadMore) : '');
+		return (strpos($text, $GLOBALS['Blogger_BodyBreak']) !== false ? preg_replace('/{\$FullName}/', $options, $GLOBALS['Blogger_ReadMore']) : '');
 	} elseif ($action == 'intro') {
-		list($found,$null) = explode($Blogger_BodyBreak, $text);
+		list($found,$null) = explode($GLOBALS['Blogger_BodyBreak'], $text);
 		return $found;
 	} elseif ($action == 'select') {
 		foreach ($GLOBALS[$text] as $k => $v)
 			$t .= '(:input select ' .$options .' "' .$k .'" "' .$v .'":)';
 		return $t;
 	} elseif ($action == 'multiline') {
-		return preg_replace('/\\n/', '<br />', $text);
+		return preg_replace('/\n/', '<br />', $text);
 	}
 }
 $Conditions['blogger_ispage'] = 'bloggerIsPage($condparm)';
 function bloggerIsPage($pn){
-	global $pagename;
-	$mp = MakePageName($pagename, $pn);
+	$mp = MakePageName($GLOBALS['pagename'], $pn);
 	if (empty($mp)) return true;
-	if ($mp==$pagename) return false;
+	if ($mp==$GLOBALS['pagename']) return false;
 	return PageExists($mp);
 }
 $Conditions['blogger_isdate'] = 'bloggerIsDate($condparm)';
@@ -127,7 +124,7 @@ function bloggerBasePage($pn){
 # Combines categories in body [[!...]] with separated tag list in tag-field.
 # Stores combined separated list in tag-field, and a [[!...]] list in hidden field to be picked up by PmWiki for backlinks, etc.
 function saveTags() {
-	global $_POST,$Blogger_TagSeparator,$pagename;
+	global $_POST,$Blogger_TagSeparator;
 	# Read tags from body, strip [[!...]]
 	if (preg_match_all('/\[\[!(.*?)\]\]/', $_POST['ptv_entrybody'], $match))
 		$bodyTags = $match[1];
@@ -164,9 +161,8 @@ function setFmtPV($a){
 }
 # Creates $FmtPV variables for each element of $a, named $n_VALUE
 function FmtPVA ($a, $n) {
-	global $FmtPV;
 	foreach ($a as $k=>$v)
-		$FmtPV[$n .'_' .strtoupper($k)] = "'" .$v ."'";
+		$GLOBALS['FmtPV'][$n .'_' .strtoupper($k)] = "'" .$v ."'";
 }
 function addPageStore ($n='wikilib.d') {
 	$GLOBALS['PageStorePath'] = dirname(__FILE__) ."/" .$n ."/{\$FullName}";
