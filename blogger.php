@@ -127,7 +127,8 @@ $Conditions['blogger_isdate'] = 'bloggerIsDate($condparm)';
 function bloggerIsDate($d){
 	return false;
 }
-$MarkupExpr['bloggerIfVar'] = '($args[1]?"if=\\"equal {=\\$:$args[0]} $args[1]\\"":"")';
+# Parameters: 0:if/noif 1:variable 2:value 3:[&&,||]
+$MarkupExpr['bloggerIfVar'] = '(!preg_match("/\\{.*?\\}/",$args[2])?(!empty($args[3])?$args[3]." ":"").($args[0]=="if"?"if=\\"":"")."equal {=\\$:$args[1]} $args[2]".($args[0]=="if"?"\\"":"") : "")';
 $MarkupExpr['bloggerBlogGroups'] = (empty($GLOBALS['Blogger_BlogGroups']) ? '""' : '"group=\"' .$GLOBALS['Blogger_BlogGroups'] .'\""');
 $MarkupExpr['bloggerBasePage'] = 'bloggerBasePage($args[0])';
 function bloggerBasePage($pn){
