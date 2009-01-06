@@ -35,6 +35,7 @@ $SearchPatterns['default'][] = FmtPageName('!^$FullName$!', $pagename);
 
 $blogger['debug']=true;
 debugLog('--------------------');
+#foreach ($_POST as $p=>$k) debugLog($p .'=' .$k, true);
 
 # Internal
 $Blogger_BlogForm = 'blogger-entry';
@@ -60,10 +61,7 @@ $PmForm[$Blogger_CommentForm] = 'saveto="' .$Blogger_CommentGroup .'/{$Group}-{$
 
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s';
-Markup('textvar::', '<split', '/\(::\w[-\w]*:(?!\)).*?::\)/s', '');  #Prevent (::...:...::) markup from being displayed.
 
-$entryType = PageVar($pagename,'$:entrytype');
-#foreach ($_POST as $p=>$k) debugLog($p .'=' .$k, true);
 debugLog('entryType: '.$entryType. '   action: '.$action. '    Target: '.$_POST['target']);
 # Blog entry being posted from PmForm (new or existing)
 if ($action=='pmform' && $_POST['target']==$Blogger_BlogForm) {
@@ -77,13 +75,18 @@ if ($action=='pmform' && $_POST['target']==$Blogger_BlogForm) {
 
 	saveTags();
 	$_POST['ptv_entrydate'] = strtotime($_POST['ptv_displaydate']); #Store dates in Unix format
-}
-if ($entryType == $Blogger_Type_BLOG) {
-	$GroupHeaderFmt = '(:include ' .$Blogger_Templates .'#single-entry-view:)';  #Required for action=browse AND comments when redirected on error.
-	if ($action=='bloggeredit' || ($action=='pmform' && $_POST['target']==$Blogger_BlogForm)){
-		$GroupHeaderFmt = '(:include ' .$Blogger_Templates .'#blog-edit:)';
-	}elseif ($action=='pmform' && $_POST['target']==$Blogger_CommentForm){
-		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
+} else {
+	# Prevent (::...:...:) markup from being displayed.
+	# NOTE: Must not be declared pre-processing of pmform blogger-entry, otherwise tags don't get generated.
+	Markup('textvar::', '<split', '/\(::\w[-\w]*:(?!\)).*?::\)/s', '');
+	$entryType = PageVar($pagename,'$:entrytype');
+	if ($entryType == $Blogger_Type_BLOG) {
+		$GroupHeaderFmt = '(:include ' .$Blogger_Templates .'#single-entry-view:)';  #Required for action=browse AND comments when redirected on error.
+		if ($action=='bloggeredit' || ($action=='pmform' && $_POST['target']==$Blogger_BlogForm)){
+			$GroupHeaderFmt = '(:include ' .$Blogger_Templates .'#blog-edit:)';
+		}elseif ($action=='pmform' && $_POST['target']==$Blogger_CommentForm){
+			$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
+		}
 	}
 }
 
