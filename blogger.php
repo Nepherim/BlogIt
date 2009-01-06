@@ -59,6 +59,7 @@ $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::
 $PmForm[$Blogger_BlogForm] = 'form=' .$Blogger_Templates .'#blog-form fmt=' .$Blogger_Templates .'#blog-post';
 $PmForm[$Blogger_CommentForm] = 'saveto="' .$Blogger_CommentGroup .'/{$Group}-{$Name}-' .date('Ymd\THms') .'" form=' .$Blogger_Templates .'#comment-form fmt=' .$Blogger_Templates .'#comment-post';
 
+$entryType = PageVar($pagename,'$:entrytype');
 debugLog('entryType: '.$entryType. '   action: '.$action. '    Target: '.$_POST['target']);
 # Blog entry being posted from PmForm (new or existing)
 if ($action && $action=='pmform' && $_POST['target']==$Blogger_BlogForm) {
@@ -74,9 +75,7 @@ if ($action && $action=='pmform' && $_POST['target']==$Blogger_BlogForm) {
 	# NOTE: Must not be declared if processing a pmform, as tags don't get generated.
 	Markup('textvar::', '<split', '/\(::\w[-\w]*:(?!\)).*?::\)/s', '');  # Prevent (::...:...:) markup from being displayed.
 }
-
-$entryType = PageVar($pagename,'$:entrytype');
-if ($entryType && $entryType == $Blogger_PageType_BLOG) {
+if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
 	$GroupHeaderFmt = '(:include ' .$Blogger_Templates .'#single-entry-view:)';  #Required for action=browse AND comments when redirected on error.
 	if ($action=='bloggeredit' || ($action=='pmform' && $_POST['target']==$Blogger_BlogForm)){
 		#Need to include GroupHeader on blog entry errors, when &action=edit is not passed back by PmForms.
@@ -97,12 +96,25 @@ function bloggerMarkupHandler($action, $options, $text){
 		list($found,$null) = explode($GLOBALS['Blogger_BodyBreak'], $text);
 		return $found;
 	}elseif ($action == 'select') {
-		$i = count($GLOBALS[$text]);
-		foreach ($GLOBALS[$text] as $k => $v)
+		list($var, $label) = split('/', $text);
+		$i = count($GLOBALS[$var]);
+		foreach ($GLOBALS[$var] as $k => $v)
 			$t .= '(:input '. ($i==1?'hidden':'select') .' ' .$options .' "' .$k .'" "' .$v .'":)';
-		return $t;
+		return ($i==1?'':$label) .$t;
 	}elseif ($action == 'multiline')
 		return preg_replace('/\n/', '<br />', $text);
+}
+SDV($HandleActions['bloggerapprove'], 'bloggerApproveComment');
+SDV($HandleAuth['bloggerapprove'], 'admin');
+function bloggerApproveComment($pn, $auth='admin') {
+	$old = RetrieveAuthPage($pn,$auth,0, READPAGE_CURRENT);
+	if(!$old) exit();
+	$new = $old;
+	$new['csum'] = $new['csum:' .$GLOBALS['Now'] ] = $GLOBALS['ChangeSummary'] = 'Approved comment';
+	$_POST['diffclass']='minor';
+	$new['text'] .= '(:commentapproved:true:)';
+	PostPage($pn,$old,$new);	# Don't need UpdatePage, as we don't require edit functions to run
+	Redirect(bloggerBasePage($pn));
 }
 $Conditions['blogger_ispage'] = 'bloggerIsPage($condparm)';
 function bloggerIsPage($pn){
@@ -141,18 +153,6 @@ function saveTags() {
 	$_POST['ptv_entrytags'] = ltrim(implode($Blogger_TagSeparator, $allTags), $Blogger_TagSeparator);
 	$_POST['ptv_pmtags'] = ($_POST['ptv_entrytags']
 		? '[[!' .preg_replace("/$Blogger_TagSeparator/", ']]'.$Blogger_TagSeparator.'[[!', $_POST['ptv_entrytags']) .']]' : '');
-}
-SDV($HandleActions['bloggerapprove'], 'bloggerApproveComment');
-SDV($HandleAuth['bloggerapprove'], 'admin');
-function bloggerApproveComment($pn, $auth='admin') {
-	$old = RetrieveAuthPage($pn,$auth,0, READPAGE_CURRENT);
-	if(!$old) exit();
-	$new = $old;
-	$new['csum'] = $new['csum:' .$GLOBALS['Now'] ] = $GLOBALS['ChangeSummary'] = 'Approved comment';
-	$_POST['diffclass']='minor';
-	$new['text'] .= '(:commentapproved:true:)';
-	PostPage($pn,$old,$new);	# Don't need UpdatePage, as we don't require edit functions to run
-	Redirect(bloggerBasePage($pn));
 }
 ## General Helper Funtions ##
 function setFmtPV($a){
