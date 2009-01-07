@@ -71,8 +71,7 @@ if ($action && $action=='pmform' && $_POST['target']==$Blogger_BlogForm) {
 
 	# Change field delimiters from (:...:...:) to (::...:...::) for tags and body; entrybody MUST be the last variable.
 	$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/si'] = '(::entrybody:$1::)';
-	$ROSPatterns['/\(:pmtags:(.*?):\)/si'] = '(::pmtags:$1::)';
-	$ROSPatterns['/\(:pmtitle:(.*?:\)):\)/si'] = '(::pmtitle:$1::)';	#This field contains (:TITLE:), so need to find .*?:)
+	$ROSPatterns['/\(:(pmtags|pmtitle):(.*?(:\))?):\)/si'] = '(::$1:$2::)';	#This field contains (:TITLE:), so need to find .*?:)
 	saveTags();
 	$_POST['ptv_entrydate'] = strtotime($_POST['ptv_displaydate']); #Store dates in Unix format
 	$_POST['ptv_pmtitle'] = '(:title ' .$_POST['ptv_entrytitle'] .':)';
