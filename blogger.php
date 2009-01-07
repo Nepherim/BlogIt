@@ -7,6 +7,7 @@ foreach ($_POST as $p=>$k) debugLog($p .'=' .$k, true);
 # Common user settable
 SDV($Blogger_DefaultGroup, 'Blog');	#Pre-populates the Pagename field; blogs can exist in *any* group, not simply the default defined here.
 SDV($Blogger_CommentGroup, 'Comments');
+SDV($Blogger_CommentsEnabled, 'true');
 SDV($Blogger_BlogGroups, 'Blog');	#OPTIONAL: Comma separated list of Blog groups. This is purely to speed up pagelists. Defining this list does not mean all pages in the group are 'blog-pages'.
 SDV($Blogger_CategoryGroup, 'Tags');
 SDV($Blogger_AuthorGroup, $AuthorGroup); #Defaults to 'Profiles'
@@ -24,8 +25,8 @@ SDVA($Blogger_PageType, array('blog'=>'blog'));  # INTERNAL USE ONLY
 
 #$FPLTemplatePageFmt
 # Usable on wiki pages
-setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_CommentGroup','Blogger_CategoryGroup','Blogger_DateEntryFormat',
-	'Blogger_DateDisplayFormat','Blogger_Templates','Blogger_BlogForm','Blogger_CommentForm'));
+setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_CommentGroup','Blogger_CommentsEnabled','Blogger_CategoryGroup',
+	'Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_Templates','Blogger_BlogForm','Blogger_CommentForm'));
 FmtPVA(array('$Blogger_StatusType'=>$Blogger_StatusType, '$Blogger_CommentType'=>$Blogger_CommentType,
 	'$Blogger_BlogList'=>$Blogger_BlogList, '$Blogger_PageType'=>$Blogger_PageType));
 
@@ -85,7 +86,7 @@ if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
 	if ($action=='bloggeredit' || ($action=='pmform' && $_POST['target']==$Blogger_BlogForm)){
 		#Need to include GroupHeader on blog entry errors, when &action=edit is not passed back by PmForms.
 		$GroupHeaderFmt = '(:include ' .$Blogger_Templates .'#blog-edit:)';
-	}elseif ($action=='pmform' && $_POST['target']==$Blogger_CommentForm){
+	}elseif ($Blogger_CommentEnabled=='true' && $action=='pmform' && $_POST['target']==$Blogger_CommentForm){
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
 	}
 }
