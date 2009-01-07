@@ -2,7 +2,7 @@
 $RecipeInfo['Blogger']['Version'] = '2009-01-10';
 $blogger['debug']=true;
 debugLog('--------------------');
-#foreach ($_POST as $p=>$k) debugLog($p .'=' .$k, true);
+foreach ($_POST as $p=>$k) debugLog($p .'=' .$k, true);
 
 # Common user settable
 SDV($Blogger_DefaultGroup, 'Blog');	#Pre-populates the Pagename field; blogs can exist in *any* group, not simply the default defined here.
@@ -29,19 +29,13 @@ setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_Comme
 FmtPVA(array('$Blogger_StatusType'=>$Blogger_StatusType, '$Blogger_CommentType'=>$Blogger_CommentType,
 	'$Blogger_BlogList'=>$Blogger_BlogList, '$Blogger_PageType'=>$Blogger_PageType));
 
-# Slow: Set to 1 to exclude listing any pages for which the browser does not currently have read authorization
-$EnablePageListProtect = 0;
-$SearchPatterns['default'][] = '!\\.(All)?Recent(Changes|Uploads|Comments)$!';
-$SearchPatterns['default'][] = '!\\.Group(Print)?(Header|Footer|Attributes)$!';
-$SearchPatterns['default'][] = '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki|' .$Blogger_CategoryGroup .')\\.!';
-$SearchPatterns['default'][] = FmtPageName('!^$FullName$!', $pagename);
-
 # Internal
 $Blogger_BlogForm = 'blogger-entry';
 $Blogger_CommentForm = 'blogger-comments';
 $Group = PageVar($pagename, '$Group');
 
 addPageStore();
+#http://pmwiki.org/wiki/PmWiki/PagelistVariables#PageListCacheDir
 include_once(dirname(__FILE__) .'/cookbook/pmform.php');
 include_once("$FarmD/scripts/guiedit.php");
 # Prevent viewing source and diff, primarily for Comments, as this would reveal email.
@@ -53,6 +47,13 @@ $CategoryGroup = $Blogger_CategoryGroup;	# Need to explicity set this.
 $AutoCreate['/^' .$Blogger_CategoryGroup .'\./'] = array('ctime' => $Now);
 if ($Group == $Blogger_CategoryGroup)
 	$GroupFooterFmt = '(:include ' .$Blogger_Templates .'#tag-pagelist:)(:nl:)';
+
+# Slow: Set to 1 to exclude listing any pages for which the browser does not currently have read authorization
+$EnablePageListProtect = 0;
+$SearchPatterns['default'][] = '!\\.(All)?Recent(Changes|Uploads|Comments)$!';
+$SearchPatterns['default'][] = '!\\.Group(Print)?(Header|Footer|Attributes)$!';
+$SearchPatterns['default'][] = '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki|' .$Blogger_CategoryGroup .')\\.!';
+$SearchPatterns['default'][] = FmtPageName('!^$FullName$!', $pagename);
 
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s';
@@ -70,6 +71,8 @@ if ($action && $action=='pmform' && $_POST['target']==$Blogger_BlogForm) {
 	$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/si'] = '(::entrybody:$1::)';
 	$ROSPatterns['/\(:pmtags:(.*?):\)/si'] = '(::pmtags:$1::)';
 	$_POST['ptv_entrydate'] = strtotime($_POST['ptv_displaydate']); #Store dates in Unix format
+	if (empty($_POST['ptv_entryurl']) && $Blogger_DefaultGroup)
+		$_POST['ptv_entryurl'] = $Blogger_DefaultGroup .'.' .$_POST['ptv_entrytitle'];
 	saveTags();
 }else{
 	# NOTE: Must not be declared if processing a pmform, as tags don't get generated.
