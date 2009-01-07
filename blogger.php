@@ -16,7 +16,8 @@ SDV($Blogger_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($Blogger_DateDisplayFormat, $TimeFmt);
 SDV($Blogger_BodyBreak, '[[#break]]');
 SDV($Blogger_CoreTemplate, $SiteGroup .'/Blogger-CoreTemplate');
-SDV($Blogger_SkinTemplate, $SiteGroup .'/Blogger-SkinTemplate');
+SDV($Blogger_SkinTemplate, (PageExists($SiteGroup .'/Blogger-SkinTemplate-'.$Skin)
+	? $SiteGroup .'/Blogger-SkinTemplate-'.$Skin : $SiteGroup .'/Blogger-SkinTemplate'));
 SDV($Blogger_NewEntry, $SiteGroup .'/Blogger-NewEntry');
 SDV($Blogger_EnablePostDirectives, true); #Set to true to allow posting of directives of form (: :) in blog entries.
 SDV($Blogger_TagSeparator, ', ');
@@ -24,7 +25,6 @@ SDVA($Blogger_StatusType, array('draft'=>'draft', 'publish'=>'publish'));
 SDVA($Blogger_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
 SDVA($Blogger_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 SDVA($Blogger_PageType, array('blog'=>'blog'));  # INTERNAL USE ONLY
-
 #$FPLTemplatePageFmt
 # Usable on wiki pages
 setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_CommentGroup','Blogger_CommentsEnabled','Blogger_CategoryGroup',
