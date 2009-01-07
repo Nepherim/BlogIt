@@ -6,10 +6,28 @@ csum=
 ctime=1231036816
 host=127.0.0.1
 name=Site.Blogger-ControlPanel
-rev=26
-targets=Site.Blogger-Templates,Site.Blogger-NewEntry,Blog.BlogEntry-1,Blog.BlogEntry-2,Blog.BlogEntry-3,Blog.BlogEntry-4,Blog.BlogEntry-5,Blog.BlogEntry-6,Blog.BlogEntry-7,Blog.BlogEntry-8,Blog.BlogEntry-9,Blog.BlogEntry-10,Blog.BlogEntry-11,Blog.BlogEntry-12,Blog.BlogEntry-13
-text=* [[{$Blogger_Templates}]]%0a* [[Site.Blogger-NewEntry]]%0a* [[Blog/BlogEntry-1]]%0a* [[Blog/BlogEntry-2]]%0a* [[Blog/BlogEntry-3]]%0a* [[Blog/BlogEntry-4]]%0a* [[Blog/BlogEntry-5]]%0a* [[Blog/BlogEntry-6]]%0a* [[Blog/BlogEntry-7]]%0a* [[Blog/BlogEntry-8]]%0a* [[Blog/BlogEntry-9]]%0a* [[Blog/BlogEntry-10]]%0a* [[Blog/BlogEntry-11]]%0a* [[Blog/BlogEntry-12]]%0a* [[Blog/BlogEntry-13]]%0a%0a----%0a!! Blog ID in Use%0ablogid:blog1%0a%0a!! Unapproved comments%0a(:include {$Blogger_Templates}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a%0a----%0a!! Latest 10 Blogs%0a(:include {$Blogger_Templates}#blog-list-pagelist count=10 blogid="{$:blogid}":)%0a%0a----%0a!! Published%0a(:include {$Blogger_Templates}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a%0a----%0a!! Draft%0a(:include {$Blogger_Templates}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a
-time=1231212848
+rev=32
+targets=Site.Blogger-NewEntry,Site.Blogger-Templates
+text=(:blogid:blog1:)%0a! Control Panel for "{$:blogid}"%0a* [[{$Blogger_NewEntry}]]%0a* [[{$Blogger_Templates}]]%0a%0a!! Unapproved comments%0a(:include {$Blogger_Templates}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a%0a!! Latest 10 Blogs%0a(:include {$Blogger_Templates}#blog-list-pagelist count=10 blogid="{$:blogid}":)%0a%0a!! Published%0a(:include {$Blogger_Templates}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a%0a!! Draft%0a(:include {$Blogger_Templates}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a
+time=1231347401
+author:1231347401=
+diff:1231347401:1231347291:=
+host:1231347401=127.0.0.1
+author:1231347291=
+diff:1231347291:1231347273:=8a9%0a> ----%0a11a13%0a> ----%0a14a17%0a> ----%0a
+host:1231347291=127.0.0.1
+author:1231347273=
+diff:1231347273:1231347174:=1,3d0%0a%3c (:blogid:blog1:)%0a%3c ! Control Panel for "{$:blogid}"%0a%3c * [[{$Blogger_NewEntry}]]%0a4a2,19%0a> * [[Site.Blogger-NewEntry]]%0a> * [[Blog/BlogEntry-1]]%0a> * [[Blog/BlogEntry-2]]%0a> * [[Blog/BlogEntry-3]]%0a> * [[Blog/BlogEntry-4]]%0a> * [[Blog/BlogEntry-5]]%0a> * [[Blog/BlogEntry-6]]%0a> * [[Blog/BlogEntry-7]]%0a> * [[Blog/BlogEntry-8]]%0a> * [[Blog/BlogEntry-9]]%0a> * [[Blog/BlogEntry-10]]%0a> * [[Blog/BlogEntry-11]]%0a> * [[Blog/BlogEntry-12]]%0a> * [[Blog/BlogEntry-13]]%0a> %0a> ----%0a> (:blogid:blog1:)%0a> !! Control Panel for Blog: "{$:blogid}"%0a
+host:1231347273=127.0.0.1
+author:1231347174=
+diff:1231347174:1231295718:=18,19c18,19%0a%3c (:blogid:blog1:)%0a%3c !! Control Panel for Blog: "{$:blogid}"%0a---%0a> !! Blog ID in Use%0a> blogid:blog1%0a
+host:1231347174=127.0.0.1
+author:1231295718=
+diff:1231295718:1231295661:=
+host:1231295718=127.0.0.1
+author:1231295661=
+diff:1231295661:1231212848:=
+host:1231295661=127.0.0.1
 author:1231212848=
 diff:1231212848:1231212705:=22c22%0a%3c (:include {$Blogger_Templates}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a---%0a> (:include {$Blogger_Templates}#show-unapproved-comments-pagelist:)%0a
 host:1231212848=127.0.0.1
