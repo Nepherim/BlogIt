@@ -2,7 +2,7 @@
 $RecipeInfo['Blogger']['Version'] = '2009-01-10';
 $blogger['debug']=true;
 debugLog('--------------------');
-foreach ($_POST as $p=>$k) debugLog($p .'=' .$k, true);
+#foreach ($_POST as $p=>$k) debugLog($p .'=' .$k, true);
 
 # Common user settable
 SDV($Blogger_DefaultGroup, 'Blog');	#Pre-populates the Pagename field; blogs can exist in *any* group, not simply the default defined here.
@@ -36,7 +36,8 @@ $Blogger_CommentForm = 'blogger-comments';
 $Group = PageVar($pagename, '$Group');
 
 addPageStore();
-#http://pmwiki.org/wiki/PmWiki/PagelistVariables#PageListCacheDir
+SDV($PageListCacheDir, $FarmD.'/work.d/');
+SDV($EnablePageIndex, 1);
 include_once(dirname(__FILE__) .'/cookbook/pmform.php');
 include_once("$FarmD/scripts/guiedit.php");
 # Prevent viewing source and diff, primarily for Comments, as this would reveal email.
