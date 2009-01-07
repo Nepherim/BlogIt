@@ -66,32 +66,29 @@ $PmForm[$Blogger_CommentForm] = 'saveto="' .$Blogger_CommentGroup .'/{$Group}-{$
 $entryType = PageVar($pagename,'$:entrytype');
 debugLog('entryType: '.$entryType. '   action: '.$action. '    Target: '.$_POST['target']);
 # Blog entry being posted from PmForm (new or existing)
-if ($action && $action=='pmform' && $_POST['target']==$Blogger_BlogForm) {
-	if ($Blogger_EnablePostDirectives == true)
-		$PmFormPostPatterns = array();  # Null out the PostPatterns means that directive markup doesn't get replaced.
+if ($action && $action=='pmform'){  #Performed before PmForm action handler.
+	if ($_POST['target']==$Blogger_BlogForm){
+		if ($Blogger_EnablePostDirectives == true)
+			$PmFormPostPatterns = array();  # Null out the PostPatterns means that directive markup doesn't get replaced.
 
-	# Change field delimiters from (:...:...:) to (::...:...::) for tags and body; entrybody MUST be the last variable.
-	$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/si'] = '(::entrybody:$1::)';
-	$ROSPatterns['/\(:(pmtags|pmtitle):(.*?(:\))?):\)/si'] = '(::$1:$2::)';	#This field contains (:TITLE:), so need to find .*?:)
-	saveTags();
-	$_POST['ptv_entrydate'] = strtotime($_POST['ptv_displaydate']); #Store dates in Unix format
-	$_POST['ptv_pmtitle'] = '(:title ' .$_POST['ptv_entrytitle'] .':)';
-	if ( $Blogger_DefaultGroup && (empty($_POST['ptv_entryurl']) || $_POST['ptv_entryurl']==$Blogger_DefaultGroup.'.') )
-		$_POST['ptv_entryurl'] = $Blogger_DefaultGroup .'.' .$_POST['ptv_entrytitle'];
-}else{
-	# NOTE: Must not be declared if processing a pmform, as tags don't get generated.
-	Markup('textvar::', '<split', '/\(::\w[-\w]*:(?!\)).*?::\)/s', '');  # Prevent (::...:...:) markup from being displayed.
-}
+		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body; entrybody MUST be the last variable.
+		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/si'] = '(::entrybody:$1::)';
+		$ROSPatterns['/\(:(pmtags|pmtitle):(.*?(:\))?):\)/si'] = '(::$1:$2::)';	#This field contains (:TITLE:), so need to find .*?:)
+		saveTags();
+		$_POST['ptv_entrydate'] = strtotime($_POST['ptv_displaydate']); #Store dates in Unix format
+		$_POST['ptv_pmtitle'] = '(:title ' .$_POST['ptv_entrytitle'] .':)';
+		if ( $Blogger_DefaultGroup && (empty($_POST['ptv_entryurl']) || $_POST['ptv_entryurl']==$Blogger_DefaultGroup.'.') )
+			$_POST['ptv_entryurl'] = $Blogger_DefaultGroup .'.' .$_POST['ptv_entrytitle'];
+	}elseif ($_POST['target']==$Blogger_CommentForm && $Blogger_CommentEnabled=='true')
+		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
+}else
+	addMarkup();
 if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
 	$GroupHeaderFmt = '(:include ' .$Blogger_Templates .'#single-entry-view:)';  #Required for action=browse AND comments when redirected on error.
 	if ($action=='bloggeredit' || ($action=='pmform' && $_POST['target']==$Blogger_BlogForm)){
-		#Need to include GroupHeader on blog entry errors, when &action=edit is not passed back by PmForms.
-		$GroupHeaderFmt = '(:include ' .$Blogger_Templates .'#blog-edit:)';
-	}elseif ($Blogger_CommentEnabled=='true' && $action=='pmform' && $_POST['target']==$Blogger_CommentForm){
-		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
+		$GroupHeaderFmt = '(:include ' .$Blogger_Templates .'#blog-edit:)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	}
 }
-
 # ----------------------------------------
 # (:blogger [intro,more] options:)text(:bloggerend:)
 Markup('blogger', 'fulltext',	'/\(:blogger ([more,intro,select,multiline]+)\s?(.*?):\)(.*?)\(:bloggerend:\)/esi',
@@ -109,7 +106,14 @@ function bloggerMarkupHandler($action, $options, $text){
 			$t .= '(:input '. ($i==1?'hidden':'select') .' ' .$options .' "' .$k .'" "' .$v .'":)';
 		return ($i==1?'':$label) .$t;
 	}elseif ($action == 'multiline')
-		return preg_replace('/\n/', '<br />', $text);
+		return preg_replace('/\n/', '<br />', $text);  #Because pmform strips \n, and we end up with comments on a single line.
+}
+$oldBrowse=$HandleActions['browse'];
+$HandleActions['browse']='blogger_HandleBrowse';
+function blogger_HandleBrowse($pagename){
+	addMarkup();
+	$GLOBALS['HandleActions']['browse']=$GLOBALS['oldBrowse'];
+	HandleDispatch($pagename, 'browse');
 }
 SDV($HandleActions['bloggerapprove'], 'bloggerApproveComment');
 SDV($HandleAuth['bloggerapprove'], 'admin');
@@ -140,6 +144,9 @@ $MarkupExpr['bloggerBlogGroups'] = (empty($GLOBALS['Blogger_BlogGroups']) ? '""'
 $MarkupExpr['bloggerBasePage'] = 'bloggerBasePage($args[0])';
 function bloggerBasePage($pn){
 	return preg_replace('/^' .$GLOBALS['Blogger_CommentGroup'] .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/','${1}/${2}',$pn);
+}
+function addMarkup(){
+	Markup('textvar::', '<split', '/\(::\w[-\w]*:(?!\)).*?::\)/s', '');  # Prevent (::...:...:) markup from being displayed.
 }
 # Combines categories in body [[!...]] with separated tag list in tag-field.
 # Stores combined separated list in tag-field, and a [[!...]] list in hidden field to be picked up by PmWiki for backlinks, etc.
