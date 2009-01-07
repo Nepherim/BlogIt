@@ -15,7 +15,8 @@ SDV($Blogger_ReadMore, '%readmore%[[{$FullName}#break | Read more...]]');
 SDV($Blogger_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($Blogger_DateDisplayFormat, $TimeFmt);
 SDV($Blogger_BodyBreak, '[[#break]]');
-SDV($Blogger_Templates, $SiteGroup .'/Blogger-Templates');
+SDV($Blogger_CoreTemplate, $SiteGroup .'/Blogger-CoreTemplate');
+SDV($Blogger_SkinTemplate, $SiteGroup .'/Blogger-SkinTemplate');
 SDV($Blogger_NewEntry, $SiteGroup .'/Blogger-NewEntry');
 SDV($Blogger_EnablePostDirectives, true); #Set to true to allow posting of directives of form (: :) in blog entries.
 SDV($Blogger_TagSeparator, ', ');
@@ -27,7 +28,7 @@ SDVA($Blogger_PageType, array('blog'=>'blog'));  # INTERNAL USE ONLY
 #$FPLTemplatePageFmt
 # Usable on wiki pages
 setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_CommentGroup','Blogger_CommentsEnabled','Blogger_CategoryGroup',
-	'Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_Templates','Blogger_NewEntry','Blogger_BlogForm','Blogger_CommentForm'));
+	'Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_CoreTemplate','Blogger_SkinTemplate','Blogger_NewEntry','Blogger_BlogForm','Blogger_CommentForm'));
 FmtPVA(array('$Blogger_StatusType'=>$Blogger_StatusType, '$Blogger_CommentType'=>$Blogger_CommentType,
 	'$Blogger_BlogList'=>$Blogger_BlogList, '$Blogger_PageType'=>$Blogger_PageType));
 
@@ -49,7 +50,7 @@ $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkTex
 $CategoryGroup = $Blogger_CategoryGroup;	# Need to explicity set this.
 $AutoCreate['/^' .$Blogger_CategoryGroup .'\./'] = array('ctime' => $Now);
 if ($Group == $Blogger_CategoryGroup)
-	$GroupFooterFmt = '(:include ' .$Blogger_Templates .'#tag-pagelist:)(:nl:)';
+	$GroupFooterFmt = '(:include ' .$Blogger_CoreTemplate .'#tag-pagelist:)(:nl:)';
 
 # Slow: Set to 1 to exclude listing any pages for which the browser does not currently have read authorization
 $EnablePageListProtect = 0;
@@ -60,8 +61,8 @@ $SearchPatterns['default'][] = FmtPageName('!^$FullName$!', $pagename);
 
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s';
-$PmForm[$Blogger_BlogForm] = 'form=' .$Blogger_Templates .'#blog-form fmt=' .$Blogger_Templates .'#blog-post';
-$PmForm[$Blogger_CommentForm] = 'saveto="' .$Blogger_CommentGroup .'/{$Group}-{$Name}-' .date('Ymd\THms') .'" form=' .$Blogger_Templates .'#comment-form fmt=' .$Blogger_Templates .'#comment-post';
+$PmForm[$Blogger_BlogForm] = 'form=' .$Blogger_CoreTemplate .'#blog-form fmt=' .$Blogger_CoreTemplate .'#blog-post';
+$PmForm[$Blogger_CommentForm] = 'saveto="' .$Blogger_CommentGroup .'/{$Group}-{$Name}-' .date('Ymd\THms') .'" form=' .$Blogger_CoreTemplate .'#comment-form fmt=' .$Blogger_CoreTemplate .'#comment-post';
 
 $entryType = PageVar($pagename,'$:entrytype');
 debugLog('entryType: '.$entryType. '   action: '.$action. '    Target: '.$_POST['target']);
@@ -79,14 +80,16 @@ if ($action && $action=='pmform'){  #Performed before PmForm action handler.
 		$_POST['ptv_pmtitle'] = '(:title ' .$_POST['ptv_entrytitle'] .':)';
 		if ( $Blogger_DefaultGroup && (empty($_POST['ptv_entryurl']) || $_POST['ptv_entryurl']==$Blogger_DefaultGroup.'.') )
 			$_POST['ptv_entryurl'] = $Blogger_DefaultGroup .'.' .$_POST['ptv_entrytitle'];
-	}elseif ($_POST['target']==$Blogger_CommentForm && $Blogger_CommentEnabled=='true')
+	}elseif ($_POST['target']==$Blogger_CommentForm && $Blogger_CommentsEnabled=='true'){
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
+		$_POST['ptv_commentapproved'] = 'false';
+	}
 }else
 	addMarkup();
 if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
-	$GroupHeaderFmt = '(:include ' .$Blogger_Templates .'#single-entry-view:)';  #Required for action=browse AND comments when redirected on error.
+	$GroupHeaderFmt = '(:include ' .$Blogger_SkinTemplate .'#single-entry-view:)';  #Required for action=browse AND comments when redirected on error.
 	if ($action=='bloggeredit' || ($action=='pmform' && $_POST['target']==$Blogger_BlogForm)){
-		$GroupHeaderFmt = '(:include ' .$Blogger_Templates .'#blog-edit:)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
+		$GroupHeaderFmt = '(:include ' .$Blogger_CoreTemplate .'#blog-edit:)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	}
 }
 # ----------------------------------------
@@ -123,7 +126,7 @@ function bloggerApproveComment($pn, $auth='admin') {
 	$new = $old;
 	$new['csum'] = $new['csum:' .$GLOBALS['Now'] ] = $GLOBALS['ChangeSummary'] = 'Approved comment';
 	$_POST['diffclass']='minor';
-	$new['text'] .= '(:commentapproved:true:)';
+	$new['text'] = preg_replace('/\(:commentapproved:(false):\)/', '(:commentapproved:true:)',$new['text']);
 	PostPage($pn,$old,$new);	# Don't need UpdatePage, as we don't require edit functions to run
 	Redirect(bloggerBasePage($pn));
 }
