@@ -1,5 +1,6 @@
 <?php if (!defined('PmWiki')) exit();
 $RecipeInfo['Blogger']['Version'] = '2009-01-10';
+if( $VersionNum<2001950 ) echo "<h3>You are running PmWiki version {$Version}. Blogger needs a newer version of PmWiki. Please update to the latest 2.2.0 beta version</h3>";
 $blogger['debug']=true;
 debugLog('--------------------');
 #foreach ($_POST as $p=>$k) debugLog($p .'=' .$k, true);
@@ -120,15 +121,17 @@ function blogger_HandleBrowse($pagename){
 }
 SDV($HandleActions['bloggerapprove'], 'bloggerApproveComment');
 SDV($HandleAuth['bloggerapprove'], 'admin');
-function bloggerApproveComment($pn, $auth='admin') {
-	$old = RetrieveAuthPage($pn,$auth,0, READPAGE_CURRENT);
-	if(!$old) exit();
-	$new = $old;
-	$new['csum'] = $new['csum:' .$GLOBALS['Now'] ] = $GLOBALS['ChangeSummary'] = 'Approved comment';
-	$_POST['diffclass']='minor';
-	$new['text'] = preg_replace('/\(:commentapproved:(false):\)/', '(:commentapproved:true:)',$new['text']);
-	PostPage($pn,$old,$new);	# Don't need UpdatePage, as we don't require edit functions to run
-	Redirect(bloggerBasePage($pn));
+function bloggerApproveComment($src, $auth='admin') {
+	$ap = (isset($GLOBALS['_GET']['pn']) ? $GLOBALS['_GET']['pn'] : '');  #Page to approve
+	if ($ap) $old = RetrieveAuthPage($ap,$auth,0, READPAGE_CURRENT);
+	if($old){
+		$new = $old;
+		$new['csum'] = $new['csum:' .$GLOBALS['Now'] ] = $GLOBALS['ChangeSummary'] = 'Approved comment';
+		$_POST['diffclass']='minor';
+		$new['text'] = preg_replace('/\(:commentapproved:(false):\)/', '(:commentapproved:true:)',$new['text']);
+		PostPage($ap,$old,$new);	# Don't need UpdatePage, as we don't require edit functions to run
+	}
+	Redirect($src);
 }
 $Conditions['blogger_ispage'] = 'bloggerIsPage($condparm)';
 function bloggerIsPage($pn){
