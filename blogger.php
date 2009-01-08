@@ -1,9 +1,16 @@
 <?php if (!defined('PmWiki')) exit();
+/*  Copyright 2009 David Gilbert.
+    This file is blogger.php; you can redistribute it and/or modify it under the terms of the GNU General Public
+    License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+
+    For installation and usages instructions refer to: http://pmwiki.com/Cookbooks/Blogger
+*/
 $RecipeInfo['Blogger']['Version'] = '2009-01-10';
 if( $VersionNum<2001950 ) echo "<h3>You are running PmWiki version {$Version}. Blogger needs a newer version of PmWiki. Please update to the latest 2.2.0 beta version</h3>";
 $blogger['debug']=true;
 debugLog('--------------------');
 #foreach ($_POST as $p=>$k) debugLog($p .'=' .$k, true);
+#FPLCountA
 
 # Common user settable
 SDV($Blogger_DefaultGroup, 'Blog');	#Pre-populates the Pagename field; blogs can exist in *any* group, not simply the default defined here.
@@ -26,7 +33,7 @@ SDVA($Blogger_StatusType, array('draft'=>'draft', 'publish'=>'publish'));
 SDVA($Blogger_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
 SDVA($Blogger_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 SDVA($Blogger_PageType, array('blog'=>'blog'));  # INTERNAL USE ONLY
-#$FPLTemplatePageFmt
+
 # Usable on wiki pages
 setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_CommentGroup','Blogger_CommentsEnabled','Blogger_CategoryGroup',
 	'Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_CoreTemplate','Blogger_SkinTemplate','Blogger_NewEntry','Blogger_BlogForm','Blogger_CommentForm'));
@@ -38,6 +45,7 @@ $Blogger_BlogForm = 'blogger-entry';
 $Blogger_CommentForm = 'blogger-comments';
 $Group = PageVar($pagename, '$Group');
 
+$HTMLStylesFmt['blogger'] = 'h2 .blogger-edit-link a {font-size: 50%;}';
 addPageStore();
 SDV($PageListCacheDir, $FarmD.'/work.d/');
 SDV($EnablePageIndex, 1);
