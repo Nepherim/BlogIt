@@ -31,6 +31,7 @@ SDV($Blogger_SkinTemplate, (PageExists($SiteGroup .'/Blogger-SkinTemplate-'.$Ski
 SDV($Blogger_NewEntry, $SiteGroup .'/Blogger-NewEntry');
 SDV($Blogger_EnablePostDirectives, true); #Set to true to allow posting of directives of form (: :) in blog entries.
 SDV($Blogger_TagSeparator, ', ');
+SDV($Blogger_TitleSeparator, '-');
 SDVA($Blogger_StatusType, array('draft'=>'$[draft]', 'publish'=>'$[publish]'));
 SDVA($Blogger_CommentType, array('open'=>'$[open]', 'readonly'=>'$[read only]', 'none'=>'$[none]'));
 SDVA($Blogger_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
@@ -95,15 +96,23 @@ if ($action && $action=='pmform'){  #Performed before PmForm action handler.
 		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body; entrybody MUST be the last variable.
 		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '(::entrybody:$1::)';
 		$ROSPatterns['/\(:entrytags:(.*?(:\))?):\)/'] = '(::entrytags:$1::)';
+		$_POST['author'] = $_POST['ptv_entryauthor'];
 		saveTags();
 		$_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']); #Convert from user entered format to Unix format
-		if ( $Blogger_DefaultGroup && (empty($_POST['ptv_entryurl']) || $_POST['ptv_entryurl']==$Blogger_DefaultGroup.'.') )
-			$_POST['ptv_entryurl'] = $Blogger_DefaultGroup .'.' .$_POST['ptv_entrytitle'];
+
+		# url will be inherited from title, and will include a group from the url or the default group. If blank title derived from url.
+		if (!strpos($_POST['ptv_entryurl'], '.')) $pg = $_POST['ptv_entryurl'];
+		else list($gr, $pg) = split('\.',$_POST['ptv_entryurl'],2);
+		if (!(empty($gr) && empty($pg)))	$_POST['ptv_entryurl'] = MakePageName($pagename,
+				(empty($gr)?$Blogger_DefaultGroup:$gr).'.'.preg_replace('/\s+/', $Blogger_TitleSeparator, (empty($pg)?$_POST['ptv_entrytitle']:$pg)));
+		$_POST['ptv_entrytitle'] = (empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']);
+
 		if ($Blogger_EnablePostDirectives == true)
 			$PmFormPostPatterns = array();  #Null out the PostPatterns means that directive markup doesn't get replaced.
 
 	}elseif ($_POST['target']==$Blogger_CommentForm && $Blogger_CommentsEnabled=='true'){
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
+		$_POST['author'] = $_POST['ptv_author'];
 		$_POST['ptv_commentapproved'] = 'false';
 	}
 }else
@@ -130,7 +139,7 @@ function bloggerMU_intro($options, $text){
 	return $found;
 }
 function bloggerMU_select($options, $text){
-	list($var, $label) = split('/', $text);
+	list($var, $label) = split('/', $text,2);
 	$i = count($GLOBALS[$var]);
 	foreach ($GLOBALS[$var] as $k => $v)
 		$t .= '(:input '. ($i==1?'hidden':'select') .' ' .$options .' "' .$k .'" "' .$v .'" id="' .$var .'":)';
