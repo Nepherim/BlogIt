@@ -6,10 +6,148 @@ csum=
 ctime=1231356656
 host=127.0.0.1
 name=Site.Blogger-CoreTemplate
-rev=60
+rev=106
 targets=
-text=! Blogs%0a!! #blog-form%0a[@%0a[[#blog-form]]%0a(:input pmform target="{$Blogger_BlogForm}":)%0a(:input default source="{*$FullName}":)%0a(:input default request=1:)%0a(:input default $:entryurl "{$Blogger_DefaultGroup}.":)%0a(:input default $:displaydate "{(ftime fmt="{$Blogger_DateEntryFormat}")}" when={$Now}:)%0a(:input default $:entrystatus "{$Blogger_StatusType_DRAFT}":)%0a(:input default $:entryauthor "{$Author}":)%0a(:messages:)%0a(:include {$Blogger_SkinTemplate}#blog-form:)%0a(:input end:)%0a(:include $[{$SiteGroup}/EditQuickReference]:)%0a[[#blog-formend]]%0a@]%0a%0a!! #blog-post%0a[@%0a[[#blog-post]]%0a(:template defaults saveto="{$$ptv_entryurl}":)%0a(:template defaults successpage="{$$saveto}":)%0a(:template require $:entrytitle errmsg="$[Title is required]":) %0a(:template require $:entryurl errmsg="$[Pagename is required]":) %0a(:template require $:entryurl if="!blogger_ispage {$$ptv_entryurl}" errmsg="$[Pagename already exists, or is invalid]":)%0a(:template require $:displaydate if="!blogger_isdate {$$ptv_displaydate}" errmsg="$[Invalid date]":)%0a(:template defaults savevars=$:blogid,$:displaydate,$:entrytype,$:entryurl,$:entrytags,$:pmtitle,$:pmtags,$:entrystatus,$:entrycomments,$:entryauthor,$:entrydate,$:entrytitle,$:entrybody:)%0a[[#blog-postend]]%0a@]%0a%0a!! #blog-edit%0a[@%0a[[#blog-edit]]%0a(:pmform {$Blogger_BlogForm}:)%0a[[#blog-edit]]%0a@]%0a%0a! Comments%0a!! #comment-form%0a[@%0a[[#comment-form]]%0a(:input pmform target="{$Blogger_CommentForm}":)%0a(:input default request=1:)%0a(:input hidden $:blogid value="{*$:blogid}":)%0a(:input hidden $:commentdate value="{$Now}":)%0a(:input default $:author "{$Author}":)%0a(:include {$Blogger_SkinTemplate}#comment-form:)%0a(:input end:)%0a[[#comment-formend]]%0a@]%0a%0a!! #comment-post%0a[@%0a[[#comment-post]]%0a(:template require $:blogid errmsg="":)%0a(:template require $:author errmsg="$[Name is required]":)%0a(:template require $:email errmsg="$[Email is required]":)%0a(:template defaults savevars=$:blogid,$:author,$:email,$:website,$:commenttext,$:commentapproved,$:commentdate:)%0a[[#comment-postend]]%0a@]%0a%0a! Pagelists%0a!! #tag-pagelist%0a[@%0a[[#tag-pagelist]]%0a(:pagelist fmt=#titlespaced link={$Blogger_CategoryGroup}.{*$Name}:)%0a[[#tag-pagelistend]]%0a@]%0a%0a!! #blog-summary-pagelist%0aAccepts parameters of status and count.%0a[@%0a[[#blog-summary-pagelist]]%0a(:pagelist fmt={$Blogger_SkinTemplate}#multi-entry-view {(bloggerBlogGroups)} {(bloggerIfVar if blogid {$$blogid})} $:entrytype={$Blogger_PageType_BLOG} $:entrystatus={$$status} count={$$count} :)%0a[[#blog-summary-pagelistend]]%0a@]%0a%0a!! #blog-list-pagelist%0aAccepts parameters of status, count, blogid.%0a[@%0a[[#blog-list-pagelist]]%0a(:pagelist fmt={$Blogger_SkinTemplate}#blog-list-view {(bloggerBlogGroups)} {(bloggerIfVar if blogid {$$blogid})} $:entrytype={$Blogger_PageType_BLOG} order=$:entrystatus,-$:entrydate count={$$count} :)%0a[[#blog-list-pagelistend]]%0a@]%0a%0a!! #show-comments-pagelist%0aParameters: pagename, group, onlyunapproved (approval status: true/false)%0a[@%0a[[#show-comments-pagelist]]%0a(:pagelist fmt={$Blogger_SkinTemplate}#comment-view order=ctime group={$Blogger_CommentGroup} name={$$group}-{$$pagename}-* if="[ auth admin || equal {=$:commentapproved} true ]" onlyunapproved="false":)%0a(:ifend:)%0a[[#show-comments-pagelistend]]%0a@]%0a%0a!! #show-unapproved-comments-pagelist%0aParameters: onlyunapproved (approval status: true/false), blogid%0a[@%0a[[#show-unapproved-comments-pagelist]]%0a(:if [ auth admin && equal "{$Blogger_CommentsEnabled}" "true" ]:)%0a(:pagelist fmt={$Blogger_SkinTemplate}#comment-view order=name,-ctime group={$Blogger_CommentGroup} $:commentapproved=false {(bloggerIfVar if blogid {$$blogid})} onlyunapproved="true":)%0a(:ifend:)%0a[[#show-unapproved-comments-pagelistend]]%0a@]%0a%0a!! #comments-count-pagelist%0aParameters: commentstatus: true/false, entrygroup, entrytitle%0a[@%0a[[#comments-count-pagelist]]%0a(:if [ auth admin && equal "{$Blogger_CommentsEnabled}" "true" ]:)(:pagelist group={$Blogger_CommentGroup} fmt=count wrap=inline name={$$entrygroup}-{$$entrytitle}-* $:commentapproved={$$commentstatus} :)(:ifend:)\%0a[[#comments-count-pagelistend]]%0a
-time=1231368796
+text=! Blogs%0a!! #blog-form%0a[@%0a[[#blog-form]]%0a(:input pmform target="{$Blogger_BlogForm}":)%0a(:input default source="{*$FullName}":)%0a(:input default request=1:)%0a(:input default $:entryurl "{$Blogger_DefaultGroup}.":)%0a(:input default $:entrystatus "{$Blogger_StatusType_DRAFT}":)%0a(:input default $:entryauthor "{$Author}":)%0a(:include {$Blogger_SkinTemplate}#blog-form:)%0a(:input end:)%0a(:include $[{$SiteGroup}/EditQuickReference]:)%0a[[#blog-formend]]%0a@]%0a%0a!! #blog-post%0a[@%0a[[#blog-post]]%0a(:template defaults saveto="{$$ptv_entryurl}":)%0a(:template defaults successpage="{$$saveto}":)%0a(:template require $:entrytitle errmsg="$[Title is required]":) %0a(:template require $:entryurl errmsg="$[Pagename is required]":) %0a(:template require $:entryurl if="!blogger_ispage {$$ptv_entryurl}" errmsg="$[Pagename already exists, or is invalid]":)%0a(:template require $:entrydate if="!blogger_isdate {$$ptv_entrydate}" errmsg="$[Invalid date]":)%0a(:template defaults savevars=$:yoink,$:blogid,$:entrytype,$:entryurl,$:entrytags,$:entrystatus,$:entrycomments,$:entryauthor,$:entrydate,$:entrytitle,$:entrybody:)%0a[[#blog-postend]]%0a@]%0a%0a!! #blog-edit%0a[@%0a[[#blog-edit]]%0a(:pmform {$Blogger_BlogForm}:)%0a[[#blog-edit]]%0a@]%0a%0a! Comments%0a!! #comment-form%0a[@%0a[[#comment-form]]%0a(:input pmform target="{$Blogger_CommentForm}":)%0a(:input default request=1:)%0a(:input hidden $:blogid value="{*$:blogid}":)%0a(:input hidden $:commentdate value="{$Now}":)%0a(:input default $:author "{$Author}":)%0a(:include {$Blogger_SkinTemplate}#comment-form:)%0a(:input end:)%0a[[#comment-formend]]%0a@]%0a%0a!! #comment-post%0a[@%0a[[#comment-post]]%0a(:template require $:blogid errmsg="":)%0a(:template require $:author errmsg="$[Name is required]":)%0a(:template require $:email errmsg="$[Email is required]":)%0a(:template defaults savevars=$:blogid,$:author,$:email,$:website,$:commenttext,$:commentapproved,$:commentdate:)%0a[[#comment-postend]]%0a@]%0a%0a! Pagelists%0a!! #tag-pagelist%0a[@%0a[[#tag-pagelist]]%0a(:pagelist fmt=#titlespaced link={$Blogger_CategoryGroup}.{*$Name}:)%0a[[#tag-pagelistend]]%0a@]%0a%0a!! #blog-summary-pagelist%0aAccepts parameters of status and count.%0a[@%0a[[#blog-summary-pagelist]]%0a(:pagelist fmt={$Blogger_SkinTemplate}#multi-entry-view {(bloggerBlogGroups)} {(bloggerIfVar if blogid {$$blogid})} $:entrytype={$Blogger_PageType_BLOG} $:entrystatus={$$status} count={$$count} :)%0a[[#blog-summary-pagelistend]]%0a@]%0a%0a!! #blog-list-pagelist%0aAccepts parameters of status, count, blogid.%0a[@%0a[[#blog-list-pagelist]]%0a(:pagelist fmt={$Blogger_SkinTemplate}#blog-list-view {(bloggerBlogGroups)} {(bloggerIfVar if blogid {$$blogid})} $:entrytype={$Blogger_PageType_BLOG} order=$:entrystatus,-$:entrydate count={$$count} :)%0a[[#blog-list-pagelistend]]%0a@]%0a%0a!! #show-comments-pagelist%0aParameters: pagename, group, onlyunapproved (approval status: true/false)%0a[@%0a[[#show-comments-pagelist]]%0a(:pagelist fmt={$Blogger_SkinTemplate}#comment-view order=ctime group={$Blogger_CommentGroup} name={$$group}-{$$pagename}-* if="[ auth admin || equal {=$:commentapproved} true ]" onlyunapproved="false":)%0a(:ifend:)%0a[[#show-comments-pagelistend]]%0a@]%0a%0a!! #show-unapproved-comments-pagelist%0aParameters: onlyunapproved (approval status: true/false), blogid%0a[@%0a[[#show-unapproved-comments-pagelist]]%0a(:if [ auth admin && equal "{$Blogger_CommentsEnabled}" "true" ]:)%0a(:pagelist fmt={$Blogger_SkinTemplate}#comment-view order=name,-ctime group={$Blogger_CommentGroup} $:commentapproved=false {(bloggerIfVar if blogid {$$blogid})} onlyunapproved="true":)%0a(:ifend:)%0a[[#show-unapproved-comments-pagelistend]]%0a@]%0a%0a!! #comments-count-pagelist%0aParameters: commentstatus: true/false, entrygroup, entrytitle%0a[@%0a[[#comments-count-pagelist]]%0a(:if [ auth admin && equal "{$Blogger_CommentsEnabled}" "true" ]:)(:pagelist group={$Blogger_CommentGroup} fmt=count wrap=inline name={$$entrygroup}-{$$entrytitle}-* $:commentapproved={$$commentstatus} :)(:ifend:)\%0a[[#comments-count-pagelistend]]%0a'+Big text+'
+time=1231475592
+author:1231475592=
+diff:1231475592:1231475212:=26c26%0a%3c (:template defaults savevars=$:yoink,$:blogid,$:entrytype,$:entryurl,$:entrytags,$:entrystatus,$:entrycomments,$:entryauthor,$:entrydate,$:entrytitle,$:entrybody:)%0a---%0a> (:template defaults savevars=$:yoink,$:blogid,$:entrytype,$:entryurl,$:entrytags,$:entrystatus,$:entrycomments,$:entryauthor,$:entrydate,$:entrytitle,$:pmmarkup,$:entrybody:)%0a110d109%0a%3c '+Big text+'%0a\ No newline at end of file%0a
+host:1231475592=127.0.0.1
+author:1231475212=
+diff:1231475212:1231475195:=7a8%0a> (:input default $:yoink dfasd:)%0a
+host:1231475212=127.0.0.1
+author:1231475195=
+diff:1231475195:1231475160:=8c8%0a%3c (:input default $:yoink dfasd:)%0a---%0a> (:input default $:yoink "blog1":)%0a
+host:1231475195=127.0.0.1
+author:1231475160=
+diff:1231475160:1231475126:=8c8,9%0a%3c (:input default $:yoink "blog1":)%0a---%0a> (:input default $:blogid "blog1":)%0a> (:input default $:entrytype "blog":)%0a27c28%0a%3c (:template defaults savevars=$:yoink,$:blogid,$:entrytype,$:entryurl,$:entrytags,$:entrystatus,$:entrycomments,$:entryauthor,$:entrydate,$:entrytitle,$:pmmarkup,$:entrybody:)%0a---%0a> (:template defaults savevars=$:blogid,$:entrytype,$:entryurl,$:entrytags,$:entrystatus,$:entrycomments,$:entryauthor,$:entrydate,$:entrytitle,$:pmmarkup,$:entrybody:)%0a
+host:1231475160=127.0.0.1
+author:1231475126=
+diff:1231475126:1231475070:=8,9d7%0a%3c (:input default $:blogid "blog1":)%0a%3c (:input default $:entrytype "blog":)%0a
+host:1231475126=127.0.0.1
+author:1231475070=
+diff:1231475070:1231474964:=7a8,9%0a> (:input default $:blogid "blog1":)%0a> (:input default $:entrytype "blog":)%0a
+host:1231475070=127.0.0.1
+author:1231474964=
+diff:1231474964:1231474574:=
+host:1231474964=127.0.0.1
+author:1231474574=
+diff:1231474574:1231474467:=9d8%0a%3c (:input default $:entrytype "blog":)%0a
+host:1231474574=127.0.0.1
+author:1231474467=
+diff:1231474467:1231474302:=8c8%0a%3c (:input default $:blogid "blog1":)%0a---%0a> (:input default $:blogid "{$Blogger_BlogList_BLOG1}":)%0a
+host:1231474467=127.0.0.1
+author:1231474302=
+diff:1231474302:1231474271:=4a5%0a> {$Blogger_BlogList_BLOG1}%0a27c28%0a%3c (:template defaults savevars=$:blogid,$:entrytype,$:entryurl,$:entrytags,$:entrystatus,$:entrycomments,$:entryauthor,$:entrydate,$:entrytitle,$:pmmarkup,$:entrybody:)%0a---%0a> (:template defaults savevars=$:yoink,$:blogid,$:entrytype,$:entryurl,$:entrytags,$:entrystatus,$:entrycomments,$:entryauthor,$:entrydate,$:entrytitle,$:pmmarkup,$:entrybody:)%0a
+host:1231474302=127.0.0.1
+author:1231474271=
+diff:1231474271:1231473863:=5d4%0a%3c {$Blogger_BlogList_BLOG1}%0a
+host:1231474271=127.0.0.1
+author:1231473863=
+diff:1231473863:1231473761:=8c8%0a%3c (:input default $:blogid "{$Blogger_BlogList_BLOG1}":)%0a---%0a> (:input default $:yoink "yoink":)%0a
+host:1231473863=127.0.0.1
+author:1231473761=
+diff:1231473761:1231473721:=8d7%0a%3c (:input default $:yoink "yoink":)%0a27c26%0a%3c (:template defaults savevars=$:yoink,$:blogid,$:entrytype,$:entryurl,$:entrytags,$:entrystatus,$:entrycomments,$:entryauthor,$:entrydate,$:entrytitle,$:pmmarkup,$:entrybody:)%0a---%0a> (:template defaults savevars=$:blogid,$:entrytype,$:entryurl,$:entrytags,$:entrystatus,$:entrycomments,$:entryauthor,$:entrydate,$:entrytitle,$:pmmarkup,$:entrybody:)%0a
+host:1231473761=127.0.0.1
+author:1231473721=
+diff:1231473721:1231469674:=
+host:1231473721=127.0.0.1
+author:1231469674=
+diff:1231469674:1231469556:=43,44c43%0a%3c (:input hidden $:blogid value="{*$:blogid}":)%0a%3c (:input hidden $:commentdate value="{$Now}":)%0a---%0a> (:input default $:blogid "{*$:blogid}":)%0a45a45,46%0a> (:input default $:commentdate "{$Now}":)%0a> (:input default $:commentapproved "false":)%0a
+host:1231469674=127.0.0.1
+author:1231469556=
+diff:1231469556:1231469401:=
+host:1231469556=127.0.0.1
+author:1231469401=
+diff:1231469401:1231469248:=4a5,6%0a> {$Blogger_PageType_BLOG}\\%0a> {$Blogger_BlogList_BLOG1}\\%0a7a10,11%0a> (:input default $:entrytype "{$Blogger_PageType_BLOG}":)%0a> (:input default $:blogid "{$Blogger_BlogList_BLOG1}":)%0a10c14%0a%3c (:input default $:entryauthor "{$Author}":)%0a---%0a> (:input default $:entryauthor "sdfsa":)%0a
+host:1231469401=127.0.0.1
+author:1231469248=
+diff:1231469248:1231469008:=14c14%0a%3c (:input default $:entryauthor "sdfsa":)%0a---%0a> (:input default $:entryauthor "{$Author}":)%0a
+host:1231469248=127.0.0.1
+author:1231469008=
+diff:1231469008:1231468745:=5,6d4%0a%3c {$Blogger_PageType_BLOG}\\%0a%3c {$Blogger_BlogList_BLOG1}\\%0a10,11c8,9%0a%3c (:input default $:entrytype "{$Blogger_PageType_BLOG}":)%0a%3c (:input default $:blogid "{$Blogger_BlogList_BLOG1}":)%0a---%0a> (:input default $:entryype "{$Blogger_PageType_BLOG}.":)%0a> (:input default $:blogid "{$Blogger_BlogList_BLOG1}.":)%0a
+host:1231469008=127.0.0.1
+author:1231468745=
+diff:1231468745:1231468025:=8,9d7%0a%3c (:input default $:entryype "{$Blogger_PageType_BLOG}.":)%0a%3c (:input default $:blogid "{$Blogger_BlogList_BLOG1}.":)%0a
+host:1231468745=127.0.0.1
+author:1231468025=
+diff:1231468025:1231467691:=8a9%0a> (:input default $:entrydate "{$Now}":)%0a
+host:1231468025=127.0.0.1
+author:1231467691=
+diff:1231467691:1231467639:=4a5%0a> {$Now}%0a
+host:1231467691=127.0.0.1
+author:1231467639=
+diff:1231467639:1231467524:=
+host:1231467639=127.0.0.1
+author:1231467524=
+diff:1231467524:1231467298:=48d47%0a%3c (:input default $:commentapproved "false":)%0a
+host:1231467524=127.0.0.1
+author:1231467298=
+diff:1231467298:1231467118:=45c45,46%0a%3c (:input default $:blogid "{*$:blogid}":)%0a---%0a> (:input hidden $:blogid value="{*$:blogid}":)%0a> (:input hidden $:commentdate value="{$Now}":)%0a47d47%0a%3c (:input default $:commentdate "{$Now}":)%0a
+host:1231467298=127.0.0.1
+author:1231467118=
+diff:1231467118:1231467101:=5d4%0a%3c {$Now}%0a
+host:1231467118=127.0.0.1
+author:1231467101=
+diff:1231467101:1231467058:=9c9%0a%3c (:input default $:entrydate "{$Now}":)%0a---%0a> (:input default $:entrydate "$:newdate":)%0a
+host:1231467101=127.0.0.1
+author:1231467058=
+diff:1231467058:1231466934:=13a14,16%0a> {$:entrydate}\\%0a> {(ftime fmt="{$Blogger_DateEntryFormat}" @{$:entrydate})}\\%0a> %0a
+host:1231467058=127.0.0.1
+author:1231466934=
+diff:1231466934:1231466903:=4a5%0a> newdate:{(ftime fmt="{$Blogger_DateEntryFormat}" @{$:entrydate})}\\%0a9c10%0a%3c (:input default $:entrydate "$:newdate":)%0a---%0a> (:input default $:entrydate $:newdate:)%0a
+host:1231466934=127.0.0.1
+author:1231466903=
+diff:1231466903:1231466873:=10c10%0a%3c (:input default $:entrydate $:newdate:)%0a---%0a> (:input default $:entrydate "$:newdate":)%0a
+host:1231466903=127.0.0.1
+author:1231466873=
+diff:1231466873:1231466828:=5d4%0a%3c newdate:{(ftime fmt="{$Blogger_DateEntryFormat}" @{$:entrydate})}\\%0a10c9%0a%3c (:input default $:entrydate "$:newdate":)%0a---%0a> (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}" @{$:entrydate})}":)%0a
+host:1231466873=127.0.0.1
+author:1231466828=
+diff:1231466828:1231466784:=9c9%0a%3c (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}" @{$:entrydate})}":)%0a---%0a> (:input default $:entrydate "{$:entrydate}":)%0a16d15%0a%3c %0a
+host:1231466828=127.0.0.1
+author:1231466784=
+diff:1231466784:1231466741:=14,15d13%0a%3c {$:entrydate}\\%0a%3c {(ftime fmt="{$Blogger_DateEntryFormat}" @{$:entrydate})}\\%0a
+host:1231466784=127.0.0.1
+author:1231466741=
+diff:1231466741:1231465524:=9c9%0a%3c (:input default $:entrydate "{$:entrydate}":)%0a---%0a> (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}" )}":)%0a11c11%0a%3c (:input default $:entryauthor "{$Author}":)%0a---%0a> (:input default $:entryauthor "{$:entrydate}":)%0a
+host:1231466741=127.0.0.1
+author:1231465524=
+diff:1231465524:1231465499:=9c9%0a%3c (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}" )}":)%0a---%0a> (:input default $:entrydate "{(bloggertime fmt="{$Blogger_DateEntryFormat}" )}":)%0a
+host:1231465524=127.0.0.1
+author:1231465499=
+diff:1231465499:1231464912:=9c9%0a%3c (:input default $:entrydate "{(bloggertime fmt="{$Blogger_DateEntryFormat}" )}":)%0a---%0a> (:input default $:entrydate "{(bloggertime fmt="{$Blogger_DateEntryFormat}" when={$$ptv_entrydate} )}":)%0a
+host:1231465499=127.0.0.1
+author:1231464912=
+diff:1231464912:1231464881:=11c11%0a%3c (:input default $:entryauthor "{$:entrydate}":)%0a---%0a> (:input default $:entryauthor "{$:ptv_entrydate}":)%0a
+host:1231464912=127.0.0.1
+author:1231464881=
+diff:1231464881:1231464866:=11c11%0a%3c (:input default $:entryauthor "{$:ptv_entrydate}":)%0a---%0a> (:input default $:entryauthor "{$$ptv_entrydate}":)%0a
+host:1231464881=127.0.0.1
+author:1231464866=
+diff:1231464866:1231463367:=9c9%0a%3c (:input default $:entrydate "{(bloggertime fmt="{$Blogger_DateEntryFormat}" when={$$ptv_entrydate} )}":)%0a---%0a> (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}" when=@{$:entrydate} )}":)%0a11c11%0a%3c (:input default $:entryauthor "{$$ptv_entrydate}":)%0a---%0a> (:input default $:entryauthor "{$Author}":)%0a
+host:1231464866=127.0.0.1
+author:1231463367=
+diff:1231463367:1231462770:=9c9%0a%3c (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}" when=@{$:entrydate} )}":)%0a---%0a> (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}")}":)%0a
+host:1231463367=127.0.0.1
+author:1231462770=
+diff:1231462770:1231462741:=9c9%0a%3c (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}")}":)%0a---%0a> (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}" when=@{$Now} )}":)%0a
+host:1231462770=127.0.0.1
+author:1231462741=
+diff:1231462741:1231462709:=9c9%0a%3c (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}" when=@{$Now} )}":)%0a---%0a> (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}")}":)%0a
+host:1231462741=127.0.0.1
+author:1231462709=
+diff:1231462709:1231462387:=9c9%0a%3c (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}")}":)%0a---%0a> (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}" when={$Now} )}":)%0a
+host:1231462709=127.0.0.1
+author:1231462387=
+diff:1231462387:1231458015:=9c9%0a%3c (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}" when={$Now} )}":)%0a---%0a> (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}")}" when={$Now}:)%0a
+host:1231462387=127.0.0.1
+author:1231458015=
+diff:1231458015:1231457456:=11a12%0a> (:messages:)%0a
+host:1231458015=127.0.0.1
+author:1231457456=
+diff:1231457456:1231368796:=9c9%0a%3c (:input default $:entrydate "{(ftime fmt="{$Blogger_DateEntryFormat}")}" when={$Now}:)%0a---%0a> (:input default $:displaydate "{(ftime fmt="{$Blogger_DateEntryFormat}")}" when={$Now}:)%0a27,28c27,28%0a%3c (:template require $:entrydate if="!blogger_isdate {$$ptv_entrydate}" errmsg="$[Invalid date]":)%0a%3c (:template defaults savevars=$:blogid,$:entrytype,$:entryurl,$:entrytags,$:entrystatus,$:entrycomments,$:entryauthor,$:entrydate,$:entrytitle,$:pmmarkup,$:entrybody:)%0a---%0a> (:template require $:displaydate if="!blogger_isdate {$$ptv_displaydate}" errmsg="$[Invalid date]":)%0a> (:template defaults savevars=$:blogid,$:displaydate,$:entrytype,$:entryurl,$:entrytags,$:pmtitle,$:pmtags,$:entrystatus,$:entrycomments,$:entryauthor,$:entrydate,$:entrytitle,$:entrybody:)%0a
+host:1231457456=127.0.0.1
 author:1231368796=
 diff:1231368796:1231367800:=91c91%0a%3c (:pagelist fmt={$Blogger_SkinTemplate}#comment-view order=ctime group={$Blogger_CommentGroup} name={$$group}-{$$pagename}-* if="[ auth admin || equal {=$:commentapproved} true ]" onlyunapproved="false":)%0a---%0a> (:pagelist fmt={$Blogger_SkinTemplate}#comment-view order=-ctime group={$Blogger_CommentGroup} name={$$group}-{$$pagename}-* if="[ auth admin || equal {=$:commentapproved} true ]" onlyunapproved="false":)%0a
 host:1231368796=127.0.0.1
