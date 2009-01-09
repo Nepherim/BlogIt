@@ -129,7 +129,7 @@ if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
 # - Markup Definitions
 # ----------------------------------------
 # (:blogger [intro,more] options:)text(:bloggerend:)
-Markup('blogger', 'fulltext', '/\(:blogger ([more,intro,select,multiline]+)\s?(.*?):\)(.*?)\(:bloggerend:\)/esi',
+Markup('blogger', 'fulltext', '/\(:blogger ([more,intro,list,multiline]+)\s?(.*?):\)(.*?)\(:bloggerend:\)/esi',
 	"bloggerMU_$1(PSS('$2'), PSS('$3'))");
 function bloggerMU_more($options, $text){
 	return (strpos($text, $GLOBALS['Blogger_BodyBreak']) !== false ? preg_replace('/{\$FullName}/', $options, $GLOBALS['Blogger_ReadMore']) : '');
@@ -138,7 +138,7 @@ function bloggerMU_intro($options, $text){
 	list($found,$null) = explode($GLOBALS['Blogger_BodyBreak'], $text);
 	return $found;
 }
-function bloggerMU_select($options, $text){
+function bloggerMU_list($options, $text){
 	list($var, $label) = split('/', $text,2);
 	$i = count($GLOBALS[$var]);
 	foreach ($GLOBALS[$var] as $k => $v)
@@ -195,7 +195,8 @@ function bloggerIsDate($d){
 # Parameters: 0:if/noif 1:variable 2:value 3:[&&,||]
 $MarkupExpr['bloggerIfVar'] = '(!preg_match("/\\{.*?\\}/",$args[2])?(!empty($args[3])?$args[3]." ":"").($args[0]=="if"?"if=\\"":"")."equal {=\\$:$args[1]} $args[2]".($args[0]=="if"?"\\"":"") : "")';
 $MarkupExpr['bloggerStripTags'] = 'implode($GLOBALS["Blogger_TagSeparator"],stripTags($args[0]))';
-$MarkupExpr['ifnull'] = '(!empty($args[1])?$args[1]:$args[2])';
+# if [0] != null then [2] or [0]; if [0] is null then [1].
+$MarkupExpr['ifnull'] = '(!empty($args[0])?empty($args[2])?$args[0]:$args[2]:$args[1])';
 $MarkupExpr['bloggerBlogGroups'] = (empty($GLOBALS['Blogger_BlogGroups']) ? '""' : '"group=\"' .$GLOBALS['Blogger_BlogGroups'] .'\""');
 $MarkupExpr['bloggerBasePage'] = 'bloggerBasePage($args[0])';
 function bloggerBasePage($pn){
