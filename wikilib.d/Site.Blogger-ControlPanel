@@ -6,10 +6,28 @@ csum=
 ctime=1231036816
 host=127.0.0.1
 name=Site.Blogger-ControlPanel
-rev=48
+rev=54
 targets=Site.Blogger-NewEntry,Site.Blogger-CoreTemplate,Site.Blogger-SkinTemplate
-text=(:blogid:blog1:)%0a! Control Panel for "{$:blogid}"%0a* [[{$Blogger_NewEntry} | New Entry]]%0a* [[{$Blogger_CoreTemplate} | Core Template]]%0a* [[{$Blogger_SkinTemplate} | Skin Template]]%0a%0a!! Unapproved comments%0a(:include {$Blogger_CoreTemplate}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a%0a!! Latest 10 Blogs%0a(:include {$Blogger_CoreTemplate}#blog-list-pagelist count=10 blogid="{$:blogid}":)%0a%0a!! Published%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a%0a!! Draft%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a
-time=1231603877
+text=(:blogid:blog1:)%0a! Control Panel for "{$:blogid}"%0a* [[{$Blogger_NewEntry} | New Entry]]%0a* [[{$Blogger_CoreTemplate} | Core Template]]%0a* [[{$Blogger_SkinTemplate} | Skin Template]]%0a%0a!! Recent Comments%0a(:include {$Blogger_CoreTemplate}#comment-summary-list-pagelist blogid="{$:blogid}" count=10:)%0a%0a!! Unapproved Comments%0a(:include {$Blogger_CoreTemplate}#unapproved-comments-pagelist blogid="{$:blogid}":)%0a%0a!! Latest 10 Blogs%0a(:include {$Blogger_CoreTemplate}#blog-list-pagelist count=10 blogid="{$:blogid}":)%0a%0a!! Published%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a%0a!! Draft%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a
+time=1231617744
+author:1231617744=Blagger
+diff:1231617744:1231617727:=5a6,9%0a> %0a> x:{(bloggerBasePage {=$FullName})}\\%0a> x is {$:x}\\%0a> %0a
+host:1231617744=127.0.0.1
+author:1231617727=Blagger
+diff:1231617727:1231617267:=6,9d5%0a%3c %0a%3c x:{(bloggerBasePage {=$FullName})}\\%0a%3c x is {$:x}\\%0a%3c %0a
+host:1231617727=127.0.0.1
+author:1231617267=Blagger
+diff:1231617267:1231617023:=
+host:1231617267=127.0.0.1
+author:1231617023=Blagger
+diff:1231617023:1231617002:=
+host:1231617023=127.0.0.1
+author:1231617002=Blagger
+diff:1231617002:1231616581:=8,9c8,9%0a%3c (:include {$Blogger_CoreTemplate}#comment-summary-list-pagelist blogid="{$:blogid}" count=10:)%0a%3c %0a---%0a> (:include {$Blogger_CoreTemplate}#show-comments-summary-pagelist blogid="{$:blogid}":)%0a> %0a11c11%0a%3c (:include {$Blogger_CoreTemplate}#unapproved-comments-pagelist blogid="{$:blogid}":)%0a---%0a> (:include {$Blogger_CoreTemplate}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a
+host:1231617002=127.0.0.1
+author:1231616581=Blagger
+diff:1231616581:1231603877:=7,10c7%0a%3c !! Recent Comments%0a%3c (:include {$Blogger_CoreTemplate}#show-comments-summary-pagelist blogid="{$:blogid}":)%0a%3c %0a%3c !! Unapproved Comments%0a---%0a> !! Unapproved comments%0a
+host:1231616581=127.0.0.1
 author:1231603877=Blagger
 diff:1231603877:1231603833:=3,5c3,6%0a%3c * [[{$Blogger_NewEntry} | New Entry]]%0a%3c * [[{$Blogger_CoreTemplate} | Core Template]]%0a%3c * [[{$Blogger_SkinTemplate} | Skin Template]]%0a---%0a> * [[{$Blogger_NewEntry}]]%0a> * [[{$Blogger_Templates}]]%0a> * [[{$Blogger_CoreTemplate}]]%0a> * [[{$Blogger_SkinTemplate}]]%0a
 host:1231603877=127.0.0.1
