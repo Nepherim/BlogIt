@@ -112,7 +112,7 @@ $Conditions['blogger_isemail'] =	'email($condparm)';
 
 # ----------------------------------------
 # - Markup Expressions
-# Parameters: 0:if/noif 1:variable 2:value 3:[&&,||]
+# Returns: "[3] [if] equal [1] [2]" only if [2] is not empty. Parameters: 0:if/noif 1:variable 2:value 3:[&&,||]
 $MarkupExpr['bloggerIfVar'] = '(!preg_match("/\{.*?\}/",$args[2])?(!empty($args[3])?$args[3]." ":"").($args[0]=="if"?"if=\"":"")."equal {=\$:$args[1]} $args[2]".($args[0]=="if"?"\"":"") : "")';
 $MarkupExpr['bloggerStripTags'] = 'implode($GLOBALS["Blogger_TagSeparator"],blogger_StripTags($args[0]))';
 $MarkupExpr['bloggerStripMarkup'] = '(preg_match("/\(:".$args[0]."\s(.*?):\)/i", $args[1],$m)!==false ? $m[1] : $args[1])';
@@ -136,7 +136,7 @@ if ($action && $action=='pmform'){  #Performed before PmForm action handler.
 		$_POST['author'] = $_POST['ptv_entryauthor'];
 		$_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']); #Convert from user entered format to Unix format
 
-		# url will be inherited from title, and will include a group from the url or the default group. If blank title derived from url.
+		# url will be inherited from title, and will include a group from the url or the default group. If title is blank it is derived from url.
 		if (!strpos($_POST['ptv_entryurl'], '.')) $pg = $_POST['ptv_entryurl'];
 		else list($gr, $pg) = split('\.',$_POST['ptv_entryurl'],2);
 		if (!(empty($gr) && empty($pg)))	$_POST['ptv_entryurl'] = MakePageName($pagename,
@@ -164,7 +164,7 @@ if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
 }
 
 # ----------------------------------------
-# - HandleActions Definitions
+# - HandleActions Functions
 # ----------------------------------------
 # If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling in Main Processing,
 # as markup (tags) isn't processed if markup is defined.
@@ -187,7 +187,7 @@ function bloggerApproveComment($src, $auth='admin') {
 }
 
 # ----------------------------------------
-# - Markup Definitions
+# - Markup Functions
 # ----------------------------------------
 function bloggerMU_more($options, $text){
 	return (strpos($text, $GLOBALS['Blogger_BodyBreak']) !== false ? preg_replace('/{\$FullName}/', $options, $GLOBALS['Blogger_ReadMore']) : '');
@@ -208,7 +208,7 @@ function bloggerMU_multiline($options, $text){
 }
 
 # ----------------------------------------
-# - Condition Definitions
+# - Condition Functions
 # ----------------------------------------
 function bloggerIsPage($pn){
 	$mp = MakePageName($GLOBALS['pagename'], $pn);
@@ -226,7 +226,7 @@ function email($e){
 }
 
 # ----------------------------------------
-# - Markup Expression Definitions
+# - Markup Expression Functions
 # ----------------------------------------
 function bloggerBasePage($pn){
 	return preg_replace('/^' .$GLOBALS['Blogger_CommentGroup'] .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/','${1}/${2}',$pn);

@@ -1,6 +1,6 @@
 version=pmwiki-2.2.0-beta68 ordered=1 urlencoded=1
 agent=Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4
-author=
+author=DaveG
 charset=ISO-8859-1
 csum=
 ctime=1230334807
@@ -10,9 +10,4 @@ rev=2
 targets=PmWiki.BasicEditing,PmWiki.TextFormattingRules,PmWiki.DocumentationIndex,PmWiki.Tables,PmWiki.TableDirectives
 text=(:pmform blogger-entry:)
 time=1230611443
-author:1230611443=
-diff:1230611443:1230334807:=1c1%0a%3c (:pmform blogger-entry:)%0a\ No newline at end of file%0a---%0a> (:pmform blog-entry:)%0a\ No newline at end of file%0a
-host:1230611443=127.0.0.1
-author:1230334807=djg
-diff:1230334807:1230334807:=1d0%0a%3c (:pmform blog-entry:)%0a\ No newline at end of file%0a
-host:1230334807=127.0.0.1
+
