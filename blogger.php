@@ -95,9 +95,9 @@ if ($action && $action=='pmform'){  #Performed before PmForm action handler.
 	if ($_POST['target']==$Blogger_BlogForm){
 		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body; entrybody MUST be the last variable.
 		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '(::entrybody:$1::)';
-		$ROSPatterns['/\(:entrytags:(.*?(:\))?):\)/'] = '(::entrytags:$1::)';
+		$ROSPatterns['/\(:(entrytags|entrytitle):(.*?(:\))?):\)/si'] = '(::$1:$2::)';	#This field contains (:TITLE:), so need to find .*?:)
+		blogger_SaveTags();
 		$_POST['author'] = $_POST['ptv_entryauthor'];
-		saveTags();
 		$_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']); #Convert from user entered format to Unix format
 
 		# url will be inherited from title, and will include a group from the url or the default group. If blank title derived from url.
@@ -105,7 +105,7 @@ if ($action && $action=='pmform'){  #Performed before PmForm action handler.
 		else list($gr, $pg) = split('\.',$_POST['ptv_entryurl'],2);
 		if (!(empty($gr) && empty($pg)))	$_POST['ptv_entryurl'] = MakePageName($pagename,
 				(empty($gr)?$Blogger_DefaultGroup:$gr).'.'.preg_replace('/\s+/', $Blogger_TitleSeparator, (empty($pg)?$_POST['ptv_entrytitle']:$pg)));
-		$_POST['ptv_entrytitle'] = (empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']);
+		$_POST['ptv_entrytitle'] = '(:title ' .(empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']) .':)';
 
 		if ($Blogger_EnablePostDirectives == true)
 			$PmFormPostPatterns = array();  #Null out the PostPatterns means that directive markup doesn't get replaced.
@@ -116,13 +116,15 @@ if ($action && $action=='pmform'){  #Performed before PmForm action handler.
 		$_POST['ptv_commentapproved'] = 'false';
 	}
 }else
-	addMarkup();
+	blogger_AddMarkup();
 
 if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
 	$GroupHeaderFmt = '(:include ' .$Blogger_SkinTemplate .'#single-entry-view:)';  #Required for action=browse AND comments when redirected on error.
 	if ($action=='bloggeredit' || ($action=='pmform' && $_POST['target']==$Blogger_BlogForm)){
 		$GroupHeaderFmt = '(:include ' .$Blogger_CoreTemplate .'#blog-edit:)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	}
+} elseif ($Group == $Blogger_CommentGroup && CondAuth($pagename, 'admin') && $action=='browse'){  #After editing/deleting a comment page
+	Redirect(bloggerBasePage($pagename));
 }
 
 # ----------------------------------------
@@ -156,7 +158,7 @@ function bloggerMU_multiline($options, $text){
 # as markup (tags) isn't processed if markup is defined.
 $HandleActions['browse']='blogger_HandleBrowse';
 function blogger_HandleBrowse($pagename){
-	addMarkup();
+	blogger_AddMarkup();
 	$GLOBALS['HandleActions']['browse']=$GLOBALS['oldBrowse'];
 	HandleDispatch($pagename, 'browse');
 }
@@ -187,17 +189,28 @@ function bloggerIsPage($pn){
 }
 $Conditions['blogger_isdate'] = 'bloggerIsDate($condparm)';
 function bloggerIsDate($d){
-	return false;
+	return true;
 }
+$Conditions['blogger_isemail'] =	'email($condparm)';
+function email($a){
+	return (bool)preg_match(
+		"/^[-_a-z0-9\'+*$^&%=~!?{}]++(?:\.[-_a-z0-9\'+*$^&%=~!?{}]+)*+@(?:(?![-.])[-a-z0-9.]+(?<![-.])\.[a-z]{2,6}|\d{1,3}(?:\.\d{1,3}){3})(?::\d++)?$/iD"
+		,$a);
+}
+
+
 # ----------------------------------------
 # - Markup Expression Definitions
 # ----------------------------------------
 # Parameters: 0:if/noif 1:variable 2:value 3:[&&,||]
 $MarkupExpr['bloggerIfVar'] = '(!preg_match("/\\{.*?\\}/",$args[2])?(!empty($args[3])?$args[3]." ":"").($args[0]=="if"?"if=\\"":"")."equal {=\\$:$args[1]} $args[2]".($args[0]=="if"?"\\"":"") : "")';
-$MarkupExpr['bloggerStripTags'] = 'implode($GLOBALS["Blogger_TagSeparator"],stripTags($args[0]))';
+$MarkupExpr['bloggerStripTags'] = 'implode($GLOBALS["Blogger_TagSeparator"],blogger_StripTags($args[0]))';
+$MarkupExpr['bloggerStripMarkup'] = '(preg_match("/\\(:".$args[0]."\\s(.*?):\\)/i", $args[1],$m)!==false ? $m[1] : $args[1])';
 # if [0] != null then [2] or [0]; if [0] is null then [1].
 $MarkupExpr['ifnull'] = '(!empty($args[0])?empty($args[2])?$args[0]:$args[2]:$args[1])';
 $MarkupExpr['bloggerBlogGroups'] = (empty($GLOBALS['Blogger_BlogGroups']) ? '""' : '"group=\"' .$GLOBALS['Blogger_BlogGroups'] .'\""');
+#$MarkupExpr['bloggerBasePage'] =
+#	'(preg_replace("/^" .$GLOBALS["Blogger_CommentGroup"] ."[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/","\${1}\/\${2}",$args[0],$m)!==false?$m[1]:$args[0])';
 $MarkupExpr['bloggerBasePage'] = 'bloggerBasePage($args[0])';
 function bloggerBasePage($pn){
 	return preg_replace('/^' .$GLOBALS['Blogger_CommentGroup'] .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/','${1}/${2}',$pn);
@@ -206,15 +219,15 @@ function bloggerBasePage($pn){
 # ----------------------------------------
 # - Internal Functions
 # ----------------------------------------
-function addMarkup(){
+function blogger_AddMarkup(){
 	Markup('textvar::', '<split', '/\(::\w[-\w]*:(?!\)).*?::\)/s', '');  # Prevent (::...:...:) markup from being displayed.
 }
 # Combines categories in body [[!...]] with separated tag list in tag-field.
 # Stores combined separated list in tag-field in PmWiki format [[!...]].
-function saveTags() {
+function blogger_SaveTags() {
 	global $_POST,$Blogger_TagSeparator;
 	# Read tags from body, strip [[!...]]
-	$bodyTags = stripTags($_POST['ptv_entrybody']);
+	$bodyTags = blogger_StripTags($_POST['ptv_entrybody']);
 	# Make sure tag-field entries are in standard separated format, and place in array
 	if ($_POST['ptv_entrytags'])
 		$fieldTags = explode($Blogger_TagSeparator, preg_replace('/'.trim($Blogger_TagSeparator).'\s*/', $Blogger_TagSeparator, $_POST['ptv_entrytags']));
@@ -225,7 +238,7 @@ function saveTags() {
 	$_POST['ptv_entrytags'] = ($allTags?'[[!'.implode(']]'.$Blogger_TagSeparator.'[[!', $allTags).']]':'');
 }
 # Returns an array of tags contained in [[!...]] markup within $src string.
-function stripTags($src){
+function blogger_StripTags($src){
 	return (preg_match_all('/\[\[\!(.*?)\]\]/', $src, $match) ? $match[1] : array());
 }
 
