@@ -130,7 +130,7 @@ if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
 # ----------------------------------------
 # - Markup Definitions
 # ----------------------------------------
-# (:blogger [intro,more] options:)text(:bloggerend:)
+# (:blogger [more,intro,list,multiline] options:)text(:bloggerend:)
 Markup('blogger', 'fulltext', '/\(:blogger ([more,intro,list,multiline]+)\s?(.*?):\)(.*?)\(:bloggerend:\)/esi',
 	"bloggerMU_$1(PSS('$2'), PSS('$3'))");
 function bloggerMU_more($options, $text){
@@ -192,10 +192,10 @@ function bloggerIsDate($d){
 	return true;
 }
 $Conditions['blogger_isemail'] =	'email($condparm)';
-function email($a){
+function email($e){
 	return (bool)preg_match(
 		"/^[-_a-z0-9\'+*$^&%=~!?{}]++(?:\.[-_a-z0-9\'+*$^&%=~!?{}]+)*+@(?:(?![-.])[-a-z0-9.]+(?<![-.])\.[a-z]{2,6}|\d{1,3}(?:\.\d{1,3}){3})(?::\d++)?$/iD"
-		,$a);
+		,$e);
 }
 
 
@@ -203,14 +203,12 @@ function email($a){
 # - Markup Expression Definitions
 # ----------------------------------------
 # Parameters: 0:if/noif 1:variable 2:value 3:[&&,||]
-$MarkupExpr['bloggerIfVar'] = '(!preg_match("/\\{.*?\\}/",$args[2])?(!empty($args[3])?$args[3]." ":"").($args[0]=="if"?"if=\\"":"")."equal {=\\$:$args[1]} $args[2]".($args[0]=="if"?"\\"":"") : "")';
+$MarkupExpr['bloggerIfVar'] = '(!preg_match("/\{.*?\}/",$args[2])?(!empty($args[3])?$args[3]." ":"").($args[0]=="if"?"if=\"":"")."equal {=\$:$args[1]} $args[2]".($args[0]=="if"?"\"":"") : "")';
 $MarkupExpr['bloggerStripTags'] = 'implode($GLOBALS["Blogger_TagSeparator"],blogger_StripTags($args[0]))';
-$MarkupExpr['bloggerStripMarkup'] = '(preg_match("/\\(:".$args[0]."\\s(.*?):\\)/i", $args[1],$m)!==false ? $m[1] : $args[1])';
+$MarkupExpr['bloggerStripMarkup'] = '(preg_match("/\(:".$args[0]."\s(.*?):\)/i", $args[1],$m)!==false ? $m[1] : $args[1])';
 # if [0] != null then [2] or [0]; if [0] is null then [1].
 $MarkupExpr['ifnull'] = '(!empty($args[0])?empty($args[2])?$args[0]:$args[2]:$args[1])';
 $MarkupExpr['bloggerBlogGroups'] = (empty($GLOBALS['Blogger_BlogGroups']) ? '""' : '"group=\"' .$GLOBALS['Blogger_BlogGroups'] .'\""');
-#$MarkupExpr['bloggerBasePage'] =
-#	'(preg_replace("/^" .$GLOBALS["Blogger_CommentGroup"] ."[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/","\${1}\/\${2}",$args[0],$m)!==false?$m[1]:$args[0])';
 $MarkupExpr['bloggerBasePage'] = 'bloggerBasePage($args[0])';
 function bloggerBasePage($pn){
 	return preg_replace('/^' .$GLOBALS['Blogger_CommentGroup'] .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/','${1}/${2}',$pn);

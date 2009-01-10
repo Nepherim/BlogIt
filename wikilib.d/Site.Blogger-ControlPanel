@@ -1,15 +1,30 @@
 version=pmwiki-2.2.0-beta68 ordered=1 urlencoded=1
 agent=Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4
-author=
+author=Blagger
 charset=ISO-8859-1
 csum=
 ctime=1231036816
 host=127.0.0.1
 name=Site.Blogger-ControlPanel
-rev=43
+rev=48
 targets=Site.Blogger-NewEntry,Site.Blogger-CoreTemplate,Site.Blogger-SkinTemplate
-text=(:blogid:blog1:)%0a! Control Panel for "{$:blogid}"%0a* [[{$Blogger_NewEntry}]]%0a* [[{$Blogger_Templates}]]%0a* [[{$Blogger_CoreTemplate}]]%0a* [[{$Blogger_SkinTemplate}]]%0a%0a!! Unapproved comments%0a(:include {$Blogger_CoreTemplate}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a%0a!! Latest 10 Blogs%0a(:include {$Blogger_CoreTemplate}#blog-list-pagelist count=10 blogid="{$:blogid}":)%0a%0a!! Published%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a%0a!! Draft%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a
-time=1231365986
+text=(:blogid:blog1:)%0a! Control Panel for "{$:blogid}"%0a* [[{$Blogger_NewEntry} | New Entry]]%0a* [[{$Blogger_CoreTemplate} | Core Template]]%0a* [[{$Blogger_SkinTemplate} | Skin Template]]%0a%0a!! Unapproved comments%0a(:include {$Blogger_CoreTemplate}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a%0a!! Latest 10 Blogs%0a(:include {$Blogger_CoreTemplate}#blog-list-pagelist count=10 blogid="{$:blogid}":)%0a%0a!! Published%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a%0a!! Draft%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a
+time=1231603877
+author:1231603877=Blagger
+diff:1231603877:1231603833:=3,5c3,6%0a%3c * [[{$Blogger_NewEntry} | New Entry]]%0a%3c * [[{$Blogger_CoreTemplate} | Core Template]]%0a%3c * [[{$Blogger_SkinTemplate} | Skin Template]]%0a---%0a> * [[{$Blogger_NewEntry}]]%0a> * [[{$Blogger_Templates}]]%0a> * [[{$Blogger_CoreTemplate}]]%0a> * [[{$Blogger_SkinTemplate}]]%0a
+host:1231603877=127.0.0.1
+author:1231603833=Blagger
+diff:1231603833:1231566748:=6a7,8%0a> %0a> (:include PmWiki/PmWiki#key:)%0a
+host:1231603833=127.0.0.1
+author:1231566748=Blagger
+diff:1231566748:1231566655:=7,8d6%0a%3c %0a%3c (:include PmWiki/PmWiki#key:)%0a
+host:1231566748=127.0.0.1
+author:1231566655=Blagger
+diff:1231566655:1231566618:=6a7,8%0a> %0a> (:include PmWiki/PmWiki:)%0a
+host:1231566655=127.0.0.1
+author:1231566618=Blagger
+diff:1231566618:1231365986:=7,8d6%0a%3c %0a%3c (:include PmWiki/PmWiki:)%0a
+host:1231566618=127.0.0.1
 author:1231365986=
 diff:1231365986:1231365603:=
 host:1231365986=127.0.0.1
