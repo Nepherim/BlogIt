@@ -1,12 +1,183 @@
 version=pmwiki-2.2.0-beta68 ordered=1 urlencoded=1
 agent=Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4
-author=DaveG
+author=Blagger
 charset=ISO-8859-1
 csum=
 ctime=1231036816
 host=127.0.0.1
 name=Site.Blogger-ControlPanel
-rev=54
+rev=57
 targets=Site.Blogger-NewEntry,Site.Blogger-CoreTemplate,Site.Blogger-SkinTemplate
-text=(:blogid:blog1:)%0a! Control Panel for "{$:blogid}"%0a* [[{$Blogger_NewEntry} | New Entry]]%0a* [[{$Blogger_CoreTemplate} | Core Template]]%0a* [[{$Blogger_SkinTemplate} | Skin Template]]%0a%0a!! Recent Comments%0a(:include {$Blogger_CoreTemplate}#comment-summary-list-pagelist blogid="{$:blogid}" count=10:)%0a%0a!! Unapproved Comments%0a(:include {$Blogger_CoreTemplate}#unapproved-comments-pagelist blogid="{$:blogid}":)%0a%0a!! Latest 10 Blogs%0a(:include {$Blogger_CoreTemplate}#blog-list-pagelist count=10 blogid="{$:blogid}":)%0a%0a!! Published%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a%0a!! Draft%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a
-time=1231617744
+text=(:blogid:blog1:)%0a! Control Panel for "{$:blogid}"%0a* [[{$Blogger_NewEntry} | New Entry]]%0a* [[{$Blogger_CoreTemplate} | Core Template]]%0a* [[{$Blogger_SkinTemplate} | Skin Template]]%0a%0a!! Stickies%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_STICKY}" count=15:)%0a%0a!! Recent Blogs%0a(:include {$Blogger_CoreTemplate}#blog-summary-list-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=10:)%0a%0a!! Recent Comments%0a(:include {$Blogger_CoreTemplate}#comment-summary-list-pagelist blogid="{$:blogid}" count=10:)%0a%0a!! Unapproved Comments%0a(:include {$Blogger_CoreTemplate}#unapproved-comments-pagelist blogid="{$:blogid}":)%0a%0a!! Latest 10 Blogs%0a(:include {$Blogger_CoreTemplate}#blog-list-pagelist count=10 blogid="{$:blogid}":)%0a%0a!! Published%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a%0a!! Draft%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a
+time=1231647377
+author:1231647377=Blagger
+diff:1231647377:1231626536:=6,8d5%0a%3c %0a%3c !! Stickies%0a%3c (:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_STICKY}" count=15:)%0a
+host:1231647377=127.0.0.1
+author:1231626536=Blagger
+diff:1231626536:1231626346:=8c8%0a%3c (:include {$Blogger_CoreTemplate}#blog-summary-list-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=10:)%0a---%0a> (:include {$Blogger_CoreTemplate}#blog-summary-list-pagelist blogid="{$:blogid}" count=10:)%0a
+host:1231626536=127.0.0.1
+author:1231626346=Blagger
+diff:1231626346:1231617744:=6,8d5%0a%3c %0a%3c !! Recent Blogs%0a%3c (:include {$Blogger_CoreTemplate}#blog-summary-list-pagelist blogid="{$:blogid}" count=10:)%0a
+host:1231626346=127.0.0.1
+author:1231617744=Blagger
+diff:1231617744:1231617727:=5a6,9%0a> %0a> x:{(bloggerBasePage {=$FullName})}\\%0a> x is {$:x}\\%0a> %0a
+host:1231617744=127.0.0.1
+author:1231617727=Blagger
+diff:1231617727:1231617267:=6,9d5%0a%3c %0a%3c x:{(bloggerBasePage {=$FullName})}\\%0a%3c x is {$:x}\\%0a%3c %0a
+host:1231617727=127.0.0.1
+author:1231617267=Blagger
+diff:1231617267:1231617023:=
+host:1231617267=127.0.0.1
+author:1231617023=Blagger
+diff:1231617023:1231617002:=
+host:1231617023=127.0.0.1
+author:1231617002=Blagger
+diff:1231617002:1231616581:=8,9c8,9%0a%3c (:include {$Blogger_CoreTemplate}#comment-summary-list-pagelist blogid="{$:blogid}" count=10:)%0a%3c %0a---%0a> (:include {$Blogger_CoreTemplate}#show-comments-summary-pagelist blogid="{$:blogid}":)%0a> %0a11c11%0a%3c (:include {$Blogger_CoreTemplate}#unapproved-comments-pagelist blogid="{$:blogid}":)%0a---%0a> (:include {$Blogger_CoreTemplate}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a
+host:1231617002=127.0.0.1
+author:1231616581=Blagger
+diff:1231616581:1231603877:=7,10c7%0a%3c !! Recent Comments%0a%3c (:include {$Blogger_CoreTemplate}#show-comments-summary-pagelist blogid="{$:blogid}":)%0a%3c %0a%3c !! Unapproved Comments%0a---%0a> !! Unapproved comments%0a
+host:1231616581=127.0.0.1
+author:1231603877=Blagger
+diff:1231603877:1231603833:=3,5c3,6%0a%3c * [[{$Blogger_NewEntry} | New Entry]]%0a%3c * [[{$Blogger_CoreTemplate} | Core Template]]%0a%3c * [[{$Blogger_SkinTemplate} | Skin Template]]%0a---%0a> * [[{$Blogger_NewEntry}]]%0a> * [[{$Blogger_Templates}]]%0a> * [[{$Blogger_CoreTemplate}]]%0a> * [[{$Blogger_SkinTemplate}]]%0a
+host:1231603877=127.0.0.1
+author:1231603833=Blagger
+diff:1231603833:1231566748:=6a7,8%0a> %0a> (:include PmWiki/PmWiki#key:)%0a
+host:1231603833=127.0.0.1
+author:1231566748=Blagger
+diff:1231566748:1231566655:=7,8d6%0a%3c %0a%3c (:include PmWiki/PmWiki#key:)%0a
+host:1231566748=127.0.0.1
+author:1231566655=Blagger
+diff:1231566655:1231566618:=6a7,8%0a> %0a> (:include PmWiki/PmWiki:)%0a
+host:1231566655=127.0.0.1
+author:1231566618=Blagger
+diff:1231566618:1231365986:=7,8d6%0a%3c %0a%3c (:include PmWiki/PmWiki:)%0a
+host:1231566618=127.0.0.1
+author:1231365986=
+diff:1231365986:1231365603:=
+host:1231365986=127.0.0.1
+author:1231365603=
+diff:1231365603:1231365302:=9c9%0a%3c (:include {$Blogger_CoreTemplate}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a---%0a> (:include {$Blogger_Templates}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a
+host:1231365603=127.0.0.1
+author:1231365302=
+diff:1231365302:1231365196:=
+host:1231365302=127.0.0.1
+author:1231365196=
+diff:1231365196:1231365152:=
+host:1231365196=127.0.0.1
+author:1231365152=
+diff:1231365152:1231364970:=
+host:1231365152=127.0.0.1
+author:1231364970=
+diff:1231364970:1231364948:=
+host:1231364970=127.0.0.1
+author:1231364948=
+diff:1231364948:1231364262:=
+host:1231364948=127.0.0.1
+author:1231364262=
+diff:1231364262:1231363248:=
+host:1231364262=127.0.0.1
+author:1231363248=
+diff:1231363248:1231356695:=
+host:1231363248=127.0.0.1
+author:1231356695=
+diff:1231356695:1231356642:=12,13c12,13%0a%3c (:include {$Blogger_CoreTemplate}#blog-list-pagelist count=10 blogid="{$:blogid}":)%0a%3c %0a---%0a> (:include {$Blogger_Templates}#blog-list-pagelist count=10 blogid="{$:blogid}":)%0a> %0a15,16c15,16%0a%3c (:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a%3c %0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a> %0a18c18%0a%3c (:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a
+host:1231356695=127.0.0.1
+author:1231356642=
+diff:1231356642:1231347401:=5,6d4%0a%3c * [[{$Blogger_CoreTemplate}]]%0a%3c * [[{$Blogger_SkinTemplate}]]%0a
+host:1231356642=127.0.0.1
+author:1231347401=
+diff:1231347401:1231347291:=
+host:1231347401=127.0.0.1
+author:1231347291=
+diff:1231347291:1231347273:=8a9%0a> ----%0a11a13%0a> ----%0a14a17%0a> ----%0a
+host:1231347291=127.0.0.1
+author:1231347273=
+diff:1231347273:1231347174:=1,3d0%0a%3c (:blogid:blog1:)%0a%3c ! Control Panel for "{$:blogid}"%0a%3c * [[{$Blogger_NewEntry}]]%0a4a2,19%0a> * [[Site.Blogger-NewEntry]]%0a> * [[Blog/BlogEntry-1]]%0a> * [[Blog/BlogEntry-2]]%0a> * [[Blog/BlogEntry-3]]%0a> * [[Blog/BlogEntry-4]]%0a> * [[Blog/BlogEntry-5]]%0a> * [[Blog/BlogEntry-6]]%0a> * [[Blog/BlogEntry-7]]%0a> * [[Blog/BlogEntry-8]]%0a> * [[Blog/BlogEntry-9]]%0a> * [[Blog/BlogEntry-10]]%0a> * [[Blog/BlogEntry-11]]%0a> * [[Blog/BlogEntry-12]]%0a> * [[Blog/BlogEntry-13]]%0a> %0a> ----%0a> (:blogid:blog1:)%0a> !! Control Panel for Blog: "{$:blogid}"%0a
+host:1231347273=127.0.0.1
+author:1231347174=
+diff:1231347174:1231295718:=18,19c18,19%0a%3c (:blogid:blog1:)%0a%3c !! Control Panel for Blog: "{$:blogid}"%0a---%0a> !! Blog ID in Use%0a> blogid:blog1%0a
+host:1231347174=127.0.0.1
+author:1231295718=
+diff:1231295718:1231295661:=
+host:1231295718=127.0.0.1
+author:1231295661=
+diff:1231295661:1231212848:=
+host:1231295661=127.0.0.1
+author:1231212848=
+diff:1231212848:1231212705:=22c22%0a%3c (:include {$Blogger_Templates}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a---%0a> (:include {$Blogger_Templates}#show-unapproved-comments-pagelist:)%0a
+host:1231212848=127.0.0.1
+author:1231212705=
+diff:1231212705:1231212703:=
+host:1231212705=127.0.0.1
+author:1231212703=
+diff:1231212703:1231212620:=22c22%0a%3c (:include {$Blogger_Templates}#show-unapproved-comments-pagelist:)%0a---%0a> (:include {$Blogger_Templates}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a
+host:1231212703=127.0.0.1
+author:1231212620=
+diff:1231212620:1231212605:=22c22%0a%3c (:include {$Blogger_Templates}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a---%0a> (:include {$Blogger_Templates}#show-unapproved-comments-pagelist :)%0a
+host:1231212620=127.0.0.1
+author:1231212605=
+diff:1231212605:1231212095:=22c22%0a%3c (:include {$Blogger_Templates}#show-unapproved-comments-pagelist :)%0a---%0a> (:include {$Blogger_Templates}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a
+host:1231212605=127.0.0.1
+author:1231212095=
+diff:1231212095:1231209952:=30,31c30,31%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a%3c %0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a> %0a34c34%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a
+host:1231212095=127.0.0.1
+author:1231209952=
+diff:1231209952:1231209340:=22c22%0a%3c (:include {$Blogger_Templates}#show-unapproved-comments-pagelist blogid="{$:blogid}":)%0a---%0a> (:include {$Blogger_Templates}#show-unapproved-comments-pagelist:)%0a
+host:1231209952=127.0.0.1
+author:1231209340=
+diff:1231209340:1231209091:=19c19%0a%3c blogid:blog1%0a---%0a> blogid:blog%0a
+host:1231209340=127.0.0.1
+author:1231209091=
+diff:1231209091:1231124628:=30,31c30,31%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a%3c %0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=10:)%0a> %0a34c34%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=10:)%0a
+host:1231209091=127.0.0.1
+author:1231124628=
+diff:1231124628:1231124587:=18,19c18%0a%3c !! Blog ID in Use%0a%3c blogid:blog%0a---%0a> (:blogid:blog:)%0a
+host:1231124628=127.0.0.1
+author:1231124587=
+diff:1231124587:1231124574:=25,26c25,26%0a%3c (:include {$Blogger_Templates}#blog-list-pagelist count=10 blogid="{$:blogid}":)%0a%3c %0a---%0a> (:include {$Blogger_Templates}#blog-list-pagelist count=10 blogid="{$$blogid}":)%0a> %0a29,30c29,30%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=10:)%0a%3c %0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="{$$blogid}" status="{$Blogger_StatusType_PUBLISH}" count=10:)%0a> %0a33c33%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=10:)%0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="{$$blogid}" status="{$Blogger_StatusType_DRAFT}" count=10:)%0a
+host:1231124587=127.0.0.1
+author:1231124574=
+diff:1231124574:1231124561:=18a19,20%0a> %0a> Blogid: {$:blogid}%0a
+host:1231124574=127.0.0.1
+author:1231124561=
+diff:1231124561:1231124553:=
+host:1231124561=127.0.0.1
+author:1231124553=
+diff:1231124553:1231124546:=20c20%0a%3c Blogid: {$:blogid}%0a---%0a> Blogid: {$$blogid}%0a
+host:1231124553=127.0.0.1
+author:1231124546=
+diff:1231124546:1231124529:=19,20d18%0a%3c %0a%3c Blogid: {$$blogid}%0a
+host:1231124546=127.0.0.1
+author:1231124529=
+diff:1231124529:1231124479:=16a17%0a> {(bloggerIfVar test abc)}%0a18,19d18%0a%3c (:blogid:blog:)%0a%3c %0a25,26c24,25%0a%3c (:include {$Blogger_Templates}#blog-list-pagelist count=10 blogid="{$$blogid}":)%0a%3c %0a---%0a> (:include {$Blogger_Templates}#blog-list-pagelist count=10 blogid="blog":)%0a> %0a29,30c28,29%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="{$$blogid}" status="{$Blogger_StatusType_PUBLISH}" count=10:)%0a%3c %0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="blog" status="{$Blogger_StatusType_PUBLISH}" count=10:)%0a> %0a33c32%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="{$$blogid}" status="{$Blogger_StatusType_DRAFT}" count=10:)%0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="blog" status="{$Blogger_StatusType_DRAFT}" count=10:)%0a
+host:1231124529=127.0.0.1
+author:1231124479=
+diff:1231124479:1231124397:=28,29c28,29%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="blog" status="{$Blogger_StatusType_PUBLISH}" count=10:)%0a%3c %0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist status="{$Blogger_StatusType_PUBLISH}" count=10:)%0a> %0a32c32%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist  blogid="blog" status="{$Blogger_StatusType_DRAFT}" count=10:)%0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist status="{$Blogger_StatusType_DRAFT}" count=10:)%0a
+host:1231124479=127.0.0.1
+author:1231124397=
+diff:1231124397:1231124306:=24c24%0a%3c (:include {$Blogger_Templates}#blog-list-pagelist count=10 blogid="blog":)%0a---%0a> (:include {$Blogger_Templates}#blog-list-pagelist count=10 blogid="blog1":)%0a
+host:1231124397=127.0.0.1
+author:1231124306=
+diff:1231124306:1231124272:=24c24%0a%3c (:include {$Blogger_Templates}#blog-list-pagelist count=10 blogid="blog1":)%0a---%0a> (:include {$Blogger_Templates}#blog-list-pagelist count=10 blogid="":)%0a
+host:1231124306=127.0.0.1
+author:1231124272=
+diff:1231124272:1231123868:=24c24%0a%3c (:include {$Blogger_Templates}#blog-list-pagelist count=10 blogid="":)%0a---%0a> (:include {$Blogger_Templates}#blog-list-pagelist count=10:)%0a
+host:1231124272=127.0.0.1
+author:1231123868=
+diff:1231123868:1231123844:=
+host:1231123868=127.0.0.1
+author:1231123844=
+diff:1231123844:1231123525:=17c17%0a%3c {(bloggerIfVar test abc)}%0a---%0a> {(blog test)}%0a
+host:1231123844=127.0.0.1
+author:1231123525=
+diff:1231123525:1231123517:=
+host:1231123525=127.0.0.1
+author:1231123517=
+diff:1231123517:1231038232:=17d16%0a%3c {(blog test)}%0a
+host:1231123517=127.0.0.1
+author:1231038232=
+diff:1231038232:1231036816:=27,28c27,28%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist status="{$Blogger_StatusType_PUBLISH}" count=10:)%0a%3c %0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist status="{$Blogger_Status_PUBLISH}" count=10:)%0a> %0a31c31%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist status="{$Blogger_StatusType_DRAFT}" count=10:)%0a---%0a> (:include {$Blogger_Templates}#blog-summary-pagelist status="{$Blogger_Status_DRAFT}" count=10:)%0a
+host:1231038232=127.0.0.1
+author:1231036816=
+diff:1231036816:1231036816:=1,31d0%0a%3c * [[{$Blogger_Templates}]]%0a%3c * [[Site.Blogger-NewEntry]]%0a%3c * [[Blog/BlogEntry-1]]%0a%3c * [[Blog/BlogEntry-2]]%0a%3c * [[Blog/BlogEntry-3]]%0a%3c * [[Blog/BlogEntry-4]]%0a%3c * [[Blog/BlogEntry-5]]%0a%3c * [[Blog/BlogEntry-6]]%0a%3c * [[Blog/BlogEntry-7]]%0a%3c * [[Blog/BlogEntry-8]]%0a%3c * [[Blog/BlogEntry-9]]%0a%3c * [[Blog/BlogEntry-10]]%0a%3c * [[Blog/BlogEntry-11]]%0a%3c * [[Blog/BlogEntry-12]]%0a%3c * [[Blog/BlogEntry-13]]%0a%3c %0a%3c ----%0a%3c !! Unapproved comments%0a%3c (:include {$Blogger_Templates}#show-unapproved-comments-pagelist:)%0a%3c %0a%3c ----%0a%3c !! Latest 10 Blogs%0a%3c (:include {$Blogger_Templates}#blog-list-pagelist count=10:)%0a%3c %0a%3c ----%0a%3c !! Published%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist status="{$Blogger_Status_PUBLISH}" count=10:)%0a%3c %0a%3c ----%0a%3c !! Draft%0a%3c (:include {$Blogger_Templates}#blog-summary-pagelist status="{$Blogger_Status_DRAFT}" count=10:)%0a
+host:1231036816=127.0.0.1

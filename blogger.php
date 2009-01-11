@@ -8,8 +8,8 @@
 $RecipeInfo['Blogger']['Version'] = '2009-01-10';
 if($VersionNum<2001950) echo "<h3>You are running PmWiki version {$Version}. Blogger needs a newer version of PmWiki. Please update to the latest 2.2.0 beta version</h3>";
 $blogger['debug']=true;
-debugLog('--------------------');
-#foreach ($_POST as $p=>$k) debugLog($p .'=' .$k, true);
+blogger_debugLog('--------------------');
+#foreach ($_POST as $p=>$k) blogger_debugLog($p .'=' .$k, true);
 #FPLCountA
 
 # ----------------------------------------
@@ -32,7 +32,7 @@ SDV($Blogger_NewEntry, $SiteGroup .'/Blogger-NewEntry');
 SDV($Blogger_EnablePostDirectives, true); #Set to true to allow posting of directives of form (: :) in blog entries.
 SDV($Blogger_TagSeparator, ', ');
 SDV($Blogger_TitleSeparator, '-');
-SDVA($Blogger_StatusType, array('draft'=>'$[draft]', 'publish'=>'$[publish]'));
+SDVA($Blogger_StatusType, array('draft'=>'$[draft]', 'publish'=>'$[publish]', 'sticky'=>'$[sticky]'));
 SDVA($Blogger_CommentType, array('open'=>'$[open]', 'readonly'=>'$[read only]', 'none'=>'$[none]'));
 SDVA($Blogger_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 SDVA($Blogger_PageType, array('blog'=>'blog'));  #INTERNAL USE ONLY
@@ -40,9 +40,9 @@ SDVA($Blogger_PageType, array('blog'=>'blog'));  #INTERNAL USE ONLY
 # ----------------------------------------
 # - Usable on Wiki Pages
 # ----------------------------------------
-setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_CommentGroup','Blogger_CommentsEnabled','Blogger_CategoryGroup',
+blogger_setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_CommentGroup','Blogger_CommentsEnabled','Blogger_CategoryGroup',
 	'Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_CoreTemplate','Blogger_SkinTemplate','Blogger_NewEntry','Blogger_BlogForm','Blogger_CommentForm'));
-setFmtPVA(array('$Blogger_StatusType'=>$Blogger_StatusType, '$Blogger_CommentType'=>$Blogger_CommentType,
+blogger_setFmtPVA(array('$Blogger_StatusType'=>$Blogger_StatusType, '$Blogger_CommentType'=>$Blogger_CommentType,
 	'$Blogger_BlogList'=>$Blogger_BlogList, '$Blogger_PageType'=>$Blogger_PageType));
 
 # ----------------------------------------
@@ -62,7 +62,7 @@ SDV($PageListCacheDir, $FarmD.'/work.d/');
 SDV($EnablePageIndex, 1);
 include_once($FarmD.'/cookbook/pmform.php');
 include_once($FarmD.'/scripts/guiedit.php');
-addPageStore();
+blogger_addPageStore();
 if ($Blogger_SkinTemplate == $SiteGroup .'/Blogger-SkinTemplate')
 	$HTMLStylesFmt['blogger'] = 'h2 .blogger-edit-link a {font-size: 50%;}';
 
@@ -95,20 +95,20 @@ $PmForm[$Blogger_CommentForm] = 'saveto="' .$Blogger_CommentGroup .'/{$Group}-{$
 # ----------------------------------------
 # - Handle Actions
 $HandleActions['browse']='blogger_HandleBrowse';
-SDV($HandleActions['bloggerapprove'], 'bloggerApproveComment');
+SDV($HandleActions['bloggerapprove'], 'blogger_ApproveComment');
 SDV($HandleAuth['bloggerapprove'], 'admin');
 
 # ----------------------------------------
 # - Markup
 # (:blogger [more,intro,list,multiline] options:)text(:bloggerend:)
-Markup('blogger', 'fulltext', '/\(:blogger ([more,intro,list,multiline]+)\s?(.*?):\)(.*?)\(:bloggerend:\)/esi',
+Markup('blogger', 'fulltext', '/\(:blogger (more|intro|list|multiline|substr)\s?(.*?):\)(.*?)\(:bloggerend:\)/esi',
 	"bloggerMU_$1(PSS('$2'), PSS('$3'))");
 
 # ----------------------------------------
 # - Conditions
-$Conditions['blogger_ispage'] = 'bloggerIsPage($condparm)';
-$Conditions['blogger_isdate'] = 'bloggerIsDate($condparm)';
-$Conditions['blogger_isemail'] =	'email($condparm)';
+$Conditions['blogger_ispage'] = 'blogger_IsPage($condparm)';
+$Conditions['blogger_isdate'] = 'blogger_IsDate($condparm)';
+$Conditions['blogger_isemail'] =	'blogger_IsEmail($condparm)';
 
 # ----------------------------------------
 # - Markup Expressions
@@ -119,13 +119,13 @@ $MarkupExpr['bloggerStripMarkup'] = '(preg_match("/\(:".$args[0]."\s(.*?):\)/i",
 # if [0] != null then [2] or [0]; if [0] is null then [1].
 $MarkupExpr['ifnull'] = '(!empty($args[0])?empty($args[2])?$args[0]:$args[2]:$args[1])';
 $MarkupExpr['bloggerBlogGroups'] = (empty($GLOBALS['Blogger_BlogGroups']) ? '""' : '"group=\"' .$GLOBALS['Blogger_BlogGroups'] .'\""');
-$MarkupExpr['bloggerBasePage'] = 'bloggerBasePage($args[0])';
+$MarkupExpr['bloggerBasePage'] = 'blogger_BasePage($args[0])';
 
 # ----------------------------------------
 # - Main Processing
 # ----------------------------------------
 $entryType = PageVar($pagename,'$:entrytype');
-debugLog('entryType: '.$entryType. '   action: '.$action. '    Target: '.$_POST['target']);
+blogger_debugLog('entryType: '.$entryType. '   action: '.$action. '    Target: '.$_POST['target']);
 # Blog entry being posted from PmForm (new or existing)
 if ($action && $action=='pmform'){  #Performed before PmForm action handler.
 	if ($_POST['target']==$Blogger_BlogForm){
@@ -160,7 +160,7 @@ if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
 		$GroupHeaderFmt = '(:include ' .$Blogger_CoreTemplate .'#blog-edit:)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	}
 } elseif ($Group == $Blogger_CommentGroup && CondAuth($pagename, 'admin') && $action=='browse'){  #After editing/deleting a comment page
-	Redirect(bloggerBasePage($pagename));
+	Redirect(blogger_BasePage($pagename));
 }
 
 # ----------------------------------------
@@ -173,7 +173,7 @@ function blogger_HandleBrowse($pagename){
 	$GLOBALS['HandleActions']['browse']=$GLOBALS['oldBrowse'];
 	HandleDispatch($pagename, 'browse');
 }
-function bloggerApproveComment($src, $auth='admin') {
+function blogger_ApproveComment($src, $auth='admin') {
 	$ap = (isset($GLOBALS['_GET']['pn']) ? $GLOBALS['_GET']['pn'] : '');  #Page to approve
 	if ($ap) $old = RetrieveAuthPage($ap,$auth,0, READPAGE_CURRENT);
 	if($old){
@@ -206,20 +206,26 @@ function bloggerMU_list($options, $text){
 function bloggerMU_multiline($options, $text){
 	return preg_replace('/\n/', '<br />', $text);  #Because pmform strips \n, and we end up with comments on a single line.
 }
+#Markup expression substr doesn't work with multi-line input.
+function bloggerMU_substr($options, $text){
+	list($from, $len) = explode(' ',$options,2);
+	$m = min(strpos($text,"\n"),$len);
+	return substr($text,$from,empty($m)?$len:$m);
+}
 
 # ----------------------------------------
 # - Condition Functions
 # ----------------------------------------
-function bloggerIsPage($pn){
+function blogger_IsPage($pn){
 	$mp = MakePageName($GLOBALS['pagename'], $pn);
 	if (empty($mp)) return true;
 	if ($mp==$GLOBALS['pagename']) return false;
 	return PageExists($mp);
 }
-function bloggerIsDate($d){
+function blogger_IsDate($d){
 	return true;
 }
-function email($e){
+function blogger_IsEmail($e){
 	return (bool)preg_match(
 		"/^[-_a-z0-9\'+*$^&%=~!?{}]++(?:\.[-_a-z0-9\'+*$^&%=~!?{}]+)*+@(?:(?![-.])[-a-z0-9.]+(?<![-.])\.[a-z]{2,6}|\d{1,3}(?:\.\d{1,3}){3})(?::\d++)?$/iD"
 		,$e);
@@ -228,7 +234,7 @@ function email($e){
 # ----------------------------------------
 # - Markup Expression Functions
 # ----------------------------------------
-function bloggerBasePage($pn){
+function blogger_BasePage($pn){
 	return preg_replace('/^' .$GLOBALS['Blogger_CommentGroup'] .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/','${1}/${2}',$pn);
 }
 
@@ -261,23 +267,23 @@ function blogger_StripTags($src){
 # ----------------------------------------
 # - General Helper Functions
 # ----------------------------------------
-function setFmtPV($a){
+function blogger_setFmtPV($a){
 	foreach ($a as $k)
 		$GLOBALS['FmtPV']['$'.$k]='$GLOBALS["'.$k.'"]';
 }
 # Sets $FmtPV variables named $key_VALUE. $a is an array with the key as the variable name, and values as indecies.
-function setFmtPVA ($a){
+function blogger_setFmtPVA ($a){
 	foreach ($a as $var=>$vals)
 		foreach ($vals as $k=>$v)
 			$GLOBALS['FmtPV'][$var .'_' .strtoupper($k)] = "'" .$v ."'";
 }
-function addPageStore ($n='wikilib.d'){
+function blogger_addPageStore ($n='wikilib.d'){
 	$GLOBALS['PageStorePath'] = dirname(__FILE__) ."/" .$n ."/{\$FullName}";
 	$where = count($GLOBALS['WikiLibDirs']);
 	if ($where>1) $where--;
 	array_splice($GLOBALS['WikiLibDirs'], $where, 0, array(new PageStore($GLOBALS['PageStorePath'])));
 }
-function debugLog ($msg, $out=false){
+function blogger_debugLog ($msg, $out=false){
 	if ($out || (!$out && $GLOBALS['blogger']['debug']) )
 		error_log(date('r'). ' [blogger]: '. $msg);
 }
