@@ -6,10 +6,19 @@ csum=
 ctime=1231036816
 host=127.0.0.1
 name=Site.Blogger-ControlPanel
-rev=57
+rev=60
 targets=Site.Blogger-NewEntry,Site.Blogger-CoreTemplate,Site.Blogger-SkinTemplate
-text=(:blogid:blog1:)%0a! Control Panel for "{$:blogid}"%0a* [[{$Blogger_NewEntry} | New Entry]]%0a* [[{$Blogger_CoreTemplate} | Core Template]]%0a* [[{$Blogger_SkinTemplate} | Skin Template]]%0a%0a!! Stickies%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_STICKY}" count=15:)%0a%0a!! Recent Blogs%0a(:include {$Blogger_CoreTemplate}#blog-summary-list-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=10:)%0a%0a!! Recent Comments%0a(:include {$Blogger_CoreTemplate}#comment-summary-list-pagelist blogid="{$:blogid}" count=10:)%0a%0a!! Unapproved Comments%0a(:include {$Blogger_CoreTemplate}#unapproved-comments-pagelist blogid="{$:blogid}":)%0a%0a!! Latest 10 Blogs%0a(:include {$Blogger_CoreTemplate}#blog-list-pagelist count=10 blogid="{$:blogid}":)%0a%0a!! Published%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a%0a!! Draft%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a
-time=1231647377
+text=(:blogid:blog1:)%0a! Control Panel for "{$:blogid}"%0a* [[{$Blogger_NewEntry} | New Entry]]%0a* [[{$Blogger_CoreTemplate} | Core Template]]%0a* [[{$Blogger_SkinTemplate} | Skin Template]]%0a%0a!! Comments%0a!!! Unapproved Comments%0a(:include {$Blogger_CoreTemplate}#unapproved-comments-pagelist blogid="{$:blogid}":)%0a%0a!!! Recent Comments%0a(:include {$Blogger_CoreTemplate}#comment-summary-list-pagelist blogid="{$:blogid}" count=10:)%0a%0a!! Blogs%0a!!! Draft Blogs%0a(:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_DRAFT}" count=15:)%0a%0a!!! Latest Blogs%0a(:include {$Blogger_CoreTemplate}#blog-list-pagelist count=5 blogid="{$:blogid}":)%0a%0a!!! Recent Published Blogs%0a(:include {$Blogger_CoreTemplate}#blog-summary-list-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=5:)%0a
+time=1231726409
+author:1231726409=Blagger
+diff:1231726409:1231724787:=7,8c7,16%0a%3c !! Comments%0a%3c !!! Unapproved Comments%0a---%0a> !! Stickies%0a> (:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_STICKY}" count=15:)%0a> %0a> !! Recent Blogs%0a> (:include {$Blogger_CoreTemplate}#blog-summary-list-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=10:)%0a> %0a> !! Recent Comments%0a> (:include {$Blogger_CoreTemplate}#comment-summary-list-pagelist blogid="{$:blogid}" count=10:)%0a> %0a> !! Unapproved Comments%0a11,15c19,25%0a%3c !!! Recent Comments%0a%3c (:include {$Blogger_CoreTemplate}#comment-summary-list-pagelist blogid="{$:blogid}" count=10:)%0a%3c %0a%3c !! Blogs%0a%3c !!! Draft Blogs%0a---%0a> !! Latest 10 Blogs%0a> (:include {$Blogger_CoreTemplate}#blog-list-pagelist count=10 blogid="{$:blogid}":)%0a> %0a> !! Published%0a> (:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=15:)%0a> %0a> !! Draft%0a17,22d26%0a%3c %0a%3c !!! Latest Blogs%0a%3c (:include {$Blogger_CoreTemplate}#blog-list-pagelist count=5 blogid="{$:blogid}":)%0a%3c %0a%3c !!! Recent Published Blogs%0a%3c (:include {$Blogger_CoreTemplate}#blog-summary-list-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_PUBLISH}" count=5:)%0a
+host:1231726409=127.0.0.1
+author:1231724787=DaveG
+diff:1231724787:1231724397:=0a1,2%0a> [[this is -- a hyphen test]]%0a> %0a
+host:1231724787=127.0.0.1
+author:1231724397=DaveG
+diff:1231724397:1231647377:=1,2d0%0a%3c [[this is -- a hyphen test]]%0a%3c %0a
+host:1231724397=127.0.0.1
 author:1231647377=Blagger
 diff:1231647377:1231626536:=6,8d5%0a%3c %0a%3c !! Stickies%0a%3c (:include {$Blogger_CoreTemplate}#blog-summary-pagelist blogid="{$:blogid}" status="{$Blogger_StatusType_STICKY}" count=15:)%0a
 host:1231647377=127.0.0.1
