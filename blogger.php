@@ -159,15 +159,15 @@ if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
 	if ($action=='bloggeredit' || ($action=='pmform' && $_POST['target']==$Blogger_BlogForm)){
 		$GroupHeaderFmt = '(:include ' .$Blogger_CoreTemplate .'#blog-edit:)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	}
-} elseif ($Group == $Blogger_CommentGroup && CondAuth($pagename, 'admin') && $action=='browse'){  #After editing/deleting a comment page
+} elseif ($Group == $Blogger_CommentGroup && $action=='browse' && CondAuth($pagename, 'admin')){  #After editing/deleting a comment page
 	Redirect(blogger_BasePage($pagename));
 }
 
 # ----------------------------------------
 # - HandleActions Functions
 # ----------------------------------------
-# If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling in Main Processing,
-# as markup (tags) isn't processed if markup is defined.
+# If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling
+# in Main Processing, as markup (tags) isn't processed if markup is defined.
 function blogger_HandleBrowse($pagename){
 	blogger_AddMarkup();
 	$GLOBALS['HandleActions']['browse']=$GLOBALS['oldBrowse'];
