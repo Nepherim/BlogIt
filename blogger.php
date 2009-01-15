@@ -25,9 +25,8 @@ SDV($Blogger_ReadMore, '%readmore%[[{$FullName}#break | Read more...]]');
 SDV($Blogger_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($Blogger_DateDisplayFormat, $TimeFmt);
 SDV($Blogger_BodyBreak, '[[#break]]');
-SDV($Blogger_CoreTemplate, $SiteGroup .'/Blogger-CoreTemplate');
-SDV($Blogger_SkinTemplate, (PageExists($SiteGroup .'/Blogger-SkinTemplate-'.$Skin)
-	? $SiteGroup .'/Blogger-SkinTemplate-'.$Skin : $SiteGroup .'/Blogger-SkinTemplate'));
+SDV($Blogger_CoreTemplate, $SiteGroup .'.Blogger-CoreTemplate');
+SDV($Blogger_TemplateList, (isset($Skin)?$SiteGroup.'.Blogger-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.Blogger-CoreTemplate');
 SDV($Blogger_NewEntry, $SiteGroup .'/Blogger-NewEntry');
 SDV($Blogger_EnablePostDirectives, true); #Set to true to allow posting of directives of form (: :) in blog entries.
 SDV($Blogger_TagSeparator, ', ');
@@ -37,11 +36,21 @@ SDVA($Blogger_CommentType, array('open'=>'$[open]', 'readonly'=>'$[read only]', 
 SDVA($Blogger_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 SDVA($Blogger_PageType, array('blog'=>'blog'));  #INTERNAL USE ONLY
 
+#$FPLTemplatePageFmt[]='xyz';
+SDV($FPLTemplatePageFmt, array(
+	(isset($Skin)?$SiteGroup.'.Blogger-SkinTemplate-'.$Skin : ''),
+	$SiteGroup .'.Blogger-CoreTemplate',
+	'{$FullName}',
+	'{$SiteGroup}.LocalTemplates',
+	'{$SiteGroup}.PageListTemplates'
+));
+
+
 # ----------------------------------------
 # - Usable on Wiki Pages
 # ----------------------------------------
 blogger_setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_CommentGroup','Blogger_CommentsEnabled','Blogger_CategoryGroup',
-	'Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_CoreTemplate','Blogger_SkinTemplate','Blogger_NewEntry','Blogger_BlogForm','Blogger_CommentForm'));
+	'Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_CoreTemplate','Blogger_TemplateList','Blogger_NewEntry','Blogger_BlogForm','Blogger_CommentForm'));
 blogger_setFmtPVA(array('$Blogger_StatusType'=>$Blogger_StatusType, '$Blogger_CommentType'=>$Blogger_CommentType,
 	'$Blogger_BlogList'=>$Blogger_BlogList, '$Blogger_PageType'=>$Blogger_PageType));
 
@@ -63,7 +72,7 @@ SDV($EnablePageIndex, 1);
 include_once($FarmD.'/cookbook/pmform.php');
 include_once($FarmD.'/scripts/guiedit.php');
 blogger_addPageStore();
-if ($Blogger_SkinTemplate == $SiteGroup .'/Blogger-SkinTemplate')
+if ($Blogger_SkinTemplate == $SiteGroup .'/Blogger-SkinTemplate-Pmwiki')
 	$HTMLStylesFmt['blogger'] = 'h2 .blogger-edit-link a {font-size: 50%;}';
 
 # ----------------------------------------
@@ -73,7 +82,7 @@ $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkTex
 $CategoryGroup = $Blogger_CategoryGroup;	# Need to explicity set this.
 $AutoCreate['/^' .$Blogger_CategoryGroup .'\./'] = array('ctime' => $Now);
 if ($Group == $Blogger_CategoryGroup)
-	$GroupFooterFmt = '(:include ' .$Blogger_CoreTemplate .'#tag-pagelist:)(:nl:)';
+	$GroupFooterFmt = '(:includesection "#tag-pagelist" ' .$Blogger_TemplateList .':)(:nl:)';
 
 # ----------------------------------------
 # - SearchPatterns
@@ -81,16 +90,16 @@ if ($Group == $Blogger_CategoryGroup)
 $EnablePageListProtect = 0;
 $SearchPatterns['default'][] = '!\\.(All)?Recent(Changes|Uploads|Comments)$!';
 $SearchPatterns['default'][] = '!\\.Group(Print)?(Header|Footer|Attributes)$!';
-$SearchPatterns['default'][] = '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki|' .$Blogger_CategoryGroup .')\\.!';
+$SearchPatterns['default'][] = '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki)\\.!';
 $SearchPatterns['default'][] = FmtPageName('!^$FullName$!', $pagename);
 
 # ----------------------------------------
 # - PmForms
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s';
-$PmForm[$Blogger_BlogForm] = 'form=' .$Blogger_CoreTemplate .'#blog-form fmt=' .$Blogger_CoreTemplate .'#blog-post';
+$PmForm[$Blogger_BlogForm] = 'form=' .$Blogger_CoreTemplate .'#blog-form-control fmt=' .$Blogger_CoreTemplate .'#blog-post-control';
 $PmForm[$Blogger_CommentForm] = 'saveto="' .$Blogger_CommentGroup .'/{$Group}-{$Name}-' .date('Ymd\THms')
-	.'" form=' .$Blogger_CoreTemplate .'#comment-form fmt=' .$Blogger_CoreTemplate .'#comment-post';
+	.'" form=' .$Blogger_CoreTemplate .'#comment-form-control fmt=' .$Blogger_CoreTemplate .'#comment-post-control';
 
 # ----------------------------------------
 # - Handle Actions
@@ -103,6 +112,8 @@ SDV($HandleAuth['bloggerapprove'], 'admin');
 # (:blogger [more,intro,list,multiline] options:)text(:bloggerend:)
 Markup('blogger', 'fulltext', '/\(:blogger (more|intro|list|multiline|substr)\s?(.*?):\)(.*?)\(:bloggerend:\)/esi',
 	"bloggerMU_$1(PSS('$2'), PSS('$3'))");
+Markup('includesection', '>if', '/\\(:includesection\\s+(\\S.*?):\\)/ei',
+	"PRR(blogger_includeSection(\$pagename, PSS('$1')))");
 
 # ----------------------------------------
 # - Conditions
@@ -155,9 +166,9 @@ if ($action && $action=='pmform'){  #Performed before PmForm action handler.
 	blogger_AddMarkup();
 
 if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
-	$GroupHeaderFmt = '(:include ' .$Blogger_SkinTemplate .'#single-entry-view:)';  #Required for action=browse AND comments when redirected on error.
+	$GroupHeaderFmt = '(:includesection "#single-entry-view" ' .$Blogger_TemplateList .':)';  #Required for action=browse AND comments when redirected on error.
 	if ($action=='bloggeredit' || ($action=='pmform' && $_POST['target']==$Blogger_BlogForm)){
-		$GroupHeaderFmt = '(:include ' .$Blogger_CoreTemplate .'#blog-edit:)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
+		$GroupHeaderFmt = '(:includesection "#blog-edit" ' .$Blogger_TemplateList .':)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	}
 } elseif ($Group == $Blogger_CommentGroup && $action=='browse' && CondAuth($pagename, 'admin')){  #After editing/deleting a comment page
 	Redirect(blogger_BasePage($pagename));
@@ -286,4 +297,13 @@ function blogger_addPageStore ($n='wikilib.d'){
 function blogger_debugLog ($msg, $out=false){
 	if ($out || (!$out && $GLOBALS['blogger']['debug']) )
 		error_log(date('r'). ' [blogger]: '. $msg);
+}
+function blogger_includeSection($pagename, $inclspec){
+	$args = ParseArgs($inclspec);
+	$anc = array_shift($args['']);
+	if($anc>'' && $anc{0}!="#") return '';
+	foreach($args[''] as $v){
+		$x = IncludeText($pagename, "$v$anc");
+		if($x>'') return $x;
+	}
 }
