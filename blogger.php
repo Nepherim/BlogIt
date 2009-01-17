@@ -113,7 +113,7 @@ SDV($HandleAuth['bloggerapprove'], 'admin');
 Markup('blogger', 'fulltext', '/\(:blogger (more|intro|list|multiline|substr)\s?(.*?):\)(.*?)\(:bloggerend:\)/esi',
 	"bloggerMU_$1(PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\\(:includesection\\s+(\\S.*?):\\)/ei',
-	"PRR(blogger_includeSection(\$pagename, PSS('$1')))");
+	"PRR(blogger_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['Blogger_TemplateList'])))");
 
 # ----------------------------------------
 # - Conditions
