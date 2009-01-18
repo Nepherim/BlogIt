@@ -35,6 +35,7 @@ SDVA($Blogger_StatusType, array('draft'=>'$[draft]', 'publish'=>'$[publish]', 's
 SDVA($Blogger_CommentType, array('open'=>'$[open]', 'readonly'=>'$[read only]', 'none'=>'$[none]'));
 SDVA($Blogger_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 SDVA($Blogger_PageType, array('blog'=>'blog'));  #INTERNAL USE ONLY
+SDV($EnablePostCaptchaRequired, 0);
 
 #$FPLTemplatePageFmt[]='xyz';
 SDV($FPLTemplatePageFmt, array(
@@ -50,7 +51,8 @@ SDV($FPLTemplatePageFmt, array(
 # - Usable on Wiki Pages
 # ----------------------------------------
 blogger_setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_CommentGroup','Blogger_CommentsEnabled','Blogger_CategoryGroup',
-	'Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_CoreTemplate','Blogger_TemplateList','Blogger_NewEntry','Blogger_BlogForm','Blogger_CommentForm'));
+	'Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_CoreTemplate','Blogger_TemplateList','Blogger_NewEntry','Blogger_BlogForm',
+	'Blogger_CommentForm', 'EnablePostCaptchaRequired'));
 blogger_setFmtPVA(array('$Blogger_StatusType'=>$Blogger_StatusType, '$Blogger_CommentType'=>$Blogger_CommentType,
 	'$Blogger_BlogList'=>$Blogger_BlogList, '$Blogger_PageType'=>$Blogger_PageType));
 
@@ -161,13 +163,16 @@ if ($action && $action=='pmform'){  #Performed before PmForm action handler.
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
 		$_POST['author'] = $_POST['ptv_author'];
 		$_POST['ptv_commentapproved'] = 'false';
+		$_POST['ptv_commentdate'] = ${Now};
 	}
 }else
 	blogger_AddMarkup();
 
+if (CondAuth($pagename,'edit') || CondAuth($pagename,'admin'))	$EnablePostCaptchaRequired = 0;
 if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
 	$GroupHeaderFmt = '(:includesection "#single-entry-view" ' .$Blogger_TemplateList .':)';  #Required for action=browse AND comments when redirected on error.
 	if ($action=='bloggeredit' || ($action=='pmform' && $_POST['target']==$Blogger_BlogForm)){
+		$EnablePostCaptchaRequired = 0;
 		$GroupHeaderFmt = '(:includesection "#blog-edit" ' .$Blogger_TemplateList .':)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	}
 } elseif ($Group == $Blogger_CommentGroup && $action=='browse' && CondAuth($pagename, 'admin')){  #After editing/deleting a comment page
