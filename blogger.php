@@ -25,6 +25,7 @@ SDV($Blogger_ReadMore, '%readmore%[[{$FullName}#break | Read more...]]');
 SDV($Blogger_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($Blogger_DateDisplayFormat, $TimeFmt);
 SDV($Blogger_BodyBreak, '[[#break]]');
+SDV($Blogger_EntriesPerPage, 15);
 SDV($Blogger_CoreTemplate, $SiteGroup .'.Blogger-CoreTemplate');
 SDV($Blogger_TemplateList, (isset($Skin)?$SiteGroup.'.Blogger-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.Blogger-CoreTemplate');
 SDV($Blogger_NewEntry, $SiteGroup .'/Blogger-NewEntry');
@@ -41,9 +42,7 @@ SDV($EnablePostCaptchaRequired, 0);
 SDV($FPLTemplatePageFmt, array(
 	(isset($Skin)?$SiteGroup.'.Blogger-SkinTemplate-'.$Skin : ''),
 	$SiteGroup .'.Blogger-CoreTemplate',
-	'{$FullName}',
-	'{$SiteGroup}.LocalTemplates',
-	'{$SiteGroup}.PageListTemplates'
+	'{$FullName}', '{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'
 ));
 
 
@@ -52,7 +51,7 @@ SDV($FPLTemplatePageFmt, array(
 # ----------------------------------------
 blogger_setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_CommentGroup','Blogger_CommentsEnabled','Blogger_CategoryGroup',
 	'Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_CoreTemplate','Blogger_TemplateList','Blogger_NewEntry','Blogger_BlogForm',
-	'Blogger_CommentForm', 'EnablePostCaptchaRequired'));
+	'Blogger_CommentForm', 'EnablePostCaptchaRequired', 'Blogger_EntriesPerPage'));
 blogger_setFmtPVA(array('$Blogger_StatusType'=>$Blogger_StatusType, '$Blogger_CommentType'=>$Blogger_CommentType,
 	'$Blogger_BlogList'=>$Blogger_BlogList, '$Blogger_PageType'=>$Blogger_PageType));
 
@@ -63,14 +62,16 @@ $Blogger_BlogForm = 'blogger-entry';
 $Blogger_CommentForm = 'blogger-comments';
 $Group = PageVar($pagename, '$Group');
 $oldBrowse=$HandleActions['browse'];  #Store old browse action so we can perform actions prior.
+$FmtPV['$Blogger_PageNext'] = (isset($_GET['page']) ? $_GET['page']+1 : 2);
+$FmtPV['$Blogger_PagePrev'] = (isset($_GET['page']) && ($_GET['page']>0) ? $_GET['page']-1 : 0);
+$FmtPV['$Blogger_EntryStart'] = (($FmtPV['$Blogger_PageNext']-2) * $Blogger_EntriesPerPage) + 1;
+$FmtPV['$Blogger_EntryEnd']   = $FmtPV['$Blogger_EntryStart'] + $Blogger_EntriesPerPage - 1;
 
 # ----------------------------------------
 # - PmWiki Config
 # ----------------------------------------
 # Prevent viewing source and diff, primarily for Comments, as this would reveal email.
 $HandleAuth['source'] = $HandleAuth['diff'] = 'edit';
-SDV($PageListCacheDir, $FarmD.'/work.d/');
-SDV($EnablePageIndex, 1);
 include_once($FarmD.'/cookbook/pmform.php');
 include_once($FarmD.'/scripts/guiedit.php');
 blogger_addPageStore();
@@ -228,6 +229,18 @@ function bloggerMU_substr($options, $text){
 	$m = min(strpos($text,"\n"),$len);
 	return substr($text,$from,empty($m)?$len:$m);
 }
+function blogger_includeSection($pagename, $inclspec){
+	$args = ParseArgs($inclspec);
+	$anc = array_shift($args['']);
+	if($anc>'' && $anc{0}!="#") return '';
+	foreach($args[''] as $v){
+		$x = IncludeText($pagename, "$v$anc");
+		if($x>'') return $x;
+	}
+}
+Markup('{earlymx(', '>{$var}',
+  '/\\{earlymx(\\(\\w+\\b.*?\\))\\}/e',
+  "MarkupExpression(\$pagename, PSS('$1'))");
 
 # ----------------------------------------
 # - Condition Functions
@@ -294,7 +307,7 @@ function blogger_setFmtPVA ($a){
 			$GLOBALS['FmtPV'][$var .'_' .strtoupper($k)] = "'" .$v ."'";
 }
 function blogger_addPageStore ($n='wikilib.d'){
-	$GLOBALS['PageStorePath'] = dirname(__FILE__) ."/" .$n ."/{\$FullName}";
+	$GLOBALS['PageStorePath'] = dirname(__FILE__) .'/' .$n ."/{\$FullName}";
 	$where = count($GLOBALS['WikiLibDirs']);
 	if ($where>1) $where--;
 	array_splice($GLOBALS['WikiLibDirs'], $where, 0, array(new PageStore($GLOBALS['PageStorePath'])));
@@ -302,13 +315,4 @@ function blogger_addPageStore ($n='wikilib.d'){
 function blogger_debugLog ($msg, $out=false){
 	if ($out || (!$out && $GLOBALS['blogger']['debug']) )
 		error_log(date('r'). ' [blogger]: '. $msg);
-}
-function blogger_includeSection($pagename, $inclspec){
-	$args = ParseArgs($inclspec);
-	$anc = array_shift($args['']);
-	if($anc>'' && $anc{0}!="#") return '';
-	foreach($args[''] as $v){
-		$x = IncludeText($pagename, "$v$anc");
-		if($x>'') return $x;
-	}
 }
