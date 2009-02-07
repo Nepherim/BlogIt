@@ -7,8 +7,8 @@
 */
 $RecipeInfo['Blogger']['Version'] = '2009-01-10';
 if ($VersionNum < 2001950)
-	Abort ("<h3>You are running PmWiki version {$Version}. Blogger needs a newer version of PmWiki. Please update to the latest 2.2.0 beta version.</h3>");
-$blogger['debug']=true;
+	Abort ("<h3>You are running PmWiki version {$Version}. Blogger needs a newer version of PmWiki. Please update to 2.2.0 or later.</h3>");
+$blogger['debug']=false;
 blogger_debugLog('--------------------');
 #foreach ($_POST as $p=>$k) blogger_debugLog($p .'=' .$k, true);
 #FPLCountA
@@ -16,28 +16,30 @@ blogger_debugLog('--------------------');
 # ----------------------------------------
 # - Common user settable
 # ----------------------------------------
+SDV($EnablePostCaptchaRequired, 1);
 SDV($Blogger_DefaultGroup, 'Blog');	#Pre-populates the Pagename field; blogs can exist in *any* group, not simply the default defined here.
 SDV($Blogger_CommentGroup, 'Comments');
 SDV($Blogger_CommentsEnabled, 'true');
-SDV($Blogger_BlogGroups, 'Blog');	#OPTIONAL: Comma separated list of Blog groups. This is purely to speed up pagelists. Defining this list does not mean all pages in the group are 'blog-pages'.
+SDV($Blogger_BlogGroups, $Blogger_DefaultGroup);	#OPTIONAL: Comma separated list of Blog groups. This is purely to speed up pagelists. Defining this list does not mean all pages in the group are 'blog-pages'.
 SDV($Blogger_CategoryGroup, 'Tags');
+SDV($Blogger_BodyBreak, '[[#break]]');
+SDV($Blogger_TagSeparator, ', ');
+SDV($Blogger_TitleSeparator, '-');
+SDV($Blogger_EnablePostDirectives, true); #Set to true to allow posting of directives of form (: :) in blog entries.
+SDV($Blogger_EntriesPerPage, 15);
 SDV($Blogger_AuthorGroup, $AuthorGroup); #Defaults to 'Profiles'
 SDV($Blogger_ReadMore, '%readmore%[[{$FullName}#break | Read more...]]');
 SDV($Blogger_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($Blogger_DateDisplayFormat, $TimeFmt);
-SDV($Blogger_BodyBreak, '[[#break]]');
-SDV($Blogger_EntriesPerPage, 15);
-SDV($Blogger_CoreTemplate, $SiteGroup .'.Blogger-CoreTemplate');
-SDV($Blogger_TemplateList, (isset($Skin)?$SiteGroup.'.Blogger-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.Blogger-CoreTemplate');
-SDV($Blogger_NewEntry, $SiteGroup .'/Blogger-NewEntry');
-SDV($Blogger_EnablePostDirectives, true); #Set to true to allow posting of directives of form (: :) in blog entries.
-SDV($Blogger_TagSeparator, ', ');
-SDV($Blogger_TitleSeparator, '-');
 SDVA($Blogger_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
 SDVA($Blogger_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
 SDVA($Blogger_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
-SDVA($Blogger_PageType, array('blog'=>'blog'));  #INTERNAL USE ONLY
-SDV($EnablePostCaptchaRequired, 1);
+#INTERNAL USE ONLY
+SDV($Blogger_CoreTemplate, $SiteGroup .'.Blogger-CoreTemplate');
+SDV($Blogger_TemplateList, (isset($Skin)?$SiteGroup.'.Blogger-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.Blogger-CoreTemplate');
+SDV($Blogger_NewEntry, $SiteGroup .'/Blogger-NewEntry');
+SDVA($Blogger_PageType, array('blog'=>'blog'));
+SDV($Blogger_PageType_Comment, 'comment');  #Not in PageType list, since we don't want bloggers to be able to select 'comment' types.
 if (CondAuth($pagename,'edit') || CondAuth($pagename,'admin'))	$EnablePostCaptchaRequired = 0;
 
 #$FPLTemplatePageFmt[]='xyz';
@@ -90,9 +92,9 @@ if ($Group == $Blogger_CategoryGroup)
 
 # ----------------------------------------
 # - SearchPatterns
-$SearchPatterns['blogger'][] = '!\\.(All)?Recent(Changes|Uploads|Comments)$!';
-$SearchPatterns['blogger'][] = '!\\.Group(Print)?(Header|Footer|Attributes)$!';
-$SearchPatterns['blogger'][] = '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki)\\.!';
+$SearchPatterns['blogger'][] = '!\.(All)?Recent(Changes|Uploads|Comments)$!';
+$SearchPatterns['blogger'][] = '!\.Group(Print)?(Header|Footer|Attributes)$!';
+$SearchPatterns['blogger'][] = '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki)\.!';
 $SearchPatterns['blogger'][] = FmtPageName('!^$FullName$!', $pagename);
 
 # ----------------------------------------
@@ -130,12 +132,12 @@ $Conditions['blogger_isemail'] =	'blogger_IsEmail($condparm)';
 
 # ----------------------------------------
 # - Markup Expressions
-# Returns: "[3] [if] equal [1] [2]" only if [2] is not empty. Parameters: 0:if/noif 1:variable 2:value 3:[&&,||]
-$MarkupExpr['bloggerIfVar'] = '(!preg_match("/\{.*?\}/",$args[2])?(!empty($args[3])?$args[3]." ":"").($args[0]=="if"?"if=\"":"")."equal {=\$:$args[1]} $args[2]".($args[0]=="if"?"\"":"") : "")';
+# Returns: [3] [if="]equal {=$:1} 2["] -- only if 2 is not empty; if 2 is empty returns ''. Parameters: 0:[if/noif] 1:variable 2:value 3:[&&,||]
+$MarkupExpr['bloggerIfVar'] = '(!preg_match("/\{.*?\}/",$args[2]) ?(!empty($args[3])?$args[3]." ":"") .($args[0]=="if"?"if=\"":"") ."equal {=\$:$args[1]} $args[2]" .($args[0]=="if"?"\"":"") : "")';
 $MarkupExpr['bloggerStripTags'] = 'implode($GLOBALS["Blogger_TagSeparator"],blogger_StripTags($args[0]))';
 $MarkupExpr['bloggerStripMarkup'] = '(preg_match("/\(:".$args[0]."\s(.*?):\)/i", $args[1],$m)!==false ? $m[1] : $args[1])';
-# if [0] != null then [2] or [0]; if [0] is null then [1].
-$MarkupExpr['ifnull'] = '(!empty($args[0])?empty($args[2])?$args[0]:$args[2]:$args[1])';
+# if 0 != null then returns ([2] or 0 if 2 is empty); if 0 is null then returns 1.
+$MarkupExpr['ifnull'] = '(!empty($args[0]) ?(empty($args[2])?$args[0] :$args[2]) :$args[1])';
 $MarkupExpr['bloggerBlogGroups'] = (empty($GLOBALS['Blogger_BlogGroups']) ? '""' : '"group=\"' .$GLOBALS['Blogger_BlogGroups'] .'\""');
 $MarkupExpr['bloggerBasePage'] = 'blogger_BasePage($args[0])';
 $MarkupExpr['lt'] = '($args[0]<$args[1]?"true":"false")';
@@ -158,18 +160,29 @@ if ($pagename=='Site.Blogger-ControlPanel'){
 		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '(::entrybody:$1::)';
 		$ROSPatterns['/\(:(entrytags|entrytitle):(.*?(:\))?):\)/si'] = '(::$1:$2::)';	#This field contains (:TITLE:), so need to find .*?:)
 		blogger_SaveTags();
-		$_POST['author'] = $_POST['ptv_entryauthor'];
-		$_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']); #Convert from user entered format to Unix format
 
 		# url will be inherited from title, and will include a group from the url or the default group. If title is blank it is derived from url.
 		if (!strpos($_POST['ptv_entryurl'], '.')) $pg = $_POST['ptv_entryurl'];
 		else list($gr, $pg) = split('\.',$_POST['ptv_entryurl'],2);
-		if (!(empty($pg) && empty($_POST['ptv_entrytitle'])))	$_POST['ptv_entryurl'] = MakePageName($pagename,
-				(empty($gr)?$Blogger_DefaultGroup:$gr).'.'.preg_replace('/\s+/', $Blogger_TitleSeparator, (empty($pg)?$_POST['ptv_entrytitle']:$pg)));
+
+		$MakePageNamePatterns = array(
+			"/'/" => '',
+#			"/[^$PageNameChars]+/" => '-',
+			"/[^-[:alnum:]]+/" => '-',
+#			'/(.*)/e' => "strtolower('$1')",
+			'/((^|[^-\\w])\\w)/e' => "strtoupper('$1')",
+			"/\\s+/" => "$Blogger_TitleSeparator",
+			'/--/' => "$Blogger_TitleSeparator");
+		if (!(empty($pg) && empty($_POST['ptv_entrytitle'])))	$_POST['ptv_entryurl'] =
+			MakePageName($pagename, (empty($gr)?$Blogger_DefaultGroup:$gr).'.'.(empty($pg)?$_POST['ptv_entrytitle']:$pg));
 		$_POST['ptv_entrytitle'] = '(:title ' .(empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']) .':)';
+		$_POST['ptv_entrytype'] = $Blogger_PageType['blog'];  #Prevent spoofing.
+		$_POST['author'] = $_POST['ptv_entryauthor'];
+		$_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']); #Convert from user entered format to Unix format
 
 	}elseif ($_POST['target']==$Blogger_CommentForm && $Blogger_CommentsEnabled=='true'){
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
+		$_POST['ptv_entrytype'] = $Blogger_PageType_Comment;
 		$_POST['author'] = $_POST['ptv_author'];
 		$_POST['ptv_commentapproved'] = 'false';
 		$_POST['ptv_commentdate'] = ${Now};
@@ -327,10 +340,10 @@ function blogger_setFmtPVA ($a){
 			$GLOBALS['FmtPV'][$var .'_' .strtoupper($k)] = "'" .$v ."'";
 }
 function blogger_addPageStore ($n='wikilib.d'){
-	$GLOBALS['PageStorePath'] = dirname(__FILE__) .'/' .$n ."/{\$FullName}";
+	$PageStorePath = dirname(__FILE__) ."/$n/{\$FullName}";
 	$where = count($GLOBALS['WikiLibDirs']);
 	if ($where>1) $where--;
-	array_splice($GLOBALS['WikiLibDirs'], $where, 0, array(new PageStore($GLOBALS['PageStorePath'])));
+	array_splice($GLOBALS['WikiLibDirs'], $where, 0, array(new PageStore($PageStorePath)));
 }
 function blogger_debugLog ($msg, $out=false){
 	if ($out || (!$out && $GLOBALS['blogger']['debug']) )
