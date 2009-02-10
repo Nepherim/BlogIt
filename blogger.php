@@ -36,6 +36,7 @@ SDVA($Blogger_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'
 SDVA($Blogger_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 #INTERNAL USE ONLY
 SDV($Blogger_CoreTemplate, $SiteGroup .'.Blogger-CoreTemplate');
+SDV($Blogger_Admin, $SiteGroup .'.Blogger-Admin');
 SDV($Blogger_TemplateList, (isset($Skin)?$SiteGroup.'.Blogger-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.Blogger-CoreTemplate');
 SDV($Blogger_NewEntry, $SiteGroup .'/Blogger-NewEntry');
 SDVA($Blogger_PageType, array('blog'=>'blog'));
@@ -49,13 +50,12 @@ SDV($FPLTemplatePageFmt, array(
 	'{$FullName}', '{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'
 ));
 
-
 # ----------------------------------------
 # - Usable on Wiki Pages
 # ----------------------------------------
-blogger_setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_CommentGroup','Blogger_CommentsEnabled','Blogger_CategoryGroup',
-	'Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_CoreTemplate','Blogger_NewEntry','Blogger_BlogForm',
-	'Blogger_CommentForm', 'EnablePostCaptchaRequired', 'Blogger_EntriesPerPage'));
+blogger_setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_BlogGroups','Blogger_CommentGroup','Blogger_CommentsEnabled',
+	'Blogger_CategoryGroup','Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_CoreTemplate','Blogger_NewEntry','Blogger_BlogForm',
+	'Blogger_CommentForm', 'EnablePostCaptchaRequired', 'Blogger_EntriesPerPage','Blogger_Admin'));
 blogger_setFmtPVA(array('$Blogger_StatusType'=>$Blogger_StatusType, '$Blogger_CommentType'=>$Blogger_CommentType,
 	'$Blogger_BlogList'=>$Blogger_BlogList, '$Blogger_PageType'=>$Blogger_PageType));
 
@@ -68,8 +68,8 @@ $Group = PageVar($pagename, '$Group');
 $oldBrowse=$HandleActions['browse'];  #Store old browse action so we can perform actions prior.
 $FmtPV['$Blogger_PageNext'] = (isset($_GET['page']) ? $_GET['page']+1 : 2);
 $FmtPV['$Blogger_PagePrev'] = (isset($_GET['page']) && ($_GET['page']>0) ? $_GET['page']-1 : 0);
-$FmtPV['$Blogger_EntryStart'] = (($FmtPV['$Blogger_PageNext']-2) * $Blogger_EntriesPerPage) + 1;
-$FmtPV['$Blogger_EntryEnd']   = $FmtPV['$Blogger_EntryStart'] + $Blogger_EntriesPerPage - 1;
+$FmtPV['$Blogger_EntryStart'] = (($FmtPV['$Blogger_PageNext']-2) * (isset($_GET['count']) ?$_GET['count'] :$Blogger_EntriesPerPage)) + 1;
+$FmtPV['$Blogger_EntryEnd']   = $FmtPV['$Blogger_EntryStart'] + (isset($_GET['count']) ?$_GET['count'] :$Blogger_EntriesPerPage) - 1;
 
 # ----------------------------------------
 # - PmWiki Config
@@ -78,7 +78,7 @@ $FmtPV['$Blogger_EntryEnd']   = $FmtPV['$Blogger_EntryStart'] + $Blogger_Entries
 $HandleAuth['source'] = $HandleAuth['diff'] = 'edit';
 include_once($FarmD.'/cookbook/pmform.php');
 blogger_addPageStore();
-if ($Blogger_SkinTemplate == $SiteGroup .'/Blogger-SkinTemplate-Pmwiki')
+if ($Blogger_SkinTemplate == $SiteGroup .'/Blogger-SkinTemplate-pmwiki')
 	$HTMLStylesFmt['blogger'] = 'h2 .blogger-edit-link a {font-size: 50%;}';
 
 # ----------------------------------------
@@ -108,10 +108,9 @@ $PmForm[$Blogger_CommentForm] = 'saveto="' .$Blogger_CommentGroup .'/{$Group}-{$
 # ----------------------------------------
 # - Handle Actions
 $HandleActions['browse']='blogger_HandleBrowse';
-SDV($HandleActions['bloggerapprove'], 'blogger_ApproveComment');
-SDV($HandleAuth['bloggerapprove'], 'admin');
-SDV($HandleActions['bloggerconvert'], 'blogger_ConvertPage');
-SDV($HandleAuth['bloggerconvert'], 'admin');
+SDV($HandleActions['bloggerapprove'], 'blogger_ApproveComment'); SDV($HandleAuth['bloggerapprove'], 'admin');
+SDV($HandleActions['bloggerconvert'], 'blogger_ConvertPage'); SDV($HandleAuth['bloggerconvert'], 'admin');
+#SDV($HandleActions['bloggeradmin'], 'blogger_Admin'); SDV($HandleAuth['bloggeradmin'], 'admin');
 
 # ----------------------------------------
 # - Markup
@@ -132,27 +131,32 @@ $Conditions['blogger_isemail'] =	'blogger_IsEmail($condparm)';
 
 # ----------------------------------------
 # - Markup Expressions
-# Returns: [3] [if="]equal {=$:1} 2["] -- only if 2 is not empty; if 2 is empty returns ''. Parameters: 0:[if/noif] 1:variable 2:value 3:[&&,||]
-$MarkupExpr['bloggerIfVar'] = '(!preg_match("/\{.*?\}/",$args[2]) ?(!empty($args[3])?$args[3]." ":"") .($args[0]=="if"?"if=\"":"") ."equal {=\$:$args[1]} $args[2]" .($args[0]=="if"?"\"":"") : "")';
 $MarkupExpr['bloggerStripTags'] = 'implode($GLOBALS["Blogger_TagSeparator"],blogger_StripTags($args[0]))';
 $MarkupExpr['bloggerStripMarkup'] = '(preg_match("/\(:".$args[0]."\s(.*?):\)/i", $args[1],$m)!==false ? $m[1] : $args[1])';
-# if 0 != null then returns ([2] or 0 if 2 is empty); if 0 is null then returns 1.
-$MarkupExpr['ifnull'] = '(!empty($args[0]) ?(empty($args[2])?$args[0] :$args[2]) :$args[1])';
-$MarkupExpr['bloggerBlogGroups'] = (empty($GLOBALS['Blogger_BlogGroups']) ? '""' : '"group=\"' .$GLOBALS['Blogger_BlogGroups'] .'\""');
-$MarkupExpr['bloggerBasePage'] = 'blogger_BasePage($args[0])';
-$MarkupExpr['lt'] = '($args[0]<$args[1]?"true":"false")';
+# if 0 is null or {$$... then returns 1; if 0 != null then returns ([2] or 0 if 2 is null)
+$MarkupExpr['b_ifnull'] = '( (!empty($args[0]) && substr($args[0],0,3)!=\'{$$\') ?((empty($args[2]) || substr($args[2],0,3)==\'{$$\') ?$args[0] :$args[2]) :$args[1])';
+# b_param "group" "group_val"   Returns: group="group_val" is group_val != "" else returns ""   0:param name; 1:value
+$MarkupExpr['b_param'] = '( (empty($args[1]) || substr($args[1],0,3)==\'{$$\') ?"" :"$args[0]=\"$args[1]\"")';
+# b_cond "!equal" "{$var}" "val" "&&"   Returns: [3] 0 1 2  if 2 != ""; returns "" if "val"="" or substr(1 or 2)="{$$"  Sample Output: && !equal "{$var}" "val"
+$MarkupExpr['b_cond'] = '( (empty($args[2]) || substr($args[2],0,3)==\'{$$\' || substr($args[1],0,3)==\'{$$\') '
+	.'?"" : "$args[0] \"$args[1]\" " .($args[0]=="date" ?"" :"\"") .$args[2] .($args[0]=="date" ?"" :"\"") .$args[3])';
+$MarkupExpr['b_base'] = 'blogger_BasePage($args[0])';
+$MarkupExpr['b_lt'] = '($args[0]<$args[1]?"true":"false")';
+$MarkupExpr['b_url'] = 'blogger_URL($args)';
 
 # ----------------------------------------
 # - Main Processing
 # ----------------------------------------
 $entryType = PageVar($pagename,'$:entrytype');
 blogger_debugLog('entryType: '.$entryType. '   action: '.$action. '    Target: '.$_POST['target']);
-
-if ($pagename=='Site.Blogger-ControlPanel'){
-	$GroupHeaderFmt = '(:includesection "#control-panel":)';
-
+# TODO: Ensure only admin/edit users can perform the actions below
+# Allow URL access to sections within $Blogger_TemplateList, including passed parameters.
+if ($action && $action=='bloggeradmin' && isset($_GET['s'])){
+	$args = blogger_Implode($_GET, $p=' ', $s='=', array('n'=>'','action'=>'','s'=>''));
+	$GroupHeaderFmt = '(:title '.$_GET['s'].':)(:includesection "#'.$_GET['s']." $args \":)";
 # Blog entry being posted from PmForm (new or existing)
 }elseif ($action && $action=='pmform'){  #Performed before PmForm action handler.
+	$blogger_ResetPmFormField = array();
 	if ($_POST['target']==$Blogger_BlogForm){
 		if ($Blogger_EnablePostDirectives == true)
 			$PmFormPostPatterns = array();  #Null out the PostPatterns means that directive markup doesn't get replaced.
@@ -167,10 +171,8 @@ if ($pagename=='Site.Blogger-ControlPanel'){
 
 		$MakePageNamePatterns = array(
 			"/'/" => '',
-#			"/[^$PageNameChars]+/" => '-',
-			"/[^-[:alnum:]]+/" => '-',
-#			'/(.*)/e' => "strtolower('$1')",
-			'/((^|[^-\\w])\\w)/e' => "strtoupper('$1')",
+			"/[^-[:alnum:]]+/" => '-',	 #"/[^$PageNameChars]+/" => '-',
+			'/((^|[^-\\w])\\w)/e' => "strtoupper('$1')",  #'/(.*)/e' => "strtolower('$1')",
 			"/\\s+/" => "$Blogger_TitleSeparator",
 			'/--/' => "$Blogger_TitleSeparator");
 		if (!(empty($pg) && empty($_POST['ptv_entrytitle'])))	$_POST['ptv_entryurl'] =
@@ -178,14 +180,16 @@ if ($pagename=='Site.Blogger-ControlPanel'){
 		$_POST['ptv_entrytitle'] = '(:title ' .(empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']) .':)';
 		$_POST['ptv_entrytype'] = $Blogger_PageType['blog'];  #Prevent spoofing.
 		$_POST['author'] = $_POST['ptv_entryauthor'];
-		$_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']); #Convert from user entered format to Unix format
+		# If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
+		if (blogger_IsDate($_POST['ptv_entrydate'])) $_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']);
+		else $blogger_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];
 
 	}elseif ($_POST['target']==$Blogger_CommentForm && $Blogger_CommentsEnabled=='true'){
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
 		$_POST['ptv_entrytype'] = $Blogger_PageType_Comment;
 		$_POST['author'] = $_POST['ptv_author'];
 		$_POST['ptv_commentapproved'] = 'false';
-		$_POST['ptv_commentdate'] = ${Now};
+		$_POST['ptv_commentdate'] = $Now;  #${Now}
 	}
 }else
 	blogger_AddMarkup();
@@ -206,8 +210,14 @@ if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
 # If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling
 # in Main Processing, as markup (tags) isn't processed if markup is defined.
 function blogger_HandleBrowse($pagename){
-	blogger_AddMarkup();
+	if (isset($GLOBALS['blogger_ResetPmFormField'])){
+		foreach ($GLOBALS['blogger_ResetPmFormField']  as $k => $v) {
+			$_POST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
+			$GLOBALS['FmtPV']['$Blogger_Error_'.$k]='"'.$v.'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
+		}
+	}
 	$GLOBALS['HandleActions']['browse']=$GLOBALS['oldBrowse'];
+	blogger_AddMarkup();
 	HandleDispatch($pagename, 'browse');
 }
 function blogger_ApproveComment($src, $auth='admin') {
@@ -220,7 +230,8 @@ function blogger_ApproveComment($src, $auth='admin') {
 		$new['text'] = preg_replace('/\(:commentapproved:(false):\)/', '(:commentapproved:true:)',$new['text']);
 		PostPage($ap,$old,$new);	#Don't need UpdatePage, as we don't require edit functions to run
 	}
-	Redirect($src);
+	$referer = explode('?',$GLOBALS['_SERVER']['HTTP_REFERER']);
+	Redirect($src.'?'.(isset($referer[count($referer)-1]) ?$referer[count($referer)-1] :$referer[count($referer)]));  #$src
 }
 function blogger_ConvertPage($src, $auth='admin') {
 	$blogid = (isset($GLOBALS['_GET']['blogid']) ? $GLOBALS['_GET']['blogid'] : $GLOBALS['Blogger_BlogList']['blog1']);
@@ -238,7 +249,14 @@ function blogger_ConvertPage($src, $auth='admin') {
 	}
 	Redirect($src);
 }
-
+/*
+function blogger_Admin($src, $auth='admin') {
+	blogger_DebugLog('s:'.$GLOBALS['_GET']['s']);
+	if (isset($GLOBALS['_GET']['s']))
+		$GLOBALS['GroupHeaderFmt'] = '(:includesection "#'.$GLOBALS['$_GET']['s'].'":)';
+	HandleDispatch($src, 'browse');
+}
+*/
 # ----------------------------------------
 # - Markup Functions
 # ----------------------------------------
@@ -285,7 +303,15 @@ function blogger_IsPage($pn){
 	return PageExists($mp);
 }
 function blogger_IsDate($d){
-	return true;
+	if (!preg_match('![-/\.]!',$d)) $d=strftime($GLOBALS['Blogger_DateEntryFormat'],$d);  #Convert Unix timestamp to EntryFormat
+	list($d,$t)=split(' ',$d,2);  #Split data from time
+	if (preg_match('!^(0?[1-9]|[12][0-9]|3[01])[-/\.]((0?[1-9])|1[012])[-/\.](19\d\d|20\d\d)$!',$d,$m))
+		if (($m[1] == 31 && ($m[2] == 4 || $m[2] == 6 || $m[2] == 9 || $m[2] == 11))  # 31st of a month with 30 days
+			|| ($m[1] >= 30 && $m[2] == 2)  # February 30th || 31st
+			|| ($m[2] == 2 && $m[1] == 29 && !($m[3] % 4 == 0 && ($m[3] % 100 != 0 || $m[3] % 400 == 0)))  # February 29th outside a leap year
+		) return false;
+		else return true; # Valid date
+	else return false; # Not a date
 }
 function blogger_IsEmail($e){
 	return (bool)preg_match(
@@ -299,10 +325,19 @@ function blogger_IsEmail($e){
 function blogger_BasePage($pn){
 	return preg_replace('/^' .$GLOBALS['Blogger_CommentGroup'] .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/','${1}/${2}',$pn);
 }
+# 0:fullname 1:param 2:val
+function blogger_URL($args){
+	$GLOBALS['_GET'][$args[1]]=$args[2];
+	return $args[0].'?'.blogger_Implode($GLOBALS['_GET']);
+}
 
 # ----------------------------------------
 # - Internal Functions
 # ----------------------------------------
+function blogger_Implode($a, $p='&', $s='=', $ignore=array('n'=>'')){
+	foreach($a as $k => $v) if(!isset($ignore[$k])!==false) $o .= $p.$k.$s.$v;
+	return substr($o,1);
+}
 function blogger_AddMarkup(){
 	Markup('textvar::', '<split', '/\(::\w[-\w]*:(?!\)).*?::\)/s', '');  # Prevent (::...:...:) markup from being displayed.
 }
