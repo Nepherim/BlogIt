@@ -132,6 +132,7 @@ $Conditions['blogger_isemail'] =	'blogger_IsEmail($condparm)';
 # ----------------------------------------
 # - Markup Expressions
 $MarkupExpr['bloggerStripTags'] = 'implode($GLOBALS["Blogger_TagSeparator"],blogger_StripTags($args[0]))';
+
 $MarkupExpr['bloggerStripMarkup'] = '(preg_match("/\(:".$args[0]."\s(.*?):\)/i", $args[1],$m)!==false ? $m[1] : $args[1])';
 # if 0 is null or {$$... then returns 1; if 0 != null then returns ([2] or 0 if 2 is null)
 $MarkupExpr['b_ifnull'] = '( (!empty($args[0]) && substr($args[0],0,3)!=\'{$$\') ?((empty($args[2]) || substr($args[2],0,3)==\'{$$\') ?$args[0] :$args[2]) :$args[1])';
@@ -165,19 +166,20 @@ if ($action && $action=='bloggeradmin' && isset($_GET['s'])){
 		$ROSPatterns['/\(:(entrytags|entrytitle):(.*?(:\))?):\)/si'] = '(::$1:$2::)';	#This field contains (:TITLE:), so need to find .*?:)
 		blogger_SaveTags();
 
-		# url will be inherited from title, and will include a group from the url or the default group. If title is blank it is derived from url.
-		if (!strpos($_POST['ptv_entryurl'], '.')) $pg = $_POST['ptv_entryurl'];
-		else list($gr, $pg) = split('\.',$_POST['ptv_entryurl'],2);
-
+		# Determine page name from title, replacing ' ' with '-' for seo.
 		$MakePageNamePatterns = array(
 			"/'/" => '',
 			"/[^-[:alnum:]]+/" => '-',	 #"/[^$PageNameChars]+/" => '-',
 			'/((^|[^-\\w])\\w)/e' => "strtoupper('$1')",  #'/(.*)/e' => "strtolower('$1')",
 			"/\\s+/" => "$Blogger_TitleSeparator",
 			'/--/' => "$Blogger_TitleSeparator");
+		# url will be inherited from title, and will include a group from the url or the default group. If title is blank it is derived from url.
+		if (!strpos($_POST['ptv_entryurl'], '.')) $pg = $_POST['ptv_entryurl'];
+		else list($gr, $pg) = split('\.',$_POST['ptv_entryurl'],2);
 		if (!(empty($pg) && empty($_POST['ptv_entrytitle'])))	$_POST['ptv_entryurl'] =
 			MakePageName($pagename, (empty($gr)?$Blogger_DefaultGroup:$gr).'.'.(empty($pg)?$_POST['ptv_entrytitle']:$pg));
 		$_POST['ptv_entrytitle'] = '(:title ' .(empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']) .':)';
+
 		$_POST['ptv_entrytype'] = $Blogger_PageType['blog'];  #Prevent spoofing.
 		$_POST['author'] = $_POST['ptv_entryauthor'];
 		# If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
