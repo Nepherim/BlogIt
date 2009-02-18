@@ -22,18 +22,22 @@ SDV($Blogger_CommentGroup, 'Comments');
 SDV($Blogger_CommentsEnabled, 'true');
 SDV($Blogger_BlogGroups, $Blogger_DefaultGroup);	#OPTIONAL: Comma separated list of Blog groups. This is purely to speed up pagelists. Defining this list does not mean all pages in the group are 'blog-pages'.
 SDV($Blogger_CategoryGroup, 'Tags');
+SDV($Blogger_AuthorGroup, 'Profiles'); #$AuthorGroup
 SDV($Blogger_BodyBreak, '[[#break]]');
 SDV($Blogger_TagSeparator, ', ');
 SDV($Blogger_TitleSeparator, '-');
 SDV($Blogger_EnablePostDirectives, true); #Set to true to allow posting of directives of form (: :) in blog entries.
 SDV($Blogger_EntriesPerPage, 15);
-SDV($Blogger_AuthorGroup, $AuthorGroup); #Defaults to 'Profiles'
+SDV($Blogger_LinkToCommentSite, 'true');
 SDV($Blogger_ReadMore, '%readmore%[[{$FullName}#break | Read more...]]');
 SDV($Blogger_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($Blogger_DateDisplayFormat, $TimeFmt);
+SDV($Blogger_DateISOFormat, '%Y%m%d');
+SDV($Blogger_NowISOFormat, strftime($Blogger_DateISOFormat, $Now));
 SDVA($Blogger_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
 SDVA($Blogger_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
 SDVA($Blogger_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
+
 #INTERNAL USE ONLY
 SDV($Blogger_CoreTemplate, $SiteGroup .'.Blogger-CoreTemplate');
 SDV($Blogger_Admin, $SiteGroup .'.Blogger-Admin');
@@ -43,21 +47,21 @@ SDVA($Blogger_PageType, array('blog'=>'blog'));
 SDV($Blogger_PageType_Comment, 'comment');  #Not in PageType list, since we don't want bloggers to be able to select 'comment' types.
 if (CondAuth($pagename,'edit') || CondAuth($pagename,'admin'))	$EnablePostCaptchaRequired = 0;
 
-#$FPLTemplatePageFmt[]='xyz';
 SDV($FPLTemplatePageFmt, array(
-	(isset($Skin)?$SiteGroup.'.Blogger-SkinTemplate-'.$Skin : ''),
-	$SiteGroup .'.Blogger-CoreTemplate',
+	$Blogger_TemplateList,
 	'{$FullName}', '{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'
 ));
 
 # ----------------------------------------
 # - Usable on Wiki Pages
 # ----------------------------------------
-blogger_setFmtPV(array('Now','Blogger_AuthorGroup','Blogger_DefaultGroup','Blogger_BlogGroups','Blogger_CommentGroup','Blogger_CommentsEnabled',
-	'Blogger_CategoryGroup','Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_CoreTemplate','Blogger_NewEntry','Blogger_BlogForm',
-	'Blogger_CommentForm', 'EnablePostCaptchaRequired', 'Blogger_EntriesPerPage','Blogger_Admin'));
+blogger_setFmtPV(array('Now','Blogger_NowISOFormat', 'Blogger_DefaultGroup','Blogger_BlogGroups','Blogger_CommentGroup','Blogger_AuthorGroup',
+	'Blogger_CommentsEnabled','Blogger_CategoryGroup','Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_CoreTemplate','Blogger_NewEntry',
+	'Blogger_BlogForm','Blogger_CommentForm', 'EnablePostCaptchaRequired', 'Blogger_EntriesPerPage','Blogger_Admin','Blogger_LinkToCommentSite'
+));
 blogger_setFmtPVA(array('$Blogger_StatusType'=>$Blogger_StatusType, '$Blogger_CommentType'=>$Blogger_CommentType,
-	'$Blogger_BlogList'=>$Blogger_BlogList, '$Blogger_PageType'=>$Blogger_PageType));
+	'$Blogger_BlogList'=>$Blogger_BlogList, '$Blogger_PageType'=>$Blogger_PageType
+));
 
 # ----------------------------------------
 # - Internal
@@ -109,7 +113,6 @@ $PmForm[$Blogger_CommentForm] = 'saveto="' .$Blogger_CommentGroup .'/{$Group}-{$
 # - Handle Actions
 $HandleActions['browse']='blogger_HandleBrowse';
 SDV($HandleActions['bloggerapprove'], 'blogger_ApproveComment'); SDV($HandleAuth['bloggerapprove'], 'admin');
-SDV($HandleActions['bloggerconvert'], 'blogger_ConvertPage'); SDV($HandleAuth['bloggerconvert'], 'admin');
 #SDV($HandleActions['bloggeradmin'], 'blogger_Admin'); SDV($HandleAuth['bloggeradmin'], 'admin');
 
 # ----------------------------------------
@@ -121,18 +124,18 @@ Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(blogger_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['Blogger_TemplateList'])))");
 Markup('{earlymx(', '>{$var}', '/\{earlymx(\(\w+\b.*?\))\}/e',
 	"MarkupExpression(\$pagename, PSS('$1'))");
-if (empty($MarkupTable['e_guibuttons'])) Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');
+# Prevent (:e_guibottons:) markup appearing if it's not defined.
+if (!$EnableGUIButtons) Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');
 
 # ----------------------------------------
 # - Conditions
 $Conditions['blogger_ispage'] = 'blogger_IsPage($condparm)';
 $Conditions['blogger_isdate'] = 'blogger_IsDate($condparm)';
-$Conditions['blogger_isemail'] =	'blogger_IsEmail($condparm)';
+$Conditions['blogger_isemail'] = 'blogger_IsEmail($condparm)';
 
 # ----------------------------------------
 # - Markup Expressions
 $MarkupExpr['bloggerStripTags'] = 'implode($GLOBALS["Blogger_TagSeparator"],blogger_StripTags($args[0]))';
-
 $MarkupExpr['bloggerStripMarkup'] = '(preg_match("/\(:".$args[0]."\s(.*?):\)/i", $args[1],$m)!==false ? $m[1] : $args[1])';
 # if 0 is null or {$$... then returns 1; if 0 != null then returns ([2] or 0 if 2 is null)
 $MarkupExpr['b_ifnull'] = '( (!empty($args[0]) && substr($args[0],0,3)!=\'{$$\') ?((empty($args[2]) || substr($args[2],0,3)==\'{$$\') ?$args[0] :$args[2]) :$args[1])';
@@ -181,17 +184,16 @@ if ($action && $action=='bloggeradmin' && isset($_GET['s'])){
 		$_POST['ptv_entrytitle'] = '(:title ' .(empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']) .':)';
 
 		$_POST['ptv_entrytype'] = $Blogger_PageType['blog'];  #Prevent spoofing.
-		$_POST['author'] = $_POST['ptv_entryauthor'];
 		# If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
 		if (blogger_IsDate($_POST['ptv_entrydate'])) $_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']);
-		else $blogger_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];
+		else $blogger_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
 
 	}elseif ($_POST['target']==$Blogger_CommentForm && $Blogger_CommentsEnabled=='true'){
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
+		$_POST['ptv_website'] = (substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
 		$_POST['ptv_entrytype'] = $Blogger_PageType_Comment;
-		$_POST['author'] = $_POST['ptv_author'];
 		$_POST['ptv_commentapproved'] = 'false';
-		$_POST['ptv_commentdate'] = $Now;  #${Now}
+		$_POST['ptv_commentdate'] = $Now;
 	}
 }else
 	blogger_AddMarkup();
@@ -203,7 +205,7 @@ if ($entryType && $entryType == trim($FmtPV['$Blogger_PageType_BLOG'],'\'')){
 		$GroupHeaderFmt = '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	}
 } elseif ($Group == $Blogger_CommentGroup && $action=='browse' && CondAuth($pagename, 'admin')){  #After editing/deleting a comment page
-	Redirect(blogger_BasePage($pagename));
+	blogger_Redirect($pagename);
 }
 
 # ----------------------------------------
@@ -232,24 +234,22 @@ function blogger_ApproveComment($src, $auth='admin') {
 		$new['text'] = preg_replace('/\(:commentapproved:(false):\)/', '(:commentapproved:true:)',$new['text']);
 		PostPage($ap,$old,$new);	#Don't need UpdatePage, as we don't require edit functions to run
 	}
-	$referer = explode('?',$GLOBALS['_SERVER']['HTTP_REFERER']);
-	Redirect($src.'?'.(isset($referer[count($referer)-1]) ?$referer[count($referer)-1] :$referer[count($referer)]));  #$src
+	blogger_Redirect();
 }
-function blogger_ConvertPage($src, $auth='admin') {
-	$blogid = (isset($GLOBALS['_GET']['blogid']) ? $GLOBALS['_GET']['blogid'] : $GLOBALS['Blogger_BlogList']['blog1']);
-	$old = RetrieveAuthPage($src,$auth,0, READPAGE_CURRENT);
-	if($old){
-		$new = $old;
-		$new['csum'] = $new['csum:' .$GLOBALS['Now'] ] = $GLOBALS['ChangeSummary'] = 'Convert to Blogger format';
-		$_POST['diffclass']='minor';
-		$new['text'] = "(:blogid:" .$blogid .":)\n(:entrytype:" .$GLOBALS['Blogger_PageType']['blog'] .":)\n"
-			."(:entrydate::)\n(::entrytitle:" .(empty($old['title'])?'':'(:title '.$old['title'].':)') ."::)\n"
-			."(:entrystatus:" .$GLOBALS['Blogger_StatusType']['draft'] .":)\n"
-			."(:entrycomments:" .$GLOBALS['Blogger_CommentType']['open'] .":)\n(::entrytags:::)\n"
-			."(::entrybody:" .$old['text'] ."::)";
-		PostPage($src,$old,$new);	#Don't need UpdatePage, as we don't require edit functions to run
+# http://localhost:4000/pmwiki.php?n=http://localhost:4000/pmwiki.php?n=Site.Blogger-Admin?action=bloggeradmin&s=unapproved-comments&blogid=blog1
+function blogger_Redirect($src){
+# Direct back to the refering page or $src
+	if ($src || empty($GLOBALS['_SERVER']['HTTP_REFERER']))
+		Redirect(blogger_BasePage($src));
+	else {
+		$r=$GLOBALS['_SERVER']['HTTP_REFERER'];
+		header("Location: $r");
+		header("Content-type: text/html");
+		echo "<html><head>
+		<meta http-equiv='Refresh' Content='URL=$r' />
+		<title>Redirect</title></head><body></body></html>";
 	}
-	Redirect($src);
+	exit;
 }
 /*
 function blogger_Admin($src, $auth='admin') {
