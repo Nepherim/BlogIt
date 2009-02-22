@@ -15,10 +15,16 @@ function blogger_ConvertPage($src, $auth='admin') {
 		$new = $old;
 		$new['csum'] = $new['csum:' .$GLOBALS['Now'] ] = $GLOBALS['ChangeSummary'] = 'Convert to Blogger format';
 		$_POST['diffclass']='minor';
-		$new['text'] = "(:blogid:" .$blogid .":)\n(:entrytype:" .$GLOBALS['Blogger_PageType']['blog'] .":)\n"
-			."(:entrydate::)\n(::entrytitle:" .(empty($old['title'])?'':'(:title '.$old['title'].':)') ."::)\n"
+		$new['text'] =
+			"(::pmmarkup:" .(empty($old['title'])?'':'(:title '.$old['title'].':)') ."::)\n"
+			."(:blogid:" .$blogid .":)\n"
+			."(:entrytype:" .$GLOBALS['Blogger_PageType']['blog'] .":)\n"
+			."(:entrydate::)\n"
+			."(:entryauthor::)\n"
+			."(:entrytitle:" .$old['title'] .":)\n"
 			."(:entrystatus:" .$GLOBALS['Blogger_StatusType']['draft'] .":)\n"
-			."(:entrycomments:" .$GLOBALS['Blogger_CommentType']['open'] .":)\n(::entrytags:::)\n"
+			."(:entrycomments:" .$GLOBALS['Blogger_CommentType']['open'] .":)\n"
+			."(:entrytags::)\n"
 			."(::entrybody:" .$old['text'] ."::)";
 		PostPage($src,$old,$new);	#Don't need UpdatePage, as we don't require edit functions to run
 	}

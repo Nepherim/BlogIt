@@ -48,7 +48,7 @@ SDV($Blogger_PageType_Comment, 'comment');  #Not in PageType list, since we don'
 if (CondAuth($pagename,'edit') || CondAuth($pagename,'admin'))	$EnablePostCaptchaRequired = 0;
 
 SDV($FPLTemplatePageFmt, array(
-	$Blogger_TemplateList,
+	(isset($Skin)?$SiteGroup.'.Blogger-SkinTemplate-'.$Skin : ''), $SiteGroup .'.Blogger-CoreTemplate',
 	'{$FullName}', '{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'
 ));
 
@@ -118,13 +118,14 @@ SDV($HandleActions['bloggerapprove'], 'blogger_ApproveComment'); SDV($HandleAuth
 # ----------------------------------------
 # - Markup
 # (:blogger [more,intro,list,multiline] options:)text(:bloggerend:)
-Markup('blogger', 'fulltext', '/\(:blogger (more|intro|list|multiline|substr)\s?(.*?):\)(.*?)\(:bloggerend:\)/esi',
+Markup('blogger', 'fulltext', '/\(:blogger (more|intro|list|multiline|substr|tags)\s?(.*?):\)(.*?)\(:bloggerend:\)/esi',
 	"bloggerMU_$1(PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(blogger_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['Blogger_TemplateList'])))");
 Markup('{earlymx(', '>{$var}', '/\{earlymx(\(\w+\b.*?\))\}/e',
 	"MarkupExpression(\$pagename, PSS('$1'))");
-# Prevent (:e_guibottons:) markup appearing if it's not defined.
+
+# Prevent (:e_guibottons:) markup appearing if gui-buttons are not enabled.
 if (!$EnableGUIButtons) Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');
 
 # ----------------------------------------
@@ -135,8 +136,6 @@ $Conditions['blogger_isemail'] = 'blogger_IsEmail($condparm)';
 
 # ----------------------------------------
 # - Markup Expressions
-$MarkupExpr['bloggerStripTags'] = 'implode($GLOBALS["Blogger_TagSeparator"],blogger_StripTags($args[0]))';
-$MarkupExpr['bloggerStripMarkup'] = '(preg_match("/\(:".$args[0]."\s(.*?):\)/i", $args[1],$m)!==false ? $m[1] : $args[1])';
 # if 0 is null or {$$... then returns 1; if 0 != null then returns ([2] or 0 if 2 is null)
 $MarkupExpr['b_ifnull'] = '( (!empty($args[0]) && substr($args[0],0,3)!=\'{$$\') ?((empty($args[2]) || substr($args[2],0,3)==\'{$$\') ?$args[0] :$args[2]) :$args[1])';
 # b_param "group" "group_val"   Returns: group="group_val" is group_val != "" else returns ""   0:param name; 1:value
@@ -158,16 +157,20 @@ blogger_debugLog('entryType: '.$entryType. '   action: '.$action. '    Target: '
 if ($action && $action=='bloggeradmin' && isset($_GET['s'])){
 	$args = blogger_Implode($_GET, $p=' ', $s='=', array('n'=>'','action'=>'','s'=>''));
 	$GroupHeaderFmt = '(:title '.$_GET['s'].':)(:includesection "#'.$_GET['s']." $args \":)";
+
 # Blog entry being posted from PmForm (new or existing)
 }elseif ($action && $action=='pmform'){  #Performed before PmForm action handler.
 	$blogger_ResetPmFormField = array();
 	if ($_POST['target']==$Blogger_BlogForm){
-		if ($Blogger_EnablePostDirectives == true)
-			$PmFormPostPatterns = array();  #Null out the PostPatterns means that directive markup doesn't get replaced.
-		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body; entrybody MUST be the last variable.
-		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '(::entrybody:$1::)';
-		$ROSPatterns['/\(:(entrytags|entrytitle):(.*?(:\))?):\)/si'] = '(::$1:$2::)';	#This field contains (:TITLE:), so need to find .*?:)
-		blogger_SaveTags();
+		# Null out the PostPatterns so that directive markup doesn't get replaced.
+		if ($Blogger_EnablePostDirectives == true)  $PmFormPostPatterns = array();
+
+		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body
+		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '(::entrybody:$1::)';  #entrybody MUST be the last variable.
+		$ROSPatterns['/\(:pmmarkup:(.*?)(:\))/s'] = '(::pmmarkup:$1::)';	#This field contains [[!tags]]
+
+		$_POST['ptv_entrytype'] = $Blogger_PageType['blog'];  #Prevent spoofing.
+		$_POST['ptv_pmmarkup'] = blogger_SaveTags($_POST['ptv_entrytags'], $_POST['ptv_entrybody'], $Blogger_TagSeparator);
 
 		# Determine page name from title, replacing ' ' with '-' for seo.
 		$MakePageNamePatterns = array(
@@ -179,11 +182,10 @@ if ($action && $action=='bloggeradmin' && isset($_GET['s'])){
 		# url will be inherited from title, and will include a group from the url or the default group. If title is blank it is derived from url.
 		if (!strpos($_POST['ptv_entryurl'], '.')) $pg = $_POST['ptv_entryurl'];
 		else list($gr, $pg) = split('\.',$_POST['ptv_entryurl'],2);
-		if (!(empty($pg) && empty($_POST['ptv_entrytitle'])))	$_POST['ptv_entryurl'] =
-			MakePageName($pagename, (empty($gr)?$Blogger_DefaultGroup:$gr).'.'.(empty($pg)?$_POST['ptv_entrytitle']:$pg));
-		$_POST['ptv_entrytitle'] = '(:title ' .(empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']) .':)';
+		if (!(empty($pg) && empty($_POST['ptv_entrytitle'])))
+			$_POST['ptv_entryurl'] = MakePageName($pagename, (empty($gr)?$Blogger_DefaultGroup:$gr).'.'.(empty($pg)?$_POST['ptv_entrytitle']:$pg));
+		$_POST['title'] = (empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']);
 
-		$_POST['ptv_entrytype'] = $Blogger_PageType['blog'];  #Prevent spoofing.
 		# If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
 		if (blogger_IsDate($_POST['ptv_entrydate'])) $_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']);
 		else $blogger_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
@@ -217,7 +219,7 @@ function blogger_HandleBrowse($pagename){
 	if (isset($GLOBALS['blogger_ResetPmFormField'])){
 		foreach ($GLOBALS['blogger_ResetPmFormField']  as $k => $v) {
 			$_POST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
-			$GLOBALS['FmtPV']['$Blogger_Error_'.$k]='"'.$v.'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
+			$GLOBALS['FmtPV']['$Blogger_Default_'.$k]='"'.$v.'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
 		}
 	}
 	$GLOBALS['HandleActions']['browse']=$GLOBALS['oldBrowse'];
@@ -269,11 +271,11 @@ function bloggerMU_intro($options, $text){
 	list($found,$null) = explode($GLOBALS['Blogger_BodyBreak'], $text);
 	return $found;
 }
-function bloggerMU_list($options, $text){
+function bloggerMU_list($name, $text){
 	list($var, $label) = split('/', $text,2);
 	$i = count($GLOBALS[$var]);
 	foreach ($GLOBALS[$var] as $k => $v)
-		$t .= '(:input '. ($i==1?'hidden':'select') .' ' .$options .' "' .$k .'" "' .$v .'" id="' .$var .'":)';
+		$t .= '(:input '. ($i==1?'hidden':'select') .' name=' .$name .' value="' .$k .'" label="' .$v .'" id="' .$var .'":)';
 	return ($i==1?'':$label).$t;
 }
 function bloggerMU_multiline($options, $text){
@@ -284,6 +286,9 @@ function bloggerMU_substr($options, $text){
 	list($from, $len) = explode(' ',$options,2);
 	$m = min(strpos($text,"\n"),$len);
 	return substr($text,$from,empty($m)?$len:$m);
+}
+function bloggerMU_tags($options, $pmmarkup){
+	return $pmmarkup;  #currently no need to parse, since only tags are stored here.
 }
 function blogger_includeSection($pagename, $inclspec){
 	$args = ParseArgs($inclspec);
@@ -305,15 +310,17 @@ function blogger_IsPage($pn){
 	return PageExists($mp);
 }
 function blogger_IsDate($d){
-	if (!preg_match('![-/\.]!',$d)) $d=strftime($GLOBALS['Blogger_DateEntryFormat'],$d);  #Convert Unix timestamp to EntryFormat
-	list($d,$t)=split(' ',$d,2);  #Split data from time
-	if (preg_match('!^(0?[1-9]|[12][0-9]|3[01])[-/\.]((0?[1-9])|1[012])[-/\.](19\d\d|20\d\d)$!',$d,$m))
-		if (($m[1] == 31 && ($m[2] == 4 || $m[2] == 6 || $m[2] == 9 || $m[2] == 11))  # 31st of a month with 30 days
-			|| ($m[1] >= 30 && $m[2] == 2)  # February 30th || 31st
-			|| ($m[2] == 2 && $m[1] == 29 && !($m[3] % 4 == 0 && ($m[3] % 100 != 0 || $m[3] % 400 == 0)))  # February 29th outside a leap year
-		) return false;
-		else return true; # Valid date
-	else return false; # Not a date
+	$re_d='(0?[1-9]|[12][0-9]|3[01])'; $re_m='((0?[1-9])|1[012])'; $re_y='(19\d\d|20\d\d)'; $re_sep='[/\-\.]';
+	if (!preg_match('!' .$re_sep .'!',$d)) $d=strftime($GLOBALS['Blogger_DateEntryFormat'],$d);  #Convert Unix timestamp to EntryFormat
+	list($d,$t)=split(' ',$d,2);  #Split date from time
+	if (preg_match('!^' .$re_d .$re_sep .$re_m .$re_sep .$re_y.'$!',$d,$m)) {  #dd-mm-yyyy
+		$day = $m[1]; $month=$m[2]; $year=$m[3];
+	} elseif (preg_match('!^' .$re_y .$re_sep .$re_m .$re_sep .$re_d.'$!',$d,$m)) {  #yyyy-mm-dd
+		$day = $m[3]; $month=$m[2]; $year=$m[1];
+	} elseif (preg_match('!^' .$re_m .$re_sep .$re_d .$re_sep .$re_y.'$!',$d,$m)) {  #mm-dd-yyyy
+		$day = $m[3]; $month=$m[2]; $year=$m[1];
+	}
+	return (isset($day) && checkdate($month, $day, $year));
 }
 function blogger_IsEmail($e){
 	return (bool)preg_match(
@@ -344,23 +351,19 @@ function blogger_AddMarkup(){
 	Markup('textvar::', '<split', '/\(::\w[-\w]*:(?!\)).*?::\)/s', '');  # Prevent (::...:...:) markup from being displayed.
 }
 # Combines categories in body [[!...]] with separated tag list in tag-field.
-# Stores combined separated list in tag-field in PmWiki format [[!...]].
-function blogger_SaveTags() {
-	global $_POST,$Blogger_TagSeparator;
+# Stores combined list in tag-field in PmWiki format [[!...]][[!...]].
+function blogger_SaveTags($user_tags, $body, $sep) {
 	# Read tags from body, strip [[!...]]
-	$bodyTags = blogger_StripTags($_POST['ptv_entrybody']);
+	$bodyTags = (preg_match_all('/\[\[\!(.*?)\]\]/', $body, $match) ? $match[1] : array());  #array of tags contained in [[!...]] markup.
+
 	# Make sure tag-field entries are in standard separated format, and place in array
-	if ($_POST['ptv_entrytags'])
-		$fieldTags = explode($Blogger_TagSeparator, preg_replace('/'.trim($Blogger_TagSeparator).'\s*/', $Blogger_TagSeparator, $_POST['ptv_entrytags']));
+	if ($user_tags)  $fieldTags = explode($sep, preg_replace('/'.trim($sep).'\s*/', $sep, $user_tags));
+
 	# Concatenate the tag-field tags, with those in the body,
 	$allTags = array_unique(array_merge((array)$fieldTags, (array)$bodyTags));
 	sort($allTags);
 	#  generate a new separated string.
-	$_POST['ptv_entrytags'] = ($allTags?'[[!'.implode(']]'.$Blogger_TagSeparator.'[[!', $allTags).']]':'');
-}
-# Returns an array of tags contained in [[!...]] markup within $src string.
-function blogger_StripTags($src){
-	return (preg_match_all('/\[\[\!(.*?)\]\]/', $src, $match) ? $match[1] : array());
+	return ($allTags?'[[!'.implode(']]'.$sep.'[[!', $allTags).']]':'');
 }
 
 # ----------------------------------------
