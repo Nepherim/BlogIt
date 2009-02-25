@@ -1,49 +1,12 @@
 version=pmwiki-2.2.0 ordered=1 urlencoded=1
 agent=Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4
-author=DG3
+author=daveg
 charset=ISO-8859-1
 csum=
 ctime=1231901689
 host=127.0.0.1
 name=Site.SideBar
-rev=40
-targets=Site.Blogger-Admin,Site.Blogger-NewEntry,Site.BlogList,Blog.BlogEntry-10,Blog.BlogEntry-3,Blog.Test-Pmwiki-markups,Blog.Kkkkkkk,Blog.Jquery-browser-chess,Blog.Lightweight-php-picasa-api,Blog.This-message-has-been-rejected,Blog.Puretext,Blog.Test-Auto-Entry,Blog.Test-Convert,Blog.Tester1,Tags.9789,Tags.A,Tags.Aaa,Tags.ABC,Tags.Abcd,Tags.AndAntoher,Tags.AndMore,Tags.ATag,Tags.B,Tags.Bbb,Tags.Blob,Tags.Blog,Tags.Break,Tags.C,Tags.Cdsd,Tags.D,Tags.Development,Tags.Drupal,Tags.E,Tags.Efg,Tags.EvenMore,Tags.FaSdfasasfs,Tags.Fdsdf,Tags.Ferfe,Tags.Freeware,Tags.How-to,Tags.Inside,Tags.Jksd,Tags.Jquery,Tags.Lyceum,Tags.More,Tags.Netflix,Tags.OneMoreHere,Tags.OneTag,Tags.Outside,Tags.Photography,Tags.Php,Tags.Picasa,Tags.Pmwiki,Tags.Quiddity,Tags.Review,Tags.Science,Tags.Soapbox,Tags.Software,Tags.Sssss,Tags.Tags,Tags.Test,Tags.Test2,Tags.ThisIsOne,Tags.Tips,Tags.Unphotographed,Tags.YetAndMore,Site.SideBar
-text=(:if [ auth admin || auth edit ] :)%0a%25sidehead%25 Site Admin%25%25%0a(:div class="list-admin":)%0a(:includesection "#control-panel":)%0a(:divend:)%0a(:ifend:)%0a%0a%25sidehead%25 [[Site.BlogList | Recently Written]]%25%25%0a(:includesection "#blog-summary-list-pagelist blogid=blog1 count=8 status={$Blogger_StatusType_PUBLISH}":)%0a%0a%25sidehead%25 Recent Comments%25%25%0a(:div class="list-comments":)%0a(:includesection "#comment-summary-list-pagelist blogid=blog1 count=8":)%0a(:divend:)%0a%0a%25sidehead%25 Categories%25%25%0a(:div class="list-cat":)%0a(:includesection "#tag-list-pagelist count=8":)%0a(:divend:)%0a%0a(:if [ !auth edit && !auth admin ] :)%0a(:div class="list-admin":)%0a* [[{*$FullName}?action=login | login]]%0a(:divend:)%0a(:ifend:)%0a
-time=1234150540
-author:1234150540=DG3
-diff:1234150540:1234146460:=4a5%0a> * [[{*$FullName}?action=logout | logout]]%0a
-host:1234150540=127.0.0.1
-author:1234146460=DG3
-diff:1234146460:1234146148:=4c4,5%0a%3c (:includesection "#control-panel":)%0a---%0a> * [[Site.Blogger-NewEntry | New Blog]]%0a> * [[Site.Blogger-Admin?action=bloggeradmin&s=control-panel | Bloger Control Panel]]%0a
-host:1234146460=127.0.0.1
-author:1234146148=
-diff:1234146148:1234146129:=23a24%0a> %25sidehead%25 Site Admin%25%25%0a
-host:1234146148=127.0.0.1
-author:1234146129=
-diff:1234146129:1234146052:=24d23%0a%3c %25sidehead%25 Site Admin%25%25%0a
-host:1234146129=127.0.0.1
-author:1234146052=
-diff:1234146052:1234145978:=24d23%0a%3c (:div class="list-admin":)%0a26d24%0a%3c (:divend:)%0a
-host:1234146052=127.0.0.1
-author:1234145978=DG3
-diff:1234145978:1234145900:=5c5%0a%3c * [[Site.Blogger-Admin?action=bloggeradmin&s=control-panel | Bloger Control Panel]]%0a---%0a> * [[Site.Blogger-ControlPanel | Bloger Control Panel]]%0a
-host:1234145978=127.0.0.1
-author:1234145900=DG3
-diff:1234145900:1233708420:=1,9d0%0a%3c (:if [ auth admin || auth edit ] :)%0a%3c %25sidehead%25 Site Admin%25%25%0a%3c (:div class="list-admin":)%0a%3c * [[Site.Blogger-NewEntry | New Blog]]%0a%3c * [[Site.Blogger-ControlPanel | Bloger Control Panel]]%0a%3c * [[{*$FullName}?action=logout | logout]]%0a%3c (:divend:)%0a%3c (:ifend:)%0a%3c %0a22a14,20%0a> (:if [ auth admin || auth edit ] :)%0a> %25sidehead%25 Site Admin%25%25%0a> (:div class="list-admin":)%0a> * [[Site.Blogger-NewEntry | New Blog]]%0a> * [[Site.Blogger-ControlPanel | Bloger Control Panel]]%0a> * [[{*$FullName}?action=logout | logout]]%0a> (:ifend:)%0a25a24%0a> (:divend:)%0a
-host:1234145900=127.0.0.1
-author:1233708420=DG3
-diff:1233708420:1233708262:=14c14%0a%3c (:if [ auth admin || auth edit ] :)%0a---%0a> (:if [ authid && ( auth admin || auth edit ) ] :)%0a21c21,22%0a%3c (:if [ !auth edit && !auth admin ] :)%0a---%0a> (:if ( ! authid ):)%0a> (:Xif ( [ !auth edit && !auth admin ] ) :)%0a
-host:1233708420=127.0.0.1
-author:1233708262=DG3
-diff:1233708262:1233708213:=
-host:1233708262=127.0.0.1
-author:1233708213=DG3
-diff:1233708213:1232766261:=14c14%0a%3c (:if [ authid && ( auth admin || auth edit ) ] :)%0a---%0a> (:if [ auth admin || auth edit ] :)%0a21,22c21%0a%3c (:if ( ! authid ):)%0a%3c (:Xif ( [ !auth edit && !auth admin ] ) :)%0a---%0a> (:if ( [ !auth edit && !auth admin ] ) :)%0a
-host:1233708213=127.0.0.1
-author:1232766261=DG3
-diff:1232766261:1232759164:=2a3%0a> %25rfloat%25[[Site.BlogList | $[more]...]]%25%25%0a
-host:1232766261=127.0.0.1
-author:1232759164=DG3
-diff:1232759164:1232310519:=3d2%0a%3c %25rfloat%25[[Site.BlogList | $[more]...]]%25%25%0a
-host:1232759164=127.0.0.1
-author:1232310519=Anonymous
+rev=43
+text=(:if [ auth admin || auth edit ] :)%0a%25sidehead%25 Site Admin%25%25%0a(:div class="list-admin":)%0a(:includesection "#control-panel":)%0a(:divend:)%0a(:ifend:)%0a%0a%25sidehead%25 Recently Written%25%25%0a(:div class="list-post":)%0a(:includesection "#blog-summary-list-pagelist blogid=blog1 count=8 status={$Blogger_StatusType_PUBLISH}":)%0a(:divend:)%0a%0a%25sidehead%25 Recent Comments%25%25%0a(:div class="list-comments":)%0a(:includesection "#comment-summary-list-pagelist blogid=blog1 count=8":)%0a(:divend:)%0a%0a%25sidehead%25 Categories%25%25%0a(:div class="list-cat":)%0a(:includesection "#tag-list-pagelist count=8":)%0a(:divend:)%0a%0a(:if [ !auth edit && !auth admin ] :)%0a(:div class="list-admin":)%0a* [[{*$FullName}?action=login | login]]%0a(:divend:)%0a(:ifend:)%0a
+time=1235338242
+author:1235338242=DaveG

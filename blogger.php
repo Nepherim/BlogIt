@@ -310,17 +310,18 @@ function blogger_IsPage($pn){
 	return PageExists($mp);
 }
 function blogger_IsDate($d){
-	$re_d='(0?[1-9]|[12][0-9]|3[01])'; $re_m='((0?[1-9])|1[012])'; $re_y='(19\d\d|20\d\d)'; $re_sep='[/\-\.]';
+	$ret = false;
+	$re_sep='[\/\-\.]';
+	$re_time='( (([0-1]?\d)|(2[0-3])):[0-5]\d)?';
+	$re_d='(0?[1-9]|[12][0-9]|3[01])'; $re_m='(0?[1-9]|1[012])'; $re_y='(19\d\d|20\d\d)';
 	if (!preg_match('!' .$re_sep .'!',$d)) $d=strftime($GLOBALS['Blogger_DateEntryFormat'],$d);  #Convert Unix timestamp to EntryFormat
-	list($d,$t)=split(' ',$d,2);  #Split date from time
-	if (preg_match('!^' .$re_d .$re_sep .$re_m .$re_sep .$re_y.'$!',$d,$m)) {  #dd-mm-yyyy
-		$day = $m[1]; $month=$m[2]; $year=$m[3];
-	} elseif (preg_match('!^' .$re_y .$re_sep .$re_m .$re_sep .$re_d.'$!',$d,$m)) {  #yyyy-mm-dd
-		$day = $m[3]; $month=$m[2]; $year=$m[1];
-	} elseif (preg_match('!^' .$re_m .$re_sep .$re_d .$re_sep .$re_y.'$!',$d,$m)) {  #mm-dd-yyyy
-		$day = $m[3]; $month=$m[2]; $year=$m[1];
-	}
-	return (isset($day) && checkdate($month, $day, $year));
+	if (preg_match('!^' .$re_d .$re_sep .$re_m .$re_sep .$re_y. $re_time. '$!',$d,$m))  #dd-mm-yyyy
+		$ret = checkdate($m[2], $m[1], $m[3]);
+	elseif (preg_match('!^' .$re_y .$re_sep .$re_m .$re_sep .$re_d. $re_time. '$!',$d,$m))  #yyyy-mm-dd
+		$ret = checkdate($m[2], $m[3], $m[1]);
+	elseif (preg_match('!^' .$re_m .$re_sep .$re_d .$re_sep .$re_y. $re_time. '$!',$d,$m))  #mm-dd-yyyy
+		$ret = checkdate($m[1], $m[2], $m[3]);
+	return $ret && strtotime($d);
 }
 function blogger_IsEmail($e){
 	return (bool)preg_match(
