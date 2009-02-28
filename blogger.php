@@ -33,6 +33,7 @@ SDV($Blogger_ReadMore, '%readmore%[[{$FullName}#break | Read more...]]');
 SDV($Blogger_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($Blogger_DateDisplayFormat, $TimeFmt);
 SDV($Blogger_DateISOFormat, '%Y%m%d');
+SDV($Blogger_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDV($Blogger_NowISOFormat, strftime($Blogger_DateISOFormat, $Now));
 SDVA($Blogger_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
 SDVA($Blogger_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
@@ -57,7 +58,8 @@ SDV($FPLTemplatePageFmt, array(
 # ----------------------------------------
 blogger_setFmtPV(array('Now','Blogger_NowISOFormat', 'Blogger_DefaultGroup','Blogger_BlogGroups','Blogger_CommentGroup','Blogger_AuthorGroup',
 	'Blogger_CommentsEnabled','Blogger_CategoryGroup','Blogger_DateEntryFormat','Blogger_DateDisplayFormat','Blogger_CoreTemplate','Blogger_NewEntry',
-	'Blogger_BlogForm','Blogger_CommentForm', 'EnablePostCaptchaRequired', 'Blogger_EntriesPerPage','Blogger_Admin','Blogger_LinkToCommentSite'
+	'Blogger_BlogForm','Blogger_CommentForm', 'EnablePostCaptchaRequired', 'Blogger_EntriesPerPage','Blogger_Admin','Blogger_LinkToCommentSite',
+	'Blogger_StatAction'
 ));
 blogger_setFmtPVA(array('$Blogger_StatusType'=>$Blogger_StatusType, '$Blogger_CommentType'=>$Blogger_CommentType,
 	'$Blogger_BlogList'=>$Blogger_BlogList, '$Blogger_PageType'=>$Blogger_PageType
