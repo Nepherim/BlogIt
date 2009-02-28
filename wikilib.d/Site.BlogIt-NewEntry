@@ -5,9 +5,9 @@ charset=ISO-8859-1
 csum=
 ctime=1230334807
 host=127.0.0.1
-name=Blog.Blogger-NewEntry
+name=Site.BlogIt-NewEntry
 rev=2
 targets=PmWiki.BasicEditing,PmWiki.TextFormattingRules,PmWiki.DocumentationIndex,PmWiki.Tables,PmWiki.TableDirectives
-text=(:pmform blogger-entry:)
+text=(:pmform blogit-entry:)
 time=1230611443
 

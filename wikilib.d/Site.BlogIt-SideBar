@@ -1,0 +1,11 @@
+version=pmwiki-2.2.0 ordered=1 urlencoded=1
+agent=Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4
+author=daveg
+charset=ISO-8859-1
+csum=
+ctime=1231901689
+host=127.0.0.1
+name=Site.BlogIt-SideBar
+rev=43
+text=(:if [ auth admin || auth edit ] :)%0a%25sidehead%25 Site Admin%25%25%0a(:div class="list-admin":)%0a(:includesection "#control-panel":)%0a(:divend:)%0a(:ifend:)%0a%0a%25sidehead%25 Recently Written%25%25%0a(:div class="list-post":)%0a(:includesection "#blog-summary-list-pagelist blogid=blog1 count=8 status={$bi_StatusType_PUBLISH}":)%0a(:divend:)%0a%0a%25sidehead%25 Recent Comments%25%25%0a(:div class="list-comments":)%0a(:includesection "#comment-summary-list-pagelist blogid=blog1 count=8":)%0a(:divend:)%0a%0a%25sidehead%25 Categories%25%25%0a(:div class="list-cat":)%0a(:includesection "#tag-list-pagelist count=8":)%0a(:divend:)%0a%0a(:if [ !auth edit && !auth admin ] :)%0a(:div class="list-admin":)%0a* [[{*$FullName}?action=login | login]]%0a(:divend:)%0a(:ifend:)%0a
+time=1235338242
