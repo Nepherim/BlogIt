@@ -6,7 +6,6 @@
     For installation and usages instructions refer to: http://pmwiki.com/Cookbooks/BlogIt
 */
 if (!isset($RecipeInfo['BlogIt'])) include_once("$FarmD/cookbook/blogit/blogit.php");
-SDV($HandleActions['blogitconvert'], 'bic_ConvertPage'); SDV($HandleAuth['blogitconvert'], 'admin');
 SDV($HandleActions['blogitupgrade'], 'bic_Upgrade'); SDV($HandleAuth['blogitupgrade'], 'admin');
 
 SDVA($SitemapSearchPatterns, array());
