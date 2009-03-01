@@ -171,6 +171,7 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '(::entrybody:$1::)';  #entrybody MUST be the last variable.
 		$ROSPatterns['/\(:pmmarkup:(.*?)(:\))/s'] = '(::pmmarkup:$1::)';	#This field contains [[!tags]]
 
+		$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
 		$_POST['ptv_entrytype'] = $bi_PageType['blog'];  #Prevent spoofing.
 		$_POST['ptv_pmmarkup'] = bi_SaveTags($_POST['ptv_entrytags'], $_POST['ptv_entrybody'], $bi_TagSeparator);
 
@@ -194,6 +195,7 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 
 	}elseif ($_POST['target']==$bi_CommentForm && $bi_CommentsEnabled=='true'){
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
+		$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
 		$_POST['ptv_website'] = (substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
 		$_POST['ptv_entrytype'] = $bi_PageType_Comment;
 		$_POST['ptv_commentapproved'] = 'false';
@@ -357,7 +359,7 @@ function bi_AddMarkup(){
 # Stores combined list in tag-field in PmWiki format [[!...]][[!...]].
 function bi_SaveTags($user_tags, $body, $sep) {
 	# Read tags from body, strip [[!...]]
-	$bodyTags = (preg_match_all('/\[\[\!(.*?)\]\]/', $body, $match) ? $match[1] : array());  #array of tags contained in [[!...]] markup.
+	$bodyTags = (preg_match_all('/\[\[\!(\w+)\]\]/', $body, $match) ? $match[1] : array());  #array of tags contained in [[!...]] markup.
 
 	# Make sure tag-field entries are in standard separated format, and place in array
 	if ($user_tags)  $fieldTags = explode($sep, preg_replace('/'.trim($sep).'\s*/', $sep, $user_tags));
