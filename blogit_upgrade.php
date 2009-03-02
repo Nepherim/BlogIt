@@ -18,7 +18,7 @@ $SitemapSearchPatterns[] = '!\.(All)?Recent(Changes|Uploads|Pages)$!';
 $bic_CurrentFields = array( #['20090227']
 	'bi_version'=> array('default'=> str_replace('-','',$GLOBALS['RecipeInfo']['BlogIt']['Version'])),
 	'pmmarkup'=> array('format'=>'(::pmmarkup:$1::)', 'repeat_format'=>'[[!$1]]', 'old_fields'=>'entrytags'),
-	'blogid'=> array(),
+	'blogid'=> array('default'=> $GLOBALS['bi_BlogList']['blog1']),
 	'entrytype'=> array('default'=> $GLOBALS['bi_PageType']['blog']),
 	'entrydate'=> array(),
 	'entryauthor'=> array(), #hardcoded to get author name from page attribute.
@@ -53,7 +53,7 @@ $version = str_replace('-','',$RecipeInfo['BlogIt']['Version']);
 	#Parameters
 	$mode = (isset($_GET['mode']) ? $_GET['mode'] :'upgrade');
 	$write = ($_GET['writetofile']=='true');
-	$blogid = (isset($GLOBALS['_GET']['blogid']) ? $GLOBALS['_GET']['blogid'] : $GLOBALS['bi_BlogList']['blog1']);
+	$blogid = (isset($GLOBALS['_GET']['blogid']) ?$GLOBALS['_GET']['blogid'] :$GLOBALS['bi_BlogList']['blog1']);
 
 	$t = @ListPages('/^('. (isset($_GET['pattern']) ?str_replace(',','|',$_GET['pattern']) :$src) .')/');
 	foreach ($t as $i => $pn) {
@@ -85,6 +85,8 @@ $version = str_replace('-','',$RecipeInfo['BlogIt']['Version']);
 				}
 
 				if ($mode=='convert' && $new_field_name=='entrybody') $new_field_val[$new_field_name]=$org['text'];
+
+				if ($new_field_name=='blogid' && isset($blogid)) $new_field_val[$new_field_name] = $blogid;
 
 				if (empty($new_field_val[$new_field_name]))
 					if (isset($bic_CurrentFields[$new_field_name]['default'])) $new_field_val[$new_field_name] = $bic_CurrentFields[$new_field_name]['default'];
