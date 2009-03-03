@@ -196,7 +196,7 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 	}elseif ($_POST['target']==$bi_CommentForm && $bi_CommentsEnabled=='true'){
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
 		$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
-		$_POST['ptv_website'] = (substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
+		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
 		$_POST['ptv_entrytype'] = $bi_PageType_Comment;
 		$_POST['ptv_commentapproved'] = 'false';
 		$_POST['ptv_commentdate'] = $Now;
