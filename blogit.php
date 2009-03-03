@@ -207,6 +207,8 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 if ($entryType && $entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 	$GroupHeaderFmt = '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error.
 	if ($action=='blogitedit' || ($action=='pmform' && $_POST['target']==$bi_BlogForm)){
+		#PmWiki only includes this automatically if action=edit.
+		if (IsEnabled($EnableGUIButtons,0)) include_once("$FarmD/scripts/guiedit.php");
 		$EnablePostCaptchaRequired = 0;
 		$GroupHeaderFmt = '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	}
