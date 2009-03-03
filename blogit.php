@@ -240,12 +240,11 @@ function bi_ApproveComment($src, $auth='admin') {
 		$new['text'] = preg_replace('/\(:commentapproved:(false):\)/', '(:commentapproved:true:)',$new['text']);
 		PostPage($ap,$old,$new);	#Don't need UpdatePage, as we don't require edit functions to run
 	}
-	bi_Redirect();
+	bi_Redirect($src);
 }
-# http://localhost:4000/pmwiki.php?n=http://localhost:4000/pmwiki.php?n=Site.BlogIt-Admin?action=blogitadmin&s=unapproved-comments&blogid=blog1
-function bi_Redirect($src){
-# Direct back to the refering page or $src
-	if ($src || empty($GLOBALS['_SERVER']['HTTP_REFERER']))
+function bi_Redirect($src=''){
+	# Direct back to the refering page or $src
+	if (!empty($src) || empty($GLOBALS['_SERVER']['HTTP_REFERER']))
 		Redirect(bi_BasePage($src));
 	else {
 		$r=$GLOBALS['_SERVER']['HTTP_REFERER'];
