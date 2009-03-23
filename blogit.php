@@ -43,7 +43,7 @@ SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you c
 SDV($bi_CoreTemplate, $SiteGroup .'.BlogIt-CoreTemplate');
 SDV($bi_Admin, $SiteGroup .'.BlogIt-Admin');
 SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
-SDV($bi_NewEntry, $SiteGroup .'/BlogIt-NewEntry');
+SDV($bi_NewEntry, $SiteGroup .'.BlogIt-NewEntry');
 SDVA($bi_PageType, array('blog'=>'blog'));
 SDV($bi_PageType_Comment, 'comment');  #Not in PageType list, since we don't want bloggers to be able to select 'comment' types.
 if (CondAuth($pagename,'edit') || CondAuth($pagename,'admin'))	$EnablePostCaptchaRequired = 0;
@@ -106,7 +106,7 @@ $SearchPatterns['blogit'][] = FmtPageName('!^$FullName$!', $pagename);
 # ----------------------------------------
 # - PmForms
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
-$PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s';
+$PageTextVarPatterns['(::var:...::)'] = '/(\(::(\w[-\w]*):(?!\)))(.*?)(::\))/s';
 $PmForm[$bi_BlogForm] = 'form=' .$bi_CoreTemplate .'#blog-form-control fmt=' .$bi_CoreTemplate .'#blog-post-control';
 $PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'/{$Group}-{$Name}-' .date('Ymd\THms')
 	.'" form=' .$bi_CoreTemplate .'#comment-form-control fmt=' .$bi_CoreTemplate .'#comment-post-control';
@@ -148,6 +148,7 @@ $MarkupExpr['bi_cond'] = '( (empty($args[2]) || substr($args[2],0,3)==\'{$$\' ||
 $MarkupExpr['bi_base'] = 'bi_BasePage($args[0])';
 $MarkupExpr['bi_lt'] = '($args[0]<$args[1]?"true":"false")';
 $MarkupExpr['bi_url'] = 'bi_URL($args)';
+$MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_NewEntry .'" ?"' .$bi_DefaultGroup .'." :$args[0])';
 
 # ----------------------------------------
 # - Main Processing
@@ -169,29 +170,29 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 
 		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body
 		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '(::entrybody:$1::)';  #entrybody MUST be the last variable.
-		$ROSPatterns['/\(:pmmarkup:(.*?)(:\))/s'] = '(::pmmarkup:$1::)';	#This field contains [[!tags]]
-
-		$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
-		$_POST['ptv_entrytype'] = $bi_PageType['blog'];  #Prevent spoofing.
-		$_POST['ptv_pmmarkup'] = bi_SaveTags($_POST['ptv_entrytags'], $_POST['ptv_entrybody'], $bi_TagSeparator);
+		$ROSPatterns['/\(:pmmarkup:(.*?)(\(:title .*?:\)):\)/s'] = '(::pmmarkup:$1$2::)';  #This field contains (:TITLE:), so need to find .*?:)
 
 		# Determine page name from title, replacing ' ' with '-' for seo.
 		$MakePageNamePatterns = array(
 			"/'/" => '',
-			"/[^-[:alnum:]]+/" => '-',	 #"/[^$PageNameChars]+/" => '-',
-			'/((^|[^-\\w])\\w)/e' => "strtoupper('$1')",  #'/(.*)/e' => "strtolower('$1')",
-			"/\\s+/" => "$bi_TitleSeparator",
+			'/[^-[:alnum:]]+/' => '-',
+			'/((^|[^-\w])\w)/e' => "strtoupper('$1')",
+			'/\s+/' => "$bi_TitleSeparator",
 			'/--/' => "$bi_TitleSeparator");
+
 		# url will be inherited from title, and will include a group from the url or the default group. If title is blank it is derived from url.
 		if (!strpos($_POST['ptv_entryurl'], '.')) $pg = $_POST['ptv_entryurl'];
 		else list($gr, $pg) = split('\.',$_POST['ptv_entryurl'],2);
-		if (!(empty($pg) && empty($_POST['ptv_entrytitle'])))
-			$_POST['ptv_entryurl'] = MakePageName($pagename, (empty($gr)?$bi_DefaultGroup:$gr).'.'.(empty($pg)?$_POST['ptv_entrytitle']:$pg));
-		$_POST['title'] = (empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']);
+		$_POST['ptv_entrytitle'] = (empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']);
+		$_POST['ptv_entryurl'] = MakePageName($pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .( empty($pg) ?$_POST['ptv_entrytitle'] :$pg) );
 
 		# If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
 		if (bi_IsDate($_POST['ptv_entrydate'])) $_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']);
 		else $bi_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
+
+		$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
+		$_POST['ptv_entrytype'] = $bi_PageType['blog'];  #Prevent spoofing.
+		$_POST['ptv_pmmarkup'] = bi_SaveTags($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $bi_TagSeparator) .'(:title ' .$_POST['ptv_entrytitle'] .':)';
 
 	}elseif ($_POST['target']==$bi_CommentForm && $bi_CommentsEnabled=='true'){
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
@@ -201,8 +202,8 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 		$_POST['ptv_commentapproved'] = 'false';
 		$_POST['ptv_commentdate'] = $Now;
 	}
-}else
-	bi_AddMarkup();
+
+}else	bi_AddMarkup();
 
 if ($entryType && $entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 	$GroupHeaderFmt = '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error.
@@ -292,8 +293,8 @@ function blogitMU_substr($options, $text){
 	$m = min(strpos($text,"\n"),$len);
 	return substr($text,$from,empty($m)?$len:$m);
 }
-function blogitMU_tags($options, $pmmarkup){
-	return $pmmarkup;  #currently no need to parse, since only tags are stored here.
+function blogitMU_tags($options, $tags){
+	return bi_SaveTags('', $tags, $GLOBALS['bi_TagSeparator']);
 }
 function bi_includeSection($pagename, $inclspec){
 	$args = ParseArgs($inclspec);
@@ -358,7 +359,7 @@ function bi_AddMarkup(){
 }
 # Combines categories in body [[!...]] with separated tag list in tag-field.
 # Stores combined list in tag-field in PmWiki format [[!...]][[!...]].
-function bi_SaveTags($user_tags, $body, $sep) {
+function bi_SaveTags($body, $user_tags, $sep) {
 	# Read tags from body, strip [[!...]]
 	$bodyTags = (preg_match_all('/\[\[\!(\w+)\]\]/', $body, $match) ? $match[1] : array());  #array of tags contained in [[!...]] markup.
 
