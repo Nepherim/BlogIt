@@ -1,11 +1,12 @@
 version=pmwiki-2.2.0 ordered=1 urlencoded=1
-agent=Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4
-author=daveg
+agent=Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.8) Gecko/2009032609 Firefox/3.0.8 (.NET CLR 3.5.30729)
+author=DaveG
 charset=ISO-8859-1
 csum=
 ctime=1231901689
 host=127.0.0.1
 name=Site.BlogIt-SideBar
-rev=43
-text=(:if [ auth admin || auth edit ] :)%0a%25sidehead%25 Site Admin%25%25%0a(:div class="list-admin":)%0a(:includesection "#control-panel":)%0a(:divend:)%0a(:ifend:)%0a%0a%25sidehead%25 Recently Written%25%25%0a(:div class="list-post":)%0a(:includesection "#blog-summary-list-pagelist blogid=blog1 count=8 status={$bi_StatusType_PUBLISH}":)%0a(:divend:)%0a%0a%25sidehead%25 Recent Comments%25%25%0a(:div class="list-comments":)%0a(:includesection "#comment-summary-list-pagelist blogid=blog1 count=8":)%0a(:divend:)%0a%0a%25sidehead%25 Categories%25%25%0a(:div class="list-cat":)%0a(:includesection "#tag-list-pagelist count=8":)%0a(:divend:)%0a%0a(:if [ !auth edit && !auth admin ] :)%0a(:div class="list-admin":)%0a* [[{*$FullName}?action=login | login]]%0a(:divend:)%0a(:ifend:)%0a
-time=1235338242
+rev=44
+targets=Site.BlogIt-Admin,Site.BlogIt-NewEntry,Site.BlogIt-SideBar,Blog.Page-with-still-no-title-yes,Blog.Testwqwqwqwqwq,Blog.Test-1f-no-hyphens,Blog.Test-1e-no-hyphens,Blog.Test-1d-no-hyphens,Blog.Test-1c-with-no-hyphens,Blog.Test-1b-with-no-hyphens,Blog.New-test-with-no-hyphens,Site.BlogList,Blog.Blogwwntry-3,Tags.9789,Tags.A,Tags.A1a,Tags.A2a,Tags.A3a,Tags.Aa,Tags.Aaa,Tags.ABC,Tags.Abcd,Tags.AndAntoher,Tags.AndMore,Tags.ATag,Tags.B,Tags.Bbb,Tags.Blob,Tags.Blog,Tags.Blog-2,Tags.Break,Tags.C,Tags.Cdsd,Tags.Chess,Tags.D,Tags.Derided,Tags.Development,Tags.Drupal,Tags.E,Tags.Efg,Tags.EvenMore,Tags.FaSdfasasfs,Tags.Fdsdf,Tags.Ferfe,Tags.Freeware,Tags.Group-1,Tags.Group1,Tags.H,Tags.Here,Tags.How-to,Tags.Hyphen,Tags.Inside,Tags.Jksd,Tags.Jquery,Tags.Lyceum,Tags.More,Tags.Netflix,Tags.OneMoreHere,Tags.OneTag,Tags.Outside,Tags.Photography,Tags.Php,Tags.Picasa,Tags.Pmwiki,Tags.Quiddity,Tags.Review,Tags.Ros,Tags.Science,Tags.Second,Tags.Skins,Tags.Soapbox,Tags.Software,Tags.Sssss,Tags.Tag1,Tags.Tag2,Tags.Tag3,Tags.Tags,Tags.Test,Tags.Test2,Tags.Third,Tags.ThisIsOne,Tags.Tips,Tags.Unphotographed,Tags.Wer,Tags.Werw,Tags.Werwerwe,Tags.YetAndMore
+text=(:if [ auth admin || auth edit ] :)%0a%25sidehead%25 Site Admin%25%25%0a(:div class="list-admin":)%0a(:includesection "#control-panel":)%0a(:divend:)%0a(:ifend:)%0a%0a%25sidehead%25 Recently Written%25%25%0a(:div class="list-post":)%0a(:includesection "#blog-summary-list-pagelist blogid=blog1 count=8 status={$bi_StatusType_PUBLISH}":)%0a(:divend:)%0a%0a%25sidehead%25 Recent Comments%25%25%0a(:div class="list-comments":)%0a(:includesection "#comment-summary-list-pagelist blogid=blog1 count=8":)%0a(:divend:)%0a%0a%25sidehead%25 Categories%25%25%0a(:div class="list-cat":)%0a(:includesection "#tag-list-pagelist count=8":)%0a(:divend:)%0a%0a(:if [ !auth edit && !auth admin ] :)%0a(:div class="list-admin":)%0a* %25item rel=nofollow class=login%25[[{*$FullName}?action=login | login]]%0a(:divend:)%0a(:ifend:)%0a
+time=1238787768

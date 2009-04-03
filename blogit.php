@@ -3,7 +3,7 @@
     This file is blogit.php; you can redistribute it and/or modify it under the terms of the GNU General Public
     License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
-    For installation and usages instructions refer to: http://pmwiki.com/Cookbooks/BlogIt
+    For installation and usage instructions refer to: http://pmwiki.com/Cookbook/BlogIt
 */
 $RecipeInfo['BlogIt']['Version'] = '2009-03-30';
 if ($VersionNum < 2001950)
