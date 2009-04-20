@@ -5,7 +5,7 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2009-03-30';
+$RecipeInfo['BlogIt']['Version'] = '2009-04-16';
 if ($VersionNum < 2001950)
 	Abort ("<h3>You are running PmWiki version {$Version}. BlogIt needs a newer version of PmWiki. Please update to 2.2.0 or later.</h3>");
 $BlogIt['debug']=false;
@@ -316,6 +316,7 @@ function bi_IsPage($pn){
 	return PageExists($mp);
 }
 function bi_IsDate($d){
+	if (empty($d)) return true; #false causes two date invalid messages.
 	$ret = false;
 	$re_sep='[\/\-\.]';
 	$re_time='( (([0-1]?\d)|(2[0-3])):[0-5]\d)?';
@@ -327,7 +328,7 @@ function bi_IsDate($d){
 		$ret = checkdate($m[2], $m[3], $m[1]);
 	elseif (preg_match('!^' .$re_m .$re_sep .$re_d .$re_sep .$re_y. $re_time. '$!',$d,$m))  #mm-dd-yyyy
 		$ret = checkdate($m[1], $m[2], $m[3]);
-	return $ret && strtotime($d);
+	return $ret; # && strtotime($d);
 }
 function bi_IsEmail($e){
 	return (bool)preg_match(
