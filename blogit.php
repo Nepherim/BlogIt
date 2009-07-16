@@ -188,21 +188,13 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 		# Determine page name from title, replacing ' ' with '-' for seo.
 		SDV($PageNameChars,'-[:alnum:]');
 		SDV($MakePageNamePatterns, array(
-			"/'/" => '',
-			"/[^". $PageNameChars. "]+/" => '-',
-			'/((^|[^-\\w])\\w)/e' => "strtoupper('$1')",
-			'/\s+/' => "$bi_TitleSeparator",
-			'/--/' => "$bi_TitleSeparator"));
-/*
-  $PageNameChars='-[:alnum:]';
-  $MakePageNamePatterns = array(
-    "/'/" => '',                           # strip single-quotes
-    "/[^$PageNameChars]+/" => '-',         # convert everything else to hyphen
-    "/(^\\-+)|(\\-+\$)/" => '',            # trim hyphens front and back
-    "/\\-{2,}/" => '-',                   # trim duplicate hyphens
-    '/((^|[^\\w])\\w)/e' => "strtoupper('$1')",
-    );
-*/
+			"/'/" => '',														# strip single-quotes
+			"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,	# convert everything else to hyphen
+			"/(^\\-+)|(\\-+\$)/" => '',            					# trim hyphens front and back
+			'/\s+/' => '',														# trim trailing spaces
+			"/\\-{2,}/" => $bi_TitleSeparator,							# trim duplicate hyphens
+			'/((^|[^-\\w])\\w)/e' => "strtoupper('$1')"
+		));
 
 		# url will be inherited from title, and will include a group from the url or the default group. If title is blank it is derived from url.
 		if (!strpos($_POST['ptv_entryurl'], '.')) $pg = $_POST['ptv_entryurl'];
