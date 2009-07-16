@@ -51,10 +51,14 @@ SDV($bi_PageType_Comment, 'comment');  #Not in PageType list, since we don't wan
 if (CondAuth($pagename,'edit') || CondAuth($pagename,'admin'))	$EnablePostCaptchaRequired = 0;
 
 SDV($FPLTemplatePageFmt, array(
-	(isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin : ''), $SiteGroup .'.BlogIt-CoreTemplate',
-	'{$FullName}', '{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'
+	'{$FullName}',
+	(isset($Skin)?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate',
+	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'
 ));
-
+SDV($PmFormTemplatesFmt, array(
+	(isset($Skin)?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate',
+	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PmFormTemplates'
+));
 # ----------------------------------------
 # - Usable on Wiki Pages
 # ----------------------------------------
@@ -116,7 +120,10 @@ $SearchPatterns['blogit'][] = FmtPageName('!^$FullName$!', $pagename);
 
 # ----------------------------------------
 # - PmForms
-$PmForm[$bi_BlogForm] = 'form=' .$bi_CoreTemplate .'#blog-form-control fmt=' .$bi_CoreTemplate .'#blog-post-control';
+#$PmForm[$bi_BlogForm] = 'form=' .$bi_CoreTemplate .'#blog-form-control fmt=' .$bi_CoreTemplate .'#blog-post-control';
+#$PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'/{$Group}-{$Name}-' .date('Ymd\THms')
+#	.'" form=' .$bi_CoreTemplate .'#comment-form-control fmt=' .$bi_CoreTemplate .'#comment-post-control';
+$PmForm[$bi_BlogForm] = 'form=#blog-form-control fmt=#blog-post-control';
 $PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'/{$Group}-{$Name}-' .date('Ymd\THms')
 	.'" form=' .$bi_CoreTemplate .'#comment-form-control fmt=' .$bi_CoreTemplate .'#comment-post-control';
 
