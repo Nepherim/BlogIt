@@ -120,12 +120,9 @@ $SearchPatterns['blogit'][] = FmtPageName('!^$FullName$!', $pagename);
 
 # ----------------------------------------
 # - PmForms
-#$PmForm[$bi_BlogForm] = 'form=' .$bi_CoreTemplate .'#blog-form-control fmt=' .$bi_CoreTemplate .'#blog-post-control';
-#$PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'/{$Group}-{$Name}-' .date('Ymd\THms')
-#	.'" form=' .$bi_CoreTemplate .'#comment-form-control fmt=' .$bi_CoreTemplate .'#comment-post-control';
 $PmForm[$bi_BlogForm] = 'form=#blog-form-control fmt=#blog-post-control';
-$PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'/{$Group}-{$Name}-' .date('Ymd\THms')
-	.'" form=' .$bi_CoreTemplate .'#comment-form-control fmt=' .$bi_CoreTemplate .'#comment-post-control';
+$PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'.{$Group}-{$Name}-' .date('Ymd\THms')
+	.'" form=#comment-form-control fmt=#comment-post-control';
 
 # ----------------------------------------
 # - Handle Actions
