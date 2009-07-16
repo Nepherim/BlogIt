@@ -72,11 +72,16 @@ bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_Comm
 # ----------------------------------------
 $bi_BlogForm = 'blogit-entry';
 $bi_CommentForm = 'blogit-comments';
-$oldBrowse=$HandleActions['browse'];  #Store old browse action so we can perform actions prior.
 $FmtPV['$bi_PageNext'] = (isset($_GET['page']) ? $_GET['page']+1 : 2);
 $FmtPV['$bi_PagePrev'] = (isset($_GET['page']) && ($_GET['page']>0) ? $_GET['page']-1 : 0);
 $FmtPV['$bi_EntryStart'] = (($FmtPV['$bi_PageNext']-2) * (isset($_GET['count']) ?$_GET['count'] :$bi_EntriesPerPage)) + 1;
 $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_GET['count'] :$bi_EntriesPerPage) - 1;
+
+# Cancel button clicked
+if($action=='pmform' && @$_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){
+	Redirect($pagename);
+	exit;
+}
 
 # ----------------------------------------
 # - PmWiki Config
@@ -117,9 +122,12 @@ $PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'/{$Group}-{$Name}-' .d
 
 # ----------------------------------------
 # - Handle Actions
+#TODO: SDV($HandleActions['blogitadmin'], 'bi_Admin'); SDV($HandleAuth['blogitadmin'], 'admin');
+$oldBrowse=$HandleActions['browse'];  #Store old browse action so we can perform actions prior.
+$oldUrlApprove=$HandleActions['approvesites'];
 $HandleActions['browse']='bi_HandleBrowse';
+#$HandleActions['approvsites']='bi_HandleApprove';
 SDV($HandleActions['blogitapprove'], 'bi_ApproveComment'); SDV($HandleAuth['blogitapprove'], 'admin');
-#SDV($HandleActions['blogitadmin'], 'bi_Admin'); SDV($HandleAuth['blogitadmin'], 'admin');
 
 # ----------------------------------------
 # - Markup
@@ -169,7 +177,7 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 }elseif ($action && $action=='pmform'){
 	$bi_ResetPmFormField = array();
 	$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
-	if ($_POST['target']==$bi_BlogForm){
+	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']>''){
 		# Null out the PostPatterns so that directive markup doesn't get replaced.
 		if ($bi_EnablePostDirectives == true)  $PmFormPostPatterns = array();
 
@@ -209,7 +217,7 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 		$_POST['ptv_entrytype'] = $bi_PageType['blog'];  #Prevent spoofing.
 		$_POST['ptv_pmmarkup'] = bi_SaveTags($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $bi_TagSeparator) .'(:title ' .$_POST['ptv_entrytitle'] .':)';
 
-	}elseif ($_POST['target']==$bi_CommentForm && $bi_CommentsEnabled=='true'){
+	}elseif (@$_POST['target']==$bi_CommentForm && $bi_CommentsEnabled=='true'){
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
 		$_POST['ptv_entrytype'] = $bi_PageType_Comment;
@@ -220,7 +228,6 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 }else	bi_AddMarkup();
 
 if ($entryType && $entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
-	bi_DebugLog('BLOG');
 	$GroupHeaderFmt = '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error.
 	if ($action=='blogitedit' || ($action=='pmform' && $_POST['target']==$bi_BlogForm)){
 		$EnablePostCaptchaRequired = 0;
@@ -245,6 +252,10 @@ function bi_HandleBrowse($pagename){
 	$GLOBALS['HandleActions']['browse']=$GLOBALS['oldBrowse'];
 	bi_AddMarkup();
 	HandleDispatch($pagename, 'browse');
+}
+function bi_HandleApprove($pagename){
+	$GLOBALS['HandleActions']['approvesites']=$GLOBALS['oldUrlApprove'];
+#	HandleDispatch($pagename, 'browse');
 }
 function bi_ApproveComment($src, $auth='admin') {
 	$ap = (isset($GLOBALS['_GET']['pn']) ? $GLOBALS['_GET']['pn'] : '');  #Page to approve
