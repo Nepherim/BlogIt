@@ -8,7 +8,7 @@
 $RecipeInfo['BlogIt']['Version'] = '2009-04-16';
 if ($VersionNum < 2001950)
 	Abort ("<h3>You are running PmWiki version {$Version}. BlogIt needs a newer version of PmWiki. Please update to 2.2.0 or later.</h3>");
-$BlogIt['debug']=false;
+$BlogIt['debug']=true;
 bi_debugLog('--------------------');
 #foreach ($_POST as $p=>$k) bi_debugLog($p .'=' .$k, true);
 #FPLCountA
@@ -39,7 +39,9 @@ SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'st
 SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
 SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 
-#INTERNAL USE ONLY
+# ----------------------------------------
+# - Internal Use Only
+# ----------------------------------------
 SDV($bi_CoreTemplate, $SiteGroup .'.BlogIt-CoreTemplate');
 SDV($bi_Admin, $SiteGroup .'.BlogIt-Admin');
 SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
@@ -70,7 +72,6 @@ bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_Comm
 # ----------------------------------------
 $bi_BlogForm = 'blogit-entry';
 $bi_CommentForm = 'blogit-comments';
-$Group = PageVar($pagename, '$Group');
 $oldBrowse=$HandleActions['browse'];  #Store old browse action so we can perform actions prior.
 $FmtPV['$bi_PageNext'] = (isset($_GET['page']) ? $_GET['page']+1 : 2);
 $FmtPV['$bi_PagePrev'] = (isset($_GET['page']) && ($_GET['page']>0) ? $_GET['page']-1 : 0);
@@ -87,6 +88,11 @@ bi_addPageStore();
 if ($bi_SkinTemplate == $SiteGroup .'/BlogIt-SkinTemplate-pmwiki')
 	$HTMLStylesFmt['blogit'] = 'h2 .blogit-edit-link a {font-size: 50%;}';
 
+# Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
+$PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s';
+$entryType = PageVar($pagename,'$:entrytype');  # MUST be after PageTextVarPatterns declaration, otherwise on single-entry ready, body is NULL.
+$Group = PageVar($pagename, '$Group');
+
 # ----------------------------------------
 # - Categories
 # Doesn't pick up categories defined as page variables.
@@ -94,7 +100,7 @@ $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkTex
 $CategoryGroup = $bi_CategoryGroup;	# Need to explicity set this.
 $AutoCreate['/^' .$bi_CategoryGroup .'\./'] = array('ctime' => $Now);
 if ($Group == $bi_CategoryGroup)
-	$GroupFooterFmt = '(:includesection "#tag-pagelist":)(:nl:)';
+	SDV($GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');
 
 # ----------------------------------------
 # - SearchPatterns
@@ -105,8 +111,6 @@ $SearchPatterns['blogit'][] = FmtPageName('!^$FullName$!', $pagename);
 
 # ----------------------------------------
 # - PmForms
-# Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
-$PageTextVarPatterns['(::var:...::)'] = '/(\(::(\w[-\w]*):(?!\)))(.*?)(::\))/s';
 $PmForm[$bi_BlogForm] = 'form=' .$bi_CoreTemplate .'#blog-form-control fmt=' .$bi_CoreTemplate .'#blog-post-control';
 $PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'/{$Group}-{$Name}-' .date('Ymd\THms')
 	.'" form=' .$bi_CoreTemplate .'#comment-form-control fmt=' .$bi_CoreTemplate .'#comment-post-control';
@@ -126,9 +130,10 @@ Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
 Markup('{earlymx(', '>{$var}', '/\{earlymx(\(\w+\b.*?\))\}/e',
 	"MarkupExpression(\$pagename, PSS('$1'))");
-
-# Prevent (:e_guibottons:) markup appearing if gui-buttons are not enabled.
-if (!$EnableGUIButtons) Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');
+if (IsEnabled($EnableGUIButtons,0))
+	if ($entryType && $entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'') || $pagename == $bi_NewEntry)
+		include_once("$FarmD/scripts/guiedit.php");  #PmWiki only includes this automatically if action=edit.
+else Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
 
 # ----------------------------------------
 # - Conditions
@@ -153,17 +158,17 @@ $MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_NewEntry .'" ?"' .$bi_Defaul
 # ----------------------------------------
 # - Main Processing
 # ----------------------------------------
-$entryType = PageVar($pagename,'$:entrytype');
 bi_debugLog('entryType: '.$entryType. '   action: '.$action. '    Target: '.$_POST['target']);
 # TODO: Ensure only admin/edit users can perform the actions below
 # Allow URL access to sections within $bi_TemplateList, including passed parameters.
 if ($action && $action=='blogitadmin' && isset($_GET['s'])){
-	$args = bi_Implode($_GET, $p=' ', $s='=', array('n'=>'','action'=>'','s'=>''));
+	$args = bi_Implode($_GET, ' ', '=', array('n'=>'','action'=>'','s'=>''));
 	$GroupHeaderFmt = '(:title '.$_GET['s'].':)(:includesection "#'.$_GET['s']." $args \":)";
 
-# Blog entry being posted from PmForm (new or existing)
-}elseif ($action && $action=='pmform'){  #Performed before PmForm action handler.
+# Blog entry being saved; performed before PmForm action handler.
+}elseif ($action && $action=='pmform'){
 	$bi_ResetPmFormField = array();
+	$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
 	if ($_POST['target']==$bi_BlogForm){
 		# Null out the PostPatterns so that directive markup doesn't get replaced.
 		if ($bi_EnablePostDirectives == true)  $PmFormPostPatterns = array();
@@ -173,30 +178,39 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 		$ROSPatterns['/\(:pmmarkup:(.*?)(\(:title .*?:\)):\)/s'] = '(::pmmarkup:$1$2::)';  #This field contains (:TITLE:), so need to find .*?:)
 
 		# Determine page name from title, replacing ' ' with '-' for seo.
-		$MakePageNamePatterns = array(
+		SDV($PageNameChars,'-[:alnum:]');
+		SDV($MakePageNamePatterns, array(
 			"/'/" => '',
-			'/[^-[:alnum:]]+/' => '-',
-			'/((^|[^-\w])\w)/e' => "strtoupper('$1')",
+			"/[^". $PageNameChars. "]+/" => '-',
+			'/((^|[^-\\w])\\w)/e' => "strtoupper('$1')",
 			'/\s+/' => "$bi_TitleSeparator",
-			'/--/' => "$bi_TitleSeparator");
+			'/--/' => "$bi_TitleSeparator"));
+/*
+  $PageNameChars='-[:alnum:]';
+  $MakePageNamePatterns = array(
+    "/'/" => '',                           # strip single-quotes
+    "/[^$PageNameChars]+/" => '-',         # convert everything else to hyphen
+    "/(^\\-+)|(\\-+\$)/" => '',            # trim hyphens front and back
+    "/\\-{2,}/" => '-',                   # trim duplicate hyphens
+    '/((^|[^\\w])\\w)/e' => "strtoupper('$1')",
+    );
+*/
 
 		# url will be inherited from title, and will include a group from the url or the default group. If title is blank it is derived from url.
 		if (!strpos($_POST['ptv_entryurl'], '.')) $pg = $_POST['ptv_entryurl'];
 		else list($gr, $pg) = split('\.',$_POST['ptv_entryurl'],2);
-		$_POST['ptv_entrytitle'] = (empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']);
-		$_POST['ptv_entryurl'] = MakePageName($pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .( empty($pg) ?$_POST['ptv_entrytitle'] :$pg) );
 
 		# If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
 		if (bi_IsDate($_POST['ptv_entrydate'])) $_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']);
 		else $bi_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
 
-		$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
+		$_POST['ptv_entrytitle'] = (empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']);
+		$_POST['ptv_entryurl'] = MakePageName($pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .( empty($pg) ?$_POST['ptv_entrytitle'] :$pg) );
 		$_POST['ptv_entrytype'] = $bi_PageType['blog'];  #Prevent spoofing.
 		$_POST['ptv_pmmarkup'] = bi_SaveTags($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $bi_TagSeparator) .'(:title ' .$_POST['ptv_entrytitle'] .':)';
 
 	}elseif ($_POST['target']==$bi_CommentForm && $bi_CommentsEnabled=='true'){
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
-		$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
 		$_POST['ptv_entrytype'] = $bi_PageType_Comment;
 		$_POST['ptv_commentapproved'] = 'false';
@@ -206,16 +220,15 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 }else	bi_AddMarkup();
 
 if ($entryType && $entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
+	bi_DebugLog('BLOG');
 	$GroupHeaderFmt = '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error.
 	if ($action=='blogitedit' || ($action=='pmform' && $_POST['target']==$bi_BlogForm)){
-		#PmWiki only includes this automatically if action=edit.
-		if (IsEnabled($EnableGUIButtons,0)) include_once("$FarmD/scripts/guiedit.php");
 		$EnablePostCaptchaRequired = 0;
 		$GroupHeaderFmt = '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	}
-} elseif ($Group == $bi_CommentGroup && $action=='browse' && CondAuth($pagename, 'admin')){  #After editing/deleting a comment page
+
+}elseif ($Group == $bi_CommentGroup && $action=='browse' && CondAuth($pagename, 'admin'))  #After editing/deleting a comment page
 	bi_Redirect($pagename);
-}
 
 # ----------------------------------------
 # - HandleActions Functions
@@ -241,7 +254,7 @@ function bi_ApproveComment($src, $auth='admin') {
 		$new['csum'] = $new['csum:' .$GLOBALS['Now'] ] = $GLOBALS['ChangeSummary'] = 'Approved comment';
 		$_POST['diffclass']='minor';
 		$new['text'] = preg_replace('/\(:commentapproved:(false):\)/', '(:commentapproved:true:)',$new['text']);
-		PostPage($ap,$old,$new);	#Don't need UpdatePage, as we don't require edit functions to run
+		PostPage($ap,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
 	}
 	bi_Redirect($src);
 }
@@ -317,17 +330,17 @@ function bi_IsPage($pn){
 }
 function bi_IsDate($d){
 	if (empty($d)) return true; #false causes two date invalid messages.
-	$ret = false;
 	$re_sep='[\/\-\.]';
 	$re_time='( (([0-1]?\d)|(2[0-3])):[0-5]\d)?';
 	$re_d='(0?[1-9]|[12][0-9]|3[01])'; $re_m='(0?[1-9]|1[012])'; $re_y='(19\d\d|20\d\d)';
-	if (!preg_match('!' .$re_sep .'!',$d)) $d=strftime($GLOBALS['bi_DateEntryFormat'],$d);  #Convert Unix timestamp to EntryFormat
+	if (preg_match('!\d{5,}!',$d)) $d=strftime($GLOBALS['bi_DateEntryFormat'],$d);  #Convert Unix timestamp to EntryFormat
 	if (preg_match('!^' .$re_d .$re_sep .$re_m .$re_sep .$re_y. $re_time. '$!',$d,$m))  #dd-mm-yyyy
 		$ret = checkdate($m[2], $m[1], $m[3]);
 	elseif (preg_match('!^' .$re_y .$re_sep .$re_m .$re_sep .$re_d. $re_time. '$!',$d,$m))  #yyyy-mm-dd
 		$ret = checkdate($m[2], $m[3], $m[1]);
 	elseif (preg_match('!^' .$re_m .$re_sep .$re_d .$re_sep .$re_y. $re_time. '$!',$d,$m))  #mm-dd-yyyy
 		$ret = checkdate($m[1], $m[2], $m[3]);
+	else $ret = false;
 	return $ret; # && strtotime($d);
 }
 function bi_IsEmail($e){

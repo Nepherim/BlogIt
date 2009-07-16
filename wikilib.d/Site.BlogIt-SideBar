@@ -1,12 +1,66 @@
-version=pmwiki-2.2.0 ordered=1 urlencoded=1
-agent=Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.8) Gecko/2009032609 Firefox/3.0.8 (.NET CLR 3.5.30729)
-author=DaveG
+version=pmwiki-2.2.1 ordered=1 urlencoded=1
+agent=Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.1) Gecko/20090624 Firefox/3.5 (.NET CLR 3.5.30729)
+author=
 charset=ISO-8859-1
 csum=
 ctime=1231901689
 host=127.0.0.1
 name=Site.BlogIt-SideBar
-rev=44
-targets=Site.BlogIt-Admin,Site.BlogIt-NewEntry,Site.BlogIt-SideBar,Blog.Page-with-still-no-title-yes,Blog.Testwqwqwqwqwq,Blog.Test-1f-no-hyphens,Blog.Test-1e-no-hyphens,Blog.Test-1d-no-hyphens,Blog.Test-1c-with-no-hyphens,Blog.Test-1b-with-no-hyphens,Blog.New-test-with-no-hyphens,Site.BlogList,Blog.Blogwwntry-3,Tags.9789,Tags.A,Tags.A1a,Tags.A2a,Tags.A3a,Tags.Aa,Tags.Aaa,Tags.ABC,Tags.Abcd,Tags.AndAntoher,Tags.AndMore,Tags.ATag,Tags.B,Tags.Bbb,Tags.Blob,Tags.Blog,Tags.Blog-2,Tags.Break,Tags.C,Tags.Cdsd,Tags.Chess,Tags.D,Tags.Derided,Tags.Development,Tags.Drupal,Tags.E,Tags.Efg,Tags.EvenMore,Tags.FaSdfasasfs,Tags.Fdsdf,Tags.Ferfe,Tags.Freeware,Tags.Group-1,Tags.Group1,Tags.H,Tags.Here,Tags.How-to,Tags.Hyphen,Tags.Inside,Tags.Jksd,Tags.Jquery,Tags.Lyceum,Tags.More,Tags.Netflix,Tags.OneMoreHere,Tags.OneTag,Tags.Outside,Tags.Photography,Tags.Php,Tags.Picasa,Tags.Pmwiki,Tags.Quiddity,Tags.Review,Tags.Ros,Tags.Science,Tags.Second,Tags.Skins,Tags.Soapbox,Tags.Software,Tags.Sssss,Tags.Tag1,Tags.Tag2,Tags.Tag3,Tags.Tags,Tags.Test,Tags.Test2,Tags.Third,Tags.ThisIsOne,Tags.Tips,Tags.Unphotographed,Tags.Wer,Tags.Werw,Tags.Werwerwe,Tags.YetAndMore
-text=(:if [ auth admin || auth edit ] :)%0a%25sidehead%25 Site Admin%25%25%0a(:div class="list-admin":)%0a(:includesection "#control-panel":)%0a(:divend:)%0a(:ifend:)%0a%0a%25sidehead%25 Recently Written%25%25%0a(:div class="list-post":)%0a(:includesection "#blog-summary-list-pagelist blogid=blog1 count=8 status={$bi_StatusType_PUBLISH}":)%0a(:divend:)%0a%0a%25sidehead%25 Recent Comments%25%25%0a(:div class="list-comments":)%0a(:includesection "#comment-summary-list-pagelist blogid=blog1 count=8":)%0a(:divend:)%0a%0a%25sidehead%25 Categories%25%25%0a(:div class="list-cat":)%0a(:includesection "#tag-list-pagelist count=8":)%0a(:divend:)%0a%0a(:if [ !auth edit && !auth admin ] :)%0a(:div class="list-admin":)%0a* %25item rel=nofollow class=login%25[[{*$FullName}?action=login | login]]%0a(:divend:)%0a(:ifend:)%0a
-time=1238787768
+rev=61
+targets=Site.BlogIt-Admin,Site.BlogIt-NewEntry,Site.BlogIt-SideBar,Blog.4321,Blog.12341,Blog.Page-with-still-no-title-yes,Blog.Testwqwqwqwqwq,Blog.Test-1f-no-hyphens,Blog.Test-1e-no-hyphens,Blog.Test-1d-no-hyphens,Blog.Test-1c-with-no-hyphens,Site.BlogList,Blog.Blogwwntry-3,Tags.9789,Tags.A,Tags.A1a,Tags.A2a,Tags.A3a,Tags.Aa,Tags.Aaa,Tags.ABC,Tags.Abcd,Tags.AndAntoher,Tags.AndMore,Tags.ATag,Tags.B,Tags.Bbb,Tags.Blob,Tags.Blog,Tags.Blog-2,Tags.Break,Tags.C,Tags.Captcha,Tags.Cdsd,Tags.Chess,Tags.D,Tags.Derided,Tags.Development,Tags.Drupal,Tags.E,Tags.Efg,Tags.Entrytags,Tags.EvenMore,Tags.FaSdfasasfs,Tags.Fdsdf,Tags.Featured,Tags.Ferfe,Tags.Freeware,Tags.Group-1,Tags.Group1,Tags.H,Tags.Here,Tags.How-to,Tags.Hyphen,Tags.Inside,Tags.Jksd,Tags.Jquery,Tags.Lyceum,Tags.More,Tags.Netflix,Tags.OneMoreHere,Tags.OneTag,Tags.Outside,Tags.Photography,Tags.Php,Tags.Picasa,Tags.Pmwiki,Tags.Quiddity,Tags.Review,Tags.Ros,Tags.Rrr,Tags.Science,Tags.Second,Tags.Skins,Tags.Soapbox,Tags.Software,Tags.Sss,Tags.Sss-and,Tags.Sssss,Tags.Tag1,Tags.Tag2,Tags.Tag3,Tags.Tags,Tags.Test,Tags.Test2,Tags.Third,Tags.ThisIsOne,Tags.Tips,Tags.Unphotographed,Tags.Wer,Tags.Werw,Tags.Werwerwe,Tags.YetAndMore
+text=(:blogid:{$bi_BlogList_BLOG1}:) %0a(:if [ auth admin || auth edit ] :)%0a(:div class="list-admin":)%0a%25sidehead%25 Site Admin%25%25%0a(:includesection "#control-panel blogid={(bi_ifnull '{$$blogid}' '{$:blogid}')}":)%0a(:divend:)%0a(:ifend:)%0a%0a(:div class="list-post":)%0a%25sidehead%25 Recently Written%25%25%0a(:includesection "#blog-summary-list-pagelist blogid={(bi_ifnull '{$$blogid}' '{$:blogid}')} count=8 status={$bi_StatusType_PUBLISH}":)%0a(:divend:)%0a%0a(:div class="list-comments":)%0a%25sidehead%25 Recent Comments%25%25%0a(:includesection "#comment-summary-list-pagelist blogid={(bi_ifnull '{$$blogid}' '{$:blogid}')} count=8":)%0a(:divend:)%0a%0a(:div class="list-cat":)%0a%25sidehead%25 Categories%25%25%0a(:includesection "#tag-list-pagelist count=8":)%0a(:divend:)%0a%0a(:div class="list-admin":)%0a(:if [ !auth edit && !auth admin ] :)%0a* %25item rel=nofollow class=login%25[[{*$FullName}?action=login | login]]%0a(:divend:)%0a(:ifend:)%0a
+time=1247619537
+author:1247619537=
+diff:1247619537:1247618877:=
+host:1247619537=127.0.0.1
+author:1247618877=
+diff:1247618877:1247618516:=5c5%0a%3c (:includesection "#control-panel blogid={(bi_ifnull '{$$blogid}' '{$:blogid}')}":)%0a---%0a> (:includesection "#control-panel blogid={(bi_ifnull '{$$blogid}' '{$:blogid}'":)%0a
+host:1247618877=127.0.0.1
+author:1247618516=
+diff:1247618516:1247617756:=5c5%0a%3c (:includesection "#control-panel blogid={(bi_ifnull '{$$blogid}' '{$:blogid}'":)%0a---%0a> (:includesection "#control-panel blogid={(bi_ifnull '{$$blogid}' ":)%0a11c11%0a%3c (:includesection "#blog-summary-list-pagelist blogid={(bi_ifnull '{$$blogid}' '{$:blogid}')} count=8 status={$bi_StatusType_PUBLISH}":)%0a---%0a> (:includesection "#blog-summary-list-pagelist blogid={(bi_ifnull '{$$blogid}' {$bi_BlogList_BLOG1})} count=8 status={$bi_StatusType_PUBLISH}":)%0a16c16%0a%3c (:includesection "#comment-summary-list-pagelist blogid={(bi_ifnull '{$$blogid}' '{$:blogid}')} count=8":)%0a---%0a> (:includesection "#comment-summary-list-pagelist blogid={(bi_ifnull '{$$blogid}' {$bi_BlogList_BLOG1})} count=8":)%0a
+host:1247618516=127.0.0.1
+author:1247617756=
+diff:1247617756:1247617426:=5c5%0a%3c (:includesection "#control-panel blogid={(bi_ifnull '{$$blogid}' ":)%0a---%0a> (:includesection "#control-panel":)%0a11c11%0a%3c (:includesection "#blog-summary-list-pagelist blogid={(bi_ifnull '{$$blogid}' {$bi_BlogList_BLOG1})} count=8 status={$bi_StatusType_PUBLISH}":)%0a---%0a> (:includesection "#blog-summary-list-pagelist blogid={(bi_ifnull "{$$blogid}" {$bi_BlogList_BLOG1})} count=8 status={$bi_StatusType_PUBLISH}":)%0a16c16%0a%3c (:includesection "#comment-summary-list-pagelist blogid={(bi_ifnull '{$$blogid}' {$bi_BlogList_BLOG1})} count=8":)%0a---%0a> (:includesection "#comment-summary-list-pagelist blogid=blog1 count=8":)%0a
+host:1247617756=127.0.0.1
+author:1247617426=
+diff:1247617426:1247617228:=1d0%0a%3c (:blogid:{$bi_BlogList_BLOG1}:) %0a11c10%0a%3c (:includesection "#blog-summary-list-pagelist blogid={(bi_ifnull "{$$blogid}" {$bi_BlogList_BLOG1})} count=8 status={$bi_StatusType_PUBLISH}":)%0a---%0a> (:includesection "#blog-summary-list-pagelist blogid=blog1 count=8 status={$bi_StatusType_PUBLISH}":)%0a
+host:1247617426=127.0.0.1
+author:1247617228=
+diff:1247617228:1247617199:=
+host:1247617228=127.0.0.1
+author:1247617199=
+diff:1247617199:1247617080:=
+host:1247617199=127.0.0.1
+author:1247617080=
+diff:1247617080:1247616600:=
+host:1247617080=127.0.0.1
+author:1247616600=
+diff:1247616600:1247616527:=4c4%0a%3c (:includesection "#control-panel":)%0a---%0a> (:includesection "#control-panel blogid=blog1":)%0a
+host:1247616600=127.0.0.1
+author:1247616527=
+diff:1247616527:1247616483:=4c4%0a%3c (:includesection "#control-panel blogid=blog1":)%0a---%0a> (:includesection "#control-panel blogid=blog2":)%0a
+host:1247616527=127.0.0.1
+author:1247616483=
+diff:1247616483:1247616372:=
+host:1247616483=127.0.0.1
+author:1247616372=
+diff:1247616372:1247616176:=
+host:1247616372=127.0.0.1
+author:1247616176=
+diff:1247616176:1247616140:=4c4%0a%3c (:includesection "#control-panel blogid=blog2":)%0a---%0a> (:includesection "#control-panel" blogid=blog2:)%0a
+host:1247616176=127.0.0.1
+author:1247616140=
+diff:1247616140:1247615988:=4c4%0a%3c (:includesection "#control-panel" blogid=blog2:)%0a---%0a> (:includesection "#control-panel" blogid="blog2":)%0a
+host:1247616140=127.0.0.1
+author:1247615988=
+diff:1247615988:1247615973:=4c4%0a%3c (:includesection "#control-panel" blogid="blog2":)%0a---%0a> (:includesection "#control-panel" blogid="blog1":)%0a
+host:1247615988=127.0.0.1
+author:1247615973=
+diff:1247615973:1238896463:=4c4%0a%3c (:includesection "#control-panel" blogid="blog1":)%0a---%0a> (:includesection "#control-panel":)%0a
+host:1247615973=127.0.0.1
+author:1238896463=
+diff:1238896463:1238787768:=2d1%0a%3c (:div class="list-admin":)%0a3a3%0a> (:div class="list-admin":)%0a8d7%0a%3c (:div class="list-post":)%0a9a9%0a> (:div class="list-post":)%0a13d12%0a%3c (:div class="list-comments":)%0a14a14%0a> (:div class="list-comments":)%0a18d17%0a%3c (:div class="list-cat":)%0a19a19%0a> (:div class="list-cat":)%0a23d22%0a%3c (:div class="list-admin":)%0a24a24%0a> (:div class="list-admin":)%0a
+host:1238896463=127.0.0.1
+author:1238787768=DaveG
+diff:1238787768:1235338242:=25c25%0a%3c * %25item rel=nofollow class=login%25[[{*$FullName}?action=login | login]]%0a---%0a> * [[{*$FullName}?action=login | login]]%0a
+host:1238787768=127.0.0.1
