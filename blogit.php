@@ -23,21 +23,22 @@ SDV($bi_CommentsEnabled, 'true');
 SDV($bi_BlogGroups, $bi_DefaultGroup);	#OPTIONAL: Comma separated list of Blog groups. This is purely to speed up pagelists. Defining this list does not mean all pages in the group are 'blog-pages'.
 SDV($bi_CategoryGroup, 'Tags');
 SDV($bi_AuthorGroup, 'Profiles'); #$AuthorGroup
-SDV($bi_BodyBreak, '[[#break]]');
-SDV($bi_TagSeparator, ', ');
-SDV($bi_TitleSeparator, '-');
-SDV($bi_EnablePostDirectives, true); #Set to true to allow posting of directives of form (: :) in blog entries.
 SDV($bi_EntriesPerPage, 15);
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_ReadMore, '%readmore%[[{$FullName}#break | Read more...]]');
 SDV($bi_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($bi_DateDisplayFormat, $TimeFmt);
-SDV($bi_DateISOFormat, '%Y%m%d');
+SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
+
+# ----------------------------------------
+# - Less frequently user settable
+# ----------------------------------------
+SDV($bi_BodyBreak, '[[#break]]');
+SDV($bi_TagSeparator, ', ');
+SDV($bi_TitleSeparator, '-');
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
-SDV($bi_NowISOFormat, strftime($bi_DateISOFormat, $Now));
 SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
 SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
-SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',														# strip single-quotes
 	"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,	# convert everything else to hyphen
@@ -50,10 +51,9 @@ SDVA($bi_MakePageNamePatterns, array(
 # ----------------------------------------
 # - Internal Use Only
 # ----------------------------------------
-SDV($bi_CoreTemplate, $SiteGroup .'.BlogIt-CoreTemplate');
 SDV($bi_Admin, $SiteGroup .'.BlogIt-Admin');
-SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
 SDV($bi_NewEntry, $SiteGroup .'.BlogIt-NewEntry');
+SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
 SDVA($bi_PageType, array('blog'=>'blog'));
 SDV($bi_PageType_Comment, 'comment');  #Not in PageType list, since we don't want bloggers to be able to select 'comment' types.
 if (CondAuth($pagename,'edit') || CondAuth($pagename,'admin'))	$EnablePostCaptchaRequired = 0;
@@ -70,8 +70,8 @@ SDV($PmFormTemplatesFmt, array(
 # ----------------------------------------
 # - Usable on Wiki Pages
 # ----------------------------------------
-bi_setFmtPV(array('Now','bi_NowISOFormat', 'bi_DefaultGroup','bi_BlogGroups','bi_CommentGroup','bi_AuthorGroup',
-	'bi_CommentsEnabled','bi_CategoryGroup','bi_DateEntryFormat','bi_DateDisplayFormat','bi_CoreTemplate','bi_NewEntry',
+bi_setFmtPV(array('Now','bi_DefaultGroup','bi_BlogGroups','bi_CommentGroup','bi_AuthorGroup',
+	'bi_CommentsEnabled','bi_CategoryGroup','bi_DateEntryFormat','bi_DateDisplayFormat','bi_NewEntry',
 	'bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired', 'bi_EntriesPerPage','bi_Admin','bi_LinkToCommentSite',
 	'bi_StatAction'
 ));
@@ -84,16 +84,18 @@ bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_Comm
 # ----------------------------------------
 $bi_BlogForm = 'blogit-entry';
 $bi_CommentForm = 'blogit-comments';
+if($action=='pmform' && @$_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){  #Cancel button clicked
+	Redirect($pagename);
+	exit;
+}
+
+# ----------------------------------------
+# - Pagination
+# ----------------------------------------
 $FmtPV['$bi_PageNext'] = (isset($_GET['page']) ? $_GET['page']+1 : 2);
 $FmtPV['$bi_PagePrev'] = (isset($_GET['page']) && ($_GET['page']>0) ? $_GET['page']-1 : 0);
 $FmtPV['$bi_EntryStart'] = (($FmtPV['$bi_PageNext']-2) * (isset($_GET['count']) ?$_GET['count'] :$bi_EntriesPerPage)) + 1;
 $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_GET['count'] :$bi_EntriesPerPage) - 1;
-
-# Cancel button clicked
-if($action=='pmform' && @$_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){
-	Redirect($pagename);
-	exit;
-}
 
 # ----------------------------------------
 # - PmWiki Config
@@ -192,7 +194,8 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 	$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
 	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']>''){
 		# Null out the PostPatterns so that directive markup doesn't get replaced.
-		if ($bi_EnablePostDirectives == true)  $PmFormPostPatterns = array();
+		#Set to true to allow posting of directives of form (: :) in blog entries.
+		if (SDV($bi_EnablePostDirectives, true) == true)  $PmFormPostPatterns = array();
 
 		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body
 		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '(::entrybody:$1::)';  #entrybody MUST be the last variable.
