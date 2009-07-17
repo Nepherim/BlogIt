@@ -38,6 +38,14 @@ SDV($bi_NowISOFormat, strftime($bi_DateISOFormat, $Now));
 SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
 SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
 SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
+SDVA($bi_MakePageNamePatterns, array(
+	"/'/" => '',														# strip single-quotes
+	"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,	# convert everything else to hyphen
+	"/(^\\-+)|(\\-+\$)/" => '',            					# trim hyphens front and back
+	"/\\-{2,}/" => $bi_TitleSeparator,							# trim duplicate hyphens
+	($Charset=='UTF-8' ?"/^([\\xc0-\\xdf].)/e" :'//') => ($Charset=='UTF-8' ?"utf8toupper('$1')" :''),  # uppercase first letter
+	"/^([a-z])/e" => "strtoupper('$1')"
+));
 
 # ----------------------------------------
 # - Internal Use Only
@@ -194,15 +202,8 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 		SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 		$MakePageNamePatterns = array_merge(
 			(isset($MakePageNamePatterns) ?$MakePageNamePatterns :array()),	# merge with prior patterns (perhaps ISO char patterns)
-			array(
-				'/ß/' => 'ss',
-				"/'/" => '',														# strip single-quotes
-				"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,	# convert everything else to hyphen
-				"/(^\\-+)|(\\-+\$)/" => '',            					# trim hyphens front and back
-				"/\\-{2,}/" => $bi_TitleSeparator,							# trim duplicate hyphens
-				($Charset=='UTF-8' ?"/^([\\xc0-\\xdf].)/e" :'//') => ($Charset=='UTF-8' ?"utf8toupper('$1')" :''),  # uppercase first letter
-				"/^([a-z])/e" => "strtoupper('$1')"
-			));
+			$bi_MakePageNamePatterns
+		);
 
 		# url will be inherited from title, and will include a group from the url or the default group. If title is blank it is derived from url.
 		if (!strpos($_POST['ptv_entryurl'], '.')) $pg = $_POST['ptv_entryurl'];
