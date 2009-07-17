@@ -99,6 +99,7 @@ if ($bi_SkinTemplate == $SiteGroup .'/BlogIt-SkinTemplate-pmwiki')
 
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s';
+
 $entryType = PageVar($pagename,'$:entrytype');  # MUST be after PageTextVarPatterns declaration, otherwise on single-entry ready, body is NULL.
 $Group = PageVar($pagename, '$Group');
 
@@ -190,15 +191,18 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 		$ROSPatterns['/\(:pmmarkup:(.*?)(\(:title .*?:\)):\)/s'] = '(::pmmarkup:$1$2::)';  #This field contains (:TITLE:), so need to find .*?:)
 
 		# Determine page name from title, replacing ' ' with '-' for seo.
-		SDV($PageNameChars,'-[:alnum:]');
-		SDV($MakePageNamePatterns, array(
-			"/'/" => '',														# strip single-quotes
-			"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,	# convert everything else to hyphen
-			"/(^\\-+)|(\\-+\$)/" => '',            					# trim hyphens front and back
-			'/\s+/' => '',														# trim trailing spaces
-			"/\\-{2,}/" => $bi_TitleSeparator,							# trim duplicate hyphens
-			'/((^|[^-\\w])\\w)/e' => "strtoupper('$1')"
-		));
+		SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
+		$MakePageNamePatterns = array_merge(
+			(isset($MakePageNamePatterns) ?$MakePageNamePatterns :array()),	# merge with prior patterns (perhaps ISO char patterns)
+			array(
+				'/ß/' => 'ss',
+				"/'/" => '',														# strip single-quotes
+				"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,	# convert everything else to hyphen
+				"/(^\\-+)|(\\-+\$)/" => '',            					# trim hyphens front and back
+				"/\\-{2,}/" => $bi_TitleSeparator,							# trim duplicate hyphens
+				($Charset=='UTF-8' ?"/^([\\xc0-\\xdf].)/e" :'//') => ($Charset=='UTF-8' ?"utf8toupper('$1')" :''),  # uppercase first letter
+				"/^([a-z])/e" => "strtoupper('$1')"
+			));
 
 		# url will be inherited from title, and will include a group from the url or the default group. If title is blank it is derived from url.
 		if (!strpos($_POST['ptv_entryurl'], '.')) $pg = $_POST['ptv_entryurl'];
@@ -360,7 +364,7 @@ function bi_IsEmail($e){
 # - Markup Expression Functions
 # ----------------------------------------
 function bi_BasePage($pn){
-	return preg_replace('/^' .$GLOBALS['bi_CommentGroup'] .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/','${1}/${2}',$pn);
+	return preg_replace('/^' .$GLOBALS['bi_CommentGroup'] .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/','${1}.${2}',$pn);
 }
 # 0:fullname 1:param 2:val
 function bi_URL($args){
