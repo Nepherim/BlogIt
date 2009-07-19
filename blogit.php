@@ -28,17 +28,23 @@ SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_ReadMore, '%readmore%[[{$FullName}#break | Read more...]]');
 SDV($bi_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($bi_DateDisplayFormat, $TimeFmt);
+SDV($bi_AuthBlogs,'edit');
+SDV($bi_AuthComments,'edit');
 SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 
 # ----------------------------------------
 # - Less frequently user settable
 # ----------------------------------------
+SDVA($bi_Auth, array('comment-edit'=>$bi_AuthComments, 'comment-approve'=>$bi_AuthComments,
+	'blog-edit'=>$bi_AuthBlogs, 'blog-new'=>$bi_AuthBlogs, 'sidebar'=>$bi_AuthBlogs));
 SDV($bi_BodyBreak, '[[#break]]');
 SDV($bi_TagSeparator, ', ');
 SDV($bi_TitleSeparator, '-');
+SDV($bi_EnablePostDirectives, true);
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
 SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
+SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',														# strip single-quotes
 	"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,	# convert everything else to hyphen
@@ -56,7 +62,11 @@ SDV($bi_NewEntry, $SiteGroup .'.BlogIt-NewEntry');
 SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
 SDVA($bi_PageType, array('blog'=>'blog'));
 SDV($bi_PageType_Comment, 'comment');  #Not in PageType list, since we don't want bloggers to be able to select 'comment' types.
-if (CondAuth($pagename,'edit') || CondAuth($pagename,'admin'))	$EnablePostCaptchaRequired = 0;
+if (bi_Auth('*')) $EnablePostCaptchaRequired = 0;
+echo (CondAuth($pagename,$bi_AuthBlogs)?"AuthBlogs":"No AuthBlogs");
+echo (' - '. (CondAuth($pagename,$bi_AuthComments)?"AuthComments":"No AuthComments") );
+echo (' - '. (CondAuth($pagename,'edit')?"edit":"No edit"));
+echo (' - '. (CondAuth($pagename,'admin')?"admin":"No admin"));
 
 SDV($FPLTemplatePageFmt, array(
 	'{$FullName}',
@@ -73,7 +83,7 @@ SDV($PmFormTemplatesFmt, array(
 bi_setFmtPV(array('Now','bi_DefaultGroup','bi_BlogGroups','bi_CommentGroup','bi_AuthorGroup',
 	'bi_CommentsEnabled','bi_CategoryGroup','bi_DateEntryFormat','bi_DateDisplayFormat','bi_NewEntry',
 	'bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired', 'bi_EntriesPerPage','bi_Admin','bi_LinkToCommentSite',
-	'bi_StatAction'
+	'bi_StatAction','bi_AuthBlogs','bi_AuthComments'
 ));
 bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_CommentType,
 	'$bi_BlogList'=>$bi_BlogList, '$bi_PageType'=>$bi_PageType
@@ -163,6 +173,7 @@ else Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (
 $Conditions['bi_ispage'] = 'bi_IsPage($condparm)';
 $Conditions['bi_isdate'] = 'bi_IsDate($condparm)';
 $Conditions['bi_isemail'] = 'bi_IsEmail($condparm)';
+$Conditions['bi_auth'] = 'bi_Auth($condparm)';
 
 # ----------------------------------------
 # - Markup Expressions
@@ -194,15 +205,14 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 	$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
 	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']>''){
 		# Null out the PostPatterns so that directive markup doesn't get replaced.
-		#Set to true to allow posting of directives of form (: :) in blog entries.
-		if (SDV($bi_EnablePostDirectives, true) == true)  $PmFormPostPatterns = array();
+		# Set to true to allow posting of directives of form (: :) in blog entries.
+		if ($bi_EnablePostDirectives)  $PmFormPostPatterns = array();
 
 		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body
 		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '(::entrybody:$1::)';  #entrybody MUST be the last variable.
 		$ROSPatterns['/\(:pmmarkup:(.*?)(\(:title .*?:\)):\)/s'] = '(::pmmarkup:$1$2::)';  #This field contains (:TITLE:), so need to find .*?:)
 
 		# Determine page name from title, replacing ' ' with '-' for seo.
-		SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 		$MakePageNamePatterns = array_merge(
 			(isset($MakePageNamePatterns) ?$MakePageNamePatterns :array()),	# merge with prior patterns (perhaps ISO char patterns)
 			$bi_MakePageNamePatterns
@@ -238,7 +248,7 @@ if ($entryType && $entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 		$GroupHeaderFmt = '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	}
 
-}elseif ($Group == $bi_CommentGroup && $action=='browse' && CondAuth($pagename, 'admin'))  #After editing/deleting a comment page
+}elseif ($Group == $bi_CommentGroup && $action=='browse' && bi_Auth($pagename, 'comment-edit'))  #After editing/deleting a comment page
 	bi_Redirect($pagename);
 
 # ----------------------------------------
@@ -362,6 +372,14 @@ function bi_IsEmail($e){
 	return (bool)preg_match(
 		"/^[-_a-z0-9\'+*$^&%=~!?{}]++(?:\.[-_a-z0-9\'+*$^&%=~!?{}]+)*+@(?:(?![-.])[-a-z0-9.]+(?<![-.])\.[a-z]{2,6}|\d{1,3}(?:\.\d{1,3}){3})(?::\d++)?$/iD"
 		,$e);
+}
+function bi_Auth($e){
+	if ($e=='*'){
+		foreach ($GLOBALS['bi_Auth'] as $k => $v)
+			if (CondAuth($GLOBALS['pagename'], $v)) return true;
+		return false;
+	} else
+		return CondAuth($GLOBALS['pagename'], $GLOBALS['bi_Auth'][$e]);
 }
 
 # ----------------------------------------
