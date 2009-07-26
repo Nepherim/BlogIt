@@ -6,10 +6,8 @@
     For installation and usage instructions refer to: http://pmwiki.com/Cookbook/BlogIt
 */
 $RecipeInfo['BlogIt']['Version'] = '2009-04-16';
-if ($VersionNum < 2001950)
-	Abort ("<h3>You are running PmWiki version {$Version}. BlogIt needs a newer version of PmWiki. Please update to 2.2.0 or later.</h3>");
-$BlogIt['debug']=true;
-bi_debugLog('--------------------');
+if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.0 or later.</h3>");
+$BlogIt['debug']=true; bi_debugLog('--------------------');
 #foreach ($_POST as $p=>$k) bi_debugLog($p .'=' .$k, true);
 #FPLCountA
 
@@ -25,7 +23,6 @@ SDV($bi_CategoryGroup, 'Tags');
 SDV($bi_AuthorGroup, 'Profiles'); #$AuthorGroup
 SDV($bi_EntriesPerPage, 15);
 SDV($bi_LinkToCommentSite, 'true');
-SDV($bi_ReadMore, '%readmore%[[{$FullName}#break | Read more...]]');
 SDV($bi_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($bi_DateDisplayFormat, $TimeFmt);
 SDV($bi_AuthBlogs,'edit');
@@ -35,9 +32,11 @@ SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you c
 # ----------------------------------------
 # - Less frequently user settable
 # ----------------------------------------
+SDV($bi_BlogIt_Enabled, 1);
 SDVA($bi_Auth, array('comment-edit'=>$bi_AuthComments, 'comment-approve'=>$bi_AuthComments,
 	'blog-edit'=>$bi_AuthBlogs, 'blog-new'=>$bi_AuthBlogs, 'sidebar'=>$bi_AuthBlogs));
-SDV($bi_BodyBreak, '[[#break]]');
+SDV($bi_BodyBreak, '$[break]');
+SDV($bi_ReadMore, '%readmore%[[{$FullName}#' .$bi_BodyBreak .' | $[Read more...]]]');
 SDV($bi_TagSeparator, ', ');
 SDV($bi_TitleSeparator, '-');
 SDV($bi_EnablePostDirectives, true);
@@ -62,42 +61,42 @@ SDV($bi_NewEntry, $SiteGroup .'.BlogIt-NewEntry');
 SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
 SDVA($bi_PageType, array('blog'=>'blog'));
 SDV($bi_PageType_Comment, 'comment');  #Not in PageType list, since we don't want bloggers to be able to select 'comment' types.
-if (bi_Auth('*')) $EnablePostCaptchaRequired = 0;
-echo (CondAuth($pagename,$bi_AuthBlogs)?"AuthBlogs":"No AuthBlogs");
-echo (' - '. (CondAuth($pagename,$bi_AuthComments)?"AuthComments":"No AuthComments") );
-echo (' - '. (CondAuth($pagename,'edit')?"edit":"No edit"));
-echo (' - '. (CondAuth($pagename,'admin')?"admin":"No admin"));
-
 SDV($FPLTemplatePageFmt, array(
-	'{$FullName}',
-	(isset($Skin)?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate',
-	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'
-));
+	'{$FullName}', (isset($Skin)?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate',
+	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'));
 SDV($PmFormTemplatesFmt, array(
 	(isset($Skin)?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate',
-	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PmFormTemplates'
-));
+	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PmFormTemplates'));
+
 # ----------------------------------------
 # - Usable on Wiki Pages
 # ----------------------------------------
-bi_setFmtPV(array('Now','bi_DefaultGroup','bi_BlogGroups','bi_CommentGroup','bi_AuthorGroup',
+bi_setFmtPV(array('bi_BlogIt_Enabled','Now','bi_DefaultGroup','bi_BlogGroups','bi_CommentGroup','bi_AuthorGroup',
 	'bi_CommentsEnabled','bi_CategoryGroup','bi_DateEntryFormat','bi_DateDisplayFormat','bi_NewEntry',
 	'bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired', 'bi_EntriesPerPage','bi_Admin','bi_LinkToCommentSite',
-	'bi_StatAction','bi_AuthBlogs','bi_AuthComments'
-));
+	'bi_StatAction','bi_AuthBlogs','bi_AuthComments'));
 bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_CommentType,
-	'$bi_BlogList'=>$bi_BlogList, '$bi_PageType'=>$bi_PageType
-));
+	'$bi_BlogList'=>$bi_BlogList, '$bi_PageType'=>$bi_PageType));
 
 # ----------------------------------------
 # - Internal
 # ----------------------------------------
 $bi_BlogForm = 'blogit-entry';
 $bi_CommentForm = 'blogit-comments';
-if($action=='pmform' && @$_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){  #Cancel button clicked
-	Redirect($pagename);
-	exit;
+if($action=='pmform'){
+	if (@$_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){  #Cancel button clicked
+		Redirect($pagename);
+		exit;
+
+	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']==$bi_CommentForm){
+		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
+	}
 }
+if (bi_Auth('*')) $EnablePostCaptchaRequired = 0;  #Needs to be before all CondAuth statements.
+echo (CondAuth($pagename,$bi_AuthBlogs)?"AuthBlogs":"No AuthBlogs");
+echo (' - '. (CondAuth($pagename,$bi_AuthComments)?"AuthComments":"No AuthComments") );
+echo (' - '. (CondAuth($pagename,'edit')?"edit":"No edit"));
+echo (' - '. (CondAuth($pagename,'admin')?"admin":"No admin"));
 
 # ----------------------------------------
 # - Pagination
@@ -177,12 +176,12 @@ $Conditions['bi_auth'] = 'bi_Auth($condparm)';
 
 # ----------------------------------------
 # - Markup Expressions
-# if 0 is null or {$$... then returns 1; if 0 != null then returns ([2] or 0 if 2 is null)
-$MarkupExpr['bi_ifnull'] = '( (!empty($args[0]) && substr($args[0],0,3)!=\'{$$\') ?((empty($args[2]) || substr($args[2],0,3)==\'{$$\') ?$args[0] :$args[2]) :$args[1])';
+# if 0 is null or {$... then returns 1; if 0 != null then returns ([2] or 0 if 2 is null)
+$MarkupExpr['bi_ifnull'] = '( (!empty($args[0]) && substr($args[0],0,2)!=\'{$\') ?((empty($args[2]) || substr($args[2],0,2)==\'{$\') ?$args[0] :$args[2]) :$args[1])';
 # bi_param "group" "group_val"   Returns: group="group_val" is group_val != "" else returns ""   0:param name; 1:value
-$MarkupExpr['bi_param'] = '( (empty($args[1]) || substr($args[1],0,3)==\'{$$\') ?"" :"$args[0]=\"$args[1]\"")';
-# bi_cond "!equal" "{$var}" "val" "&&"   Returns: [3] 0 1 2  if 2 != ""; returns "" if "val"="" or substr(1 or 2)="{$$"  Sample Output: && !equal "{$var}" "val"
-$MarkupExpr['bi_cond'] = '( (empty($args[2]) || substr($args[2],0,3)==\'{$$\' || substr($args[1],0,3)==\'{$$\') '
+$MarkupExpr['bi_param'] = '( (empty($args[1]) || substr($args[1],0,2)==\'{$\') ?"" :"$args[0]=\"$args[1]\"")';
+# bi_cond "!equal" "{$var}" "val" "&&"   Returns: [3] 0 1 2  if 2 != ""; returns "" if "val"="" or substr(1 or 2)="{$"  Sample Output: && !equal "{$var}" "val"
+$MarkupExpr['bi_cond'] = '( (empty($args[2]) || substr($args[2],0,2)==\'{$\' || substr($args[1],0,2)==\'{$\') '
 	.'?"" : "$args[0] \"$args[1]\" " .($args[0]=="date" ?"" :"\"") .$args[2] .($args[0]=="date" ?"" :"\"") .$args[3])';
 $MarkupExpr['bi_base'] = 'bi_BasePage($args[0])';
 $MarkupExpr['bi_lt'] = '($args[0]<$args[1]?"true":"false")';
@@ -197,7 +196,7 @@ bi_debugLog('entryType: '.$entryType. '   action: '.$action. '    Target: '.$_PO
 # Allow URL access to sections within $bi_TemplateList, including passed parameters.
 if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 	$args = bi_Implode($_GET, ' ', '=', array('n'=>'','action'=>'','s'=>''));
-	$GroupHeaderFmt = '(:title '.$_GET['s'].':)(:includesection "#'.$_GET['s']." $args \":)";
+	$GroupHeaderFmt = '(:title $[' .$_GET['s'] .']:)(:includesection "#' .$_GET['s'] ." $args \":)";
 
 # Blog entry being saved; performed before PmForm action handler.
 }elseif ($action && $action=='pmform'){
@@ -231,15 +230,16 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 		$_POST['ptv_entrytype'] = $bi_PageType['blog'];  #Prevent spoofing.
 		$_POST['ptv_pmmarkup'] = bi_SaveTags($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $bi_TagSeparator) .'(:title ' .$_POST['ptv_entrytitle'] .':)';
 
-	}elseif (@$_POST['target']==$bi_CommentForm && $bi_CommentsEnabled=='true'){
-		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
+	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']==$bi_CommentForm){
+#		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
 		$_POST['ptv_entrytype'] = $bi_PageType_Comment;
 		$_POST['ptv_commentapproved'] = 'false';
 		$_POST['ptv_commentdate'] = $Now;
 	}
 
-}else	bi_AddMarkup();
+}else
+	bi_AddMarkup();
 
 if ($entryType && $entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 	$GroupHeaderFmt = '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error.
@@ -309,10 +309,10 @@ function bi_Admin($src, $auth='admin') {
 # - Markup Functions
 # ----------------------------------------
 function blogitMU_more($options, $text){
-	return (strpos($text, $GLOBALS['bi_BodyBreak']) !== false ? preg_replace('/{\$FullName}/', $options, $GLOBALS['bi_ReadMore']) : '');
+	return (strpos($text, '[[#' .$GLOBALS['bi_BodyBreak'] .']]') !== false ? preg_replace('/{\$FullName}/', $options, $GLOBALS['bi_ReadMore']) : '');
 }
 function blogitMU_intro($options, $text){
-	list($found,$null) = explode($GLOBALS['bi_BodyBreak'], $text);
+	list($found,$null) = explode('[[#' .$GLOBALS['bi_BodyBreak'] .']]', $text);
 	return $found;
 }
 function blogitMU_list($name, $text){
