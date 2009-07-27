@@ -93,10 +93,6 @@ if($action=='pmform'){
 	}
 }
 if (bi_Auth('*')) $EnablePostCaptchaRequired = 0;  #Needs to be before all CondAuth statements.
-echo (CondAuth($pagename,$bi_AuthBlogs)?"AuthBlogs":"No AuthBlogs");
-echo (' - '. (CondAuth($pagename,$bi_AuthComments)?"AuthComments":"No AuthComments") );
-echo (' - '. (CondAuth($pagename,'edit')?"edit":"No edit"));
-echo (' - '. (CondAuth($pagename,'admin')?"admin":"No admin"));
 
 # ----------------------------------------
 # - Pagination
@@ -162,10 +158,10 @@ Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
 Markup('{earlymx(', '>{$var}', '/\{earlymx(\(\w+\b.*?\))\}/e',
 	"MarkupExpression(\$pagename, PSS('$1'))");
-if (IsEnabled($EnableGUIButtons,0))
+if (IsEnabled($EnableGUIButtons,0)){
 	if ($entryType && $entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'') || $pagename == $bi_NewEntry)
 		include_once("$FarmD/scripts/guiedit.php");  #PmWiki only includes this automatically if action=edit.
-else Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
+}else Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
 
 # ----------------------------------------
 # - Conditions
