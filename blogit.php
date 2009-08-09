@@ -19,7 +19,7 @@ SDV($bi_DefaultGroup, 'Blog');	#Pre-populates the Pagename field; blogs can exis
 SDV($bi_CommentGroup, 'Comments');
 SDV($bi_CommentsEnabled, 'true');
 SDV($bi_BlogGroups, $bi_DefaultGroup);	#OPTIONAL: Comma separated list of Blog groups. This is purely to speed up pagelists. Defining this list does not mean all pages in the group are 'blog-pages'.
-SDV($bi_CategoryGroup, 'Tags');
+SDV($CategoryGroup, 'Tags');
 SDV($bi_AuthorGroup, 'Profiles'); #$AuthorGroup
 SDV($bi_EntriesPerPage, 15);
 SDV($bi_LinkToCommentSite, 'true');
@@ -32,6 +32,7 @@ SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you c
 # ----------------------------------------
 # - Less frequently user settable
 # ----------------------------------------
+SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');
 SDV($bi_BlogIt_Enabled, 1);
 SDVA($bi_Auth, array('comment-edit'=>$bi_AuthComments, 'comment-approve'=>$bi_AuthComments,
 	'blog-edit'=>$bi_AuthBlogs, 'blog-new'=>$bi_AuthBlogs, 'sidebar'=>$bi_AuthBlogs));
@@ -72,7 +73,7 @@ SDV($PmFormTemplatesFmt, array(
 # - Usable on Wiki Pages
 # ----------------------------------------
 bi_setFmtPV(array('bi_BlogIt_Enabled','Now','bi_DefaultGroup','bi_BlogGroups','bi_CommentGroup','bi_AuthorGroup',
-	'bi_CommentsEnabled','bi_CategoryGroup','bi_DateEntryFormat','bi_DateDisplayFormat','bi_NewEntry',
+	'bi_CommentsEnabled','CategoryGroup','bi_DateEntryFormat','bi_DateDisplayFormat','bi_NewEntry',
 	'bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired', 'bi_EntriesPerPage','bi_Admin','bi_LinkToCommentSite',
 	'bi_StatAction','bi_AuthBlogs','bi_AuthComments'));
 bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_CommentType,
@@ -119,10 +120,8 @@ $Group = PageVar($pagename, '$Group');
 # - Categories
 # Doesn't pick up categories defined as page variables.
 $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>";
-$CategoryGroup = $bi_CategoryGroup;	# Need to explicity set this.
-$AutoCreate['/^' .$bi_CategoryGroup .'\./'] = array('ctime' => $Now);
-if ($Group == $bi_CategoryGroup)
-	SDV($GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');
+$AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
+if ($Group == $CategoryGroup) $GroupFooterFmt = $bi_GroupFooterFmt;
 
 # ----------------------------------------
 # - SearchPatterns
@@ -148,7 +147,7 @@ SDV($HandleActions['blogitapprove'], 'bi_ApproveComment'); SDV($HandleAuth['blog
 
 # ----------------------------------------
 # - Markup
-# (:blogit [more,intro,list,multiline] options:)text(:blogitend:)
+# (:blogit [more|intro|list|multiline|substr|tags] options:)text(:blogitend:)
 Markup('blogit', 'fulltext', '/\(:blogit (more|intro|list|multiline|substr|tags)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',

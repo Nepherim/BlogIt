@@ -6,10 +6,34 @@ csum=
 ctime=1231901689
 host=127.0.0.1
 name=Site.BlogIt-SideBar
-rev=81
-targets=Site.BlogIt-Admin,Site.BlogIt-NewEntry,Site.BlogIt-SideBar,Blog.A-is-a-title,Blog.4321,Blog.12341,Blog.Page-with-still-no-title-yes,Blog.Testwqwqwqwqwq,Blog.Test-1f-no-hyphens,Blog.Test-1e-no-hyphens,Blog.Test-1d-no-hyphens,Site.BlogList,Blog.Blogwwntry-3,Tags.9789,Tags.A,Tags.A1a,Tags.A2a,Tags.A3a,Tags.Aa,Tags.Aaa,Tags.ABC,Tags.Abcd,Tags.And-some-other,Tags.AndAntoher,Tags.AndMore,Tags.ATag,Tags.B,Tags.Bbb,Tags.Blob,Tags.Blog,Tags.Blog-2,Tags.Break,Tags.C,Tags.Captcha,Tags.Cdsd,Tags.Chess,Tags.D,Tags.Derided,Tags.Development,Tags.Drupal,Tags.E,Tags.Efg,Tags.Entrytags,Tags.EvenMore,Tags.FaSdfasasfs,Tags.Fdsdf,Tags.Featured,Tags.Featured-article,Tags.Ferfe,Tags.Freeware,Tags.Group-1,Tags.Group1,Tags.H,Tags.Here,Tags.How-to,Tags.Hyphen,Tags.Hyphens,Tags.Inside,Tags.Jksd,Tags.Jquery,Tags.Lyceum,Tags.More,Tags.Netflix,Tags.OneMoreHere,Tags.OneTag,Tags.Outside,Tags.Photography,Tags.Php,Tags.Picasa,Tags.Pmwiki,Tags.Quiddity,Tags.Review,Tags.Ros,Tags.Rrr,Tags.Science,Tags.Second,Tags.Skins,Tags.Soapbox,Tags.Software,Tags.Sss,Tags.Sss-and,Tags.Sssss,Tags.Tag1,Tags.Tag2,Tags.Tag3,Tags.Tags,Tags.Test,Tags.Test2,Tags.Third,Tags.ThisIsOne,Tags.Tips,Tags.Unphotographed,Tags.Wer,Tags.Werw,Tags.Werwerwe,Tags.YetAndMore
+rev=89
+targets=Site.BlogIt-Admin,Site.BlogIt-NewEntry,Site.BlogIt-SideBar,Blog.A-is-a-title,Blog.4321,Blog.12341,Blog.Page-with-still-no-title-yes,Blog.Testwqwqwqwqwq,Blog.Test-1f-no-hyphens,Blog.Test-1e-no-hyphens,Blog.Test-1d-no-hyphens,Site.BlogList,Blog.Blogwwntry-3,Tags.9789,Tags.A,Tags.A1a,Tags.A2a,Tags.A3a,Tags.Aa,Tags.Aaa,Tags.ABC,Tags.Abcd,Tags.And-another,Tags.And-some-other,Tags.AndAntoher,Tags.AndMore,Tags.ATag,Tags.B,Tags.Bbb,Tags.Blob,Tags.Blog,Tags.Blog-2,Tags.Break,Tags.C,Tags.Captcha,Tags.Cdsd,Tags.Chess,Tags.D,Tags.Derided,Tags.Development,Tags.Drupal,Tags.E,Tags.Efg,Tags.Entrytags,Tags.EvenMore,Tags.FaSdfasasfs,Tags.Fdsdf,Tags.Featured,Tags.Featured-article,Tags.Ferfe,Tags.Freeware,Tags.Group-1,Tags.Group1,Tags.H,Tags.Here,Tags.How-to,Tags.Hyphen,Tags.Hyphens,Tags.Inside,Tags.Jksd,Tags.Jquery,Tags.Lyceum,Tags.More,Tags.Netflix,Tags.Nospace,Tags.OneMoreHere,Tags.OneTag,Tags.Outside,Tags.Photography,Tags.Php,Tags.Picasa,Tags.Pmwiki,Tags.Quiddity,Tags.Review,Tags.Ros,Tags.Rrr,Tags.Science,Tags.Second,Tags.Skins,Tags.Soapbox,Tags.Software,Tags.Spaced-tag,Tags.Sss,Tags.Sss-and,Tags.Sssss,Tags.Tag1,Tags.Tag2,Tags.Tag3,Tags.Tags,Tags.Test,Tags.Test2,Tags.The-last,Tags.Third,Tags.ThisIsOne,Tags.Tips,Tags.Unphotographed,Tags.Wer,Tags.Werw,Tags.Werwerwe,Tags.YetAndMore
 text=(:if false:)Parameters: blogid (restricts the information in the sidebar to a single blog)(:if:)%0a(:blogid:{$bi_BlogList_BLOG1}:) %0a(:if bi_auth sidebar:)%0a(:div class="list-admin":)%0a%25sidehead%25 $[Site Admin]%25%25%0a(:includesection "#control-panel blogid={(bi_ifnull '{$$blogid}' '{$:blogid}')}":)%0a(:divend:)%0a(:if:)%0a%0a(:div class="list-post":)%0a%25sidehead%25 $[Recently Written]%25%25%0a(:includesection "#blog-summary-list-pagelist blogid={(bi_ifnull '{$$blogid}' '{$:blogid}')} count=8 status={$bi_StatusType_PUBLISH}":)%0a(:divend:)%0a%0a(:div class="list-comments":)%0a%25sidehead%25 $[Recent Comments]%25%25%0a(:includesection "#comment-summary-list-pagelist blogid={(bi_ifnull '{$$blogid}' '{$:blogid}')} count=8":)%0a(:divend:)%0a%0a(:div class="list-cat":)%0a%25sidehead%25 $[Categories]%25%25%0a(:includesection "#tag-list-pagelist count=8":)%0a(:divend:)%0a%0a(:div class="list-admin":)%0a(:if [ !authid && !auth edit && !auth admin ] :)%0a* %25item rel=nofollow class=login%25[[{*$FullName}?action=login | login]]%0a(:divend:)%0a(:if:)
-time=1248650605
+time=1249857176
+author:1249857176=
+diff:1249857176:1249856630:=11a12%0a> * [[Site.BlogIt-SideBar]] and more at [[Site.BlogIt-SideBar]] end%0a
+host:1249857176=127.0.0.1
+author:1249856630=
+diff:1249856630:1249856426:=23c23%0a%3c (:includesection "#tag-list-pagelist count=8":)%0a---%0a> (:includesection "#tag-list-pagelist blogid={(bi_ifnull '{$$blogid}' '{$:blogid}')} count=8":)%0a
+host:1249856630=127.0.0.1
+author:1249856426=
+diff:1249856426:1249832326:=23c23%0a%3c (:includesection "#tag-list-pagelist blogid={(bi_ifnull '{$$blogid}' '{$:blogid}')} count=8":)%0a---%0a> (:includesection "#tag-list-pagelist count=8":)%0a
+host:1249856426=127.0.0.1
+author:1249832326=
+diff:1249832326:1249832160:=8a9,11%0a> %0a> %25sidehead%25 [[NoteIt/HomePage|NoteIt]]%0a> (:pagelist group=Blog fmt=title list=normal order=-time name=-HomePage,-SideBar,-RecentChanges:)%0a
+host:1249832326=127.0.0.1
+author:1249832160=
+diff:1249832160:1249832124:=11c11%0a%3c (:pagelist group=Blog fmt=title list=normal order=-time name=-HomePage,-SideBar,-RecentChanges:)%0a---%0a> * (:pagelist group=Blog fmt=title list=normal order=-time name=-HomePage,-SideBar,-RecentChanges:)%0a
+host:1249832160=127.0.0.1
+author:1249832124=
+diff:1249832124:1249690645:=9,11d8%0a%3c %0a%3c %25sidehead%25 [[NoteIt/HomePage|NoteIt]]%0a%3c * (:pagelist group=Blog fmt=title list=normal order=-time name=-HomePage,-SideBar,-RecentChanges:)%0a
+host:1249832124=127.0.0.1
+author:1249690645=
+diff:1249690645:1249689674:=12c12%0a%3c * [[Site.BlogIt-SideBar]] and more at [[Site.BlogIt-SideBar]] end%0a---%0a> * [[link 1]] and more at [[link2]] end%0a
+host:1249690645=127.0.0.1
+author:1249689674=
+diff:1249689674:1248650605:=12d11%0a%3c * [[link 1]] and more at [[link2]] end%0a
+host:1249689674=127.0.0.1
 author:1248650605=
 diff:1248650605:1248650605:=
 host:1248650605=127.0.0.1
