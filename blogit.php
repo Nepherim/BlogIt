@@ -5,9 +5,9 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2009-04-16';
+$RecipeInfo['BlogIt']['Version'] = '2009-08-08';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.0 or later.</h3>");
-$BlogIt['debug']=true; bi_debugLog('--------------------');
+#$BlogIt['debug']=true; bi_debugLog('--------------------');
 #foreach ($_POST as $p=>$k) bi_debugLog($p .'=' .$k, true);
 #FPLCountA
 
@@ -35,7 +35,7 @@ SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you c
 SDV($bi_BlogIt_Enabled, 1);
 SDVA($bi_Auth, array('comment-edit'=>$bi_AuthComments, 'comment-approve'=>$bi_AuthComments,
 	'blog-edit'=>$bi_AuthBlogs, 'blog-new'=>$bi_AuthBlogs, 'sidebar'=>$bi_AuthBlogs));
-SDV($bi_BodyBreak, '$[break]');
+SDV($bi_BodyBreak, 'break');
 SDV($bi_ReadMore, '%readmore%[[{$FullName}#' .$bi_BodyBreak .' | $[Read more...]]]');
 SDV($bi_TagSeparator, ', ');
 SDV($bi_TitleSeparator, '-');
@@ -109,12 +109,9 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_
 $HandleAuth['source'] = $HandleAuth['diff'] = 'edit';
 include_once($FarmD.'/cookbook/pmform.php');
 bi_addPageStore();
-if ($bi_SkinTemplate == $SiteGroup .'/BlogIt-SkinTemplate-pmwiki')
-	$HTMLStylesFmt['blogit'] = 'h2 .blogit-edit-link a {font-size: 50%;}';
 
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s';
-
 $entryType = PageVar($pagename,'$:entrytype');  # MUST be after PageTextVarPatterns declaration, otherwise on single-entry ready, body is NULL.
 $Group = PageVar($pagename, '$Group');
 
@@ -172,8 +169,12 @@ $Conditions['bi_auth'] = 'bi_Auth($condparm)';
 
 # ----------------------------------------
 # - Markup Expressions
-# if 0 is null or {$... then returns 1; if 0 != null then returns ([2] or 0 if 2 is null)
-$MarkupExpr['bi_ifnull'] = '( (!empty($args[0]) && substr($args[0],0,2)!=\'{$\') ?((empty($args[2]) || substr($args[2],0,2)==\'{$\') ?$args[0] :$args[2]) :$args[1])';
+# if [0] is null or {$... then returns [1]; if [0] != null then returns ([2] or [0] if [2] is null)
+#$MarkupExpr['bi_ifnull'] = '( (!empty($args[0]) && substr($args[0],0,2)!=\'{$\') ?((empty($args[2]) || substr($args[2],0,2)==\'{$\') ?$args[0] :$args[2]) :$args[1])';
+$MarkupExpr['bi_ifnull'] = '( bi_IsNull($args[0])!="" ?( bi_IsNull($args[2])=="" ?$args[0] :$args[2]) :$args[1])';
+# if [0] is null or {$ or {=$ then returns true; else false
+$MarkupExpr['bi_isnull'] = '(bi_IsNull($args[0])=="" ?"true" :"false")';
+$MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull($args[0]))';
 # bi_param "group" "group_val"   Returns: group="group_val" is group_val != "" else returns ""   0:param name; 1:value
 $MarkupExpr['bi_param'] = '( (empty($args[1]) || substr($args[1],0,2)==\'{$\') ?"" :"$args[0]=\"$args[1]\"")';
 # bi_cond "!equal" "{$var}" "val" "&&"   Returns: [3] 0 1 2  if 2 != ""; returns "" if "val"="" or substr(1 or 2)="{$"  Sample Output: && !equal "{$var}" "val"
@@ -201,7 +202,7 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']>''){
 		# Null out the PostPatterns so that directive markup doesn't get replaced.
 		# Set to true to allow posting of directives of form (: :) in blog entries.
-		if ($bi_EnablePostDirectives)  $PmFormPostPatterns = array();
+		if ($bi_EnablePostDirectives) $PmFormPostPatterns = array();
 
 		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body
 		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '(::entrybody:$1::)';  #entrybody MUST be the last variable.
@@ -227,7 +228,6 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 		$_POST['ptv_pmmarkup'] = bi_SaveTags($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $bi_TagSeparator) .'(:title ' .$_POST['ptv_entrytitle'] .':)';
 
 	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']==$bi_CommentForm){
-#		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
 		$_POST['ptv_entrytype'] = $bi_PageType_Comment;
 		$_POST['ptv_commentapproved'] = 'false';
@@ -239,7 +239,7 @@ if ($action && $action=='blogitadmin' && isset($_GET['s'])){
 
 if ($entryType && $entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 	$GroupHeaderFmt = '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error.
-	if ($action=='blogitedit' || ($action=='pmform' && $_POST['target']==$bi_BlogForm)){
+	if ( ($action=='blogitedit' || ($action=='pmform' && $_POST['target']==$bi_BlogForm)) && (bi_Auth('blog-edit')||bi_Auth('blog-new'))){
 		$EnablePostCaptchaRequired = 0;
 		$GroupHeaderFmt = '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	}
@@ -377,6 +377,9 @@ function bi_Auth($e){
 	} else
 		return CondAuth($GLOBALS['pagename'], $GLOBALS['bi_Auth'][$e]);
 }
+function bi_IsNull($e){
+	return (!empty($e) && substr($e,0,3)!='{*$' && substr($e,0,2)!='{$' && substr($e,0,3)!='{=$' ?$e :'');
+}
 
 # ----------------------------------------
 # - Markup Expression Functions
@@ -404,16 +407,16 @@ function bi_AddMarkup(){
 # Stores combined list in tag-field in PmWiki format [[!...]][[!...]].
 function bi_SaveTags($body, $user_tags, $sep) {
 	# Read tags from body, strip [[!...]]
-	$bodyTags = (preg_match_all('/\[\[\!(\w+)\]\]/', $body, $match) ? $match[1] : array());  #array of tags contained in [[!...]] markup.
+	if ($bodyTags) $bodyTags = (preg_match_all('/\[\[\!(\w+)\]\]/', $body, $match) ? $match[1] : array());  #array of tags contained in [[!...]] markup.
 
 	# Make sure tag-field entries are in standard separated format, and place in array
-	if ($user_tags)  $fieldTags = explode($sep, preg_replace('/'.trim($sep).'\s*/', $sep, $user_tags));
+	if ($user_tags) $fieldTags = explode($sep, preg_replace('/'.trim($sep).'\s*/', $sep, $user_tags));
 
 	# Concatenate the tag-field tags, with those in the body,
 	$allTags = array_unique(array_merge((array)$fieldTags, (array)$bodyTags));
 	sort($allTags);
 	#  generate a new separated string.
-	return ($allTags?'[[!'.implode(']]'.$sep.'[[!', $allTags).']]':'');
+	return ($allTags ?'[[!'.implode(']]'.$sep.'[[!', $allTags).']]' :'');
 }
 
 # ----------------------------------------
