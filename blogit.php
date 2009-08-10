@@ -84,6 +84,7 @@ bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_Comm
 # ----------------------------------------
 $bi_BlogForm = 'blogit-entry';
 $bi_CommentForm = 'blogit-comments';
+if (bi_Auth('*')) $EnablePostCaptchaRequired = 0;  #Needs to be before all CondAuth statements, and before possible reset of edit password.
 if($action=='pmform'){
 	if (@$_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){  #Cancel button clicked
 		Redirect($pagename);
@@ -93,7 +94,6 @@ if($action=='pmform'){
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
 	}
 }
-if (bi_Auth('*')) $EnablePostCaptchaRequired = 0;  #Needs to be before all CondAuth statements.
 
 # ----------------------------------------
 # - Pagination
@@ -113,7 +113,7 @@ bi_addPageStore();
 
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s';
-$entryType = PageVar($pagename,'$:entrytype');  # MUST be after PageTextVarPatterns declaration, otherwise on single-entry ready, body is NULL.
+$entryType = PageVar($pagename,'$:entrytype');  # MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 $Group = PageVar($pagename, '$Group');
 
 # ----------------------------------------
@@ -165,15 +165,13 @@ $Conditions['bi_ispage'] = 'bi_IsPage($condparm)';
 $Conditions['bi_isdate'] = 'bi_IsDate($condparm)';
 $Conditions['bi_isemail'] = 'bi_IsEmail($condparm)';
 $Conditions['bi_auth'] = 'bi_Auth($condparm)';
+$Conditions['bi_isnull'] = 'bi_IsNull($condparm)==""';
 
 # ----------------------------------------
 # - Markup Expressions
 # if [0] is null or {$... then returns [1]; if [0] != null then returns ([2] or [0] if [2] is null)
-#$MarkupExpr['bi_ifnull'] = '( (!empty($args[0]) && substr($args[0],0,2)!=\'{$\') ?((empty($args[2]) || substr($args[2],0,2)==\'{$\') ?$args[0] :$args[2]) :$args[1])';
 $MarkupExpr['bi_ifnull'] = '( bi_IsNull($args[0])!="" ?( bi_IsNull($args[2])=="" ?$args[0] :$args[2]) :$args[1])';
-# if [0] is null or {$ or {=$ then returns true; else false
-$MarkupExpr['bi_isnull'] = '(bi_IsNull($args[0])=="" ?"true" :"false")';
-$MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull($args[0]))';
+$MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull($args[0]),ENT_QUOTES)';
 # bi_param "group" "group_val"   Returns: group="group_val" is group_val != "" else returns ""   0:param name; 1:value
 $MarkupExpr['bi_param'] = '( (empty($args[1]) || substr($args[1],0,2)==\'{$\') ?"" :"$args[0]=\"$args[1]\"")';
 # bi_cond "!equal" "{$var}" "val" "&&"   Returns: [3] 0 1 2  if 2 != ""; returns "" if "val"="" or substr(1 or 2)="{$"  Sample Output: && !equal "{$var}" "val"
@@ -371,10 +369,10 @@ function bi_IsEmail($e){
 function bi_Auth($e){
 	if ($e=='*'){
 		foreach ($GLOBALS['bi_Auth'] as $k => $v)
-			if (CondAuth($GLOBALS['pagename'], $v)) return true;
-		return false;
+			if (NoCache(CondAuth($GLOBALS['pagename'], $v))) return true;
 	} else
-		return CondAuth($GLOBALS['pagename'], $GLOBALS['bi_Auth'][$e]);
+		return NoCache(CondAuth($GLOBALS['pagename'], $GLOBALS['bi_Auth'][$e]));
+	return false;
 }
 function bi_IsNull($e){
 	return (!empty($e) && substr($e,0,3)!='{*$' && substr($e,0,2)!='{$' && substr($e,0,3)!='{=$' ?$e :'');
@@ -406,7 +404,7 @@ function bi_AddMarkup(){
 # Stores combined list in tag-field in PmWiki format [[!...]][[!...]].
 function bi_SaveTags($body, $user_tags, $sep) {
 	# Read tags from body, strip [[!...]]
-	if ($bodyTags) $bodyTags = (preg_match_all('/\[\[\!(\w+)\]\]/', $body, $match) ? $match[1] : array());  #array of tags contained in [[!...]] markup.
+	if ($body) $bodyTags = (preg_match_all('/\[\[\!(\w+)\]\]/', $body, $match) ? $match[1] : array());  #array of tags contained in [[!...]] markup.
 
 	# Make sure tag-field entries are in standard separated format, and place in array
 	if ($user_tags) $fieldTags = explode($sep, preg_replace('/'.trim($sep).'\s*/', $sep, $user_tags));
