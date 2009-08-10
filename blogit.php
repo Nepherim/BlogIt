@@ -44,6 +44,7 @@ SDV($bi_EnablePostDirectives, true);
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
 SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
+SDV($bi_NowISOFormat, strftime('%Y%m%d', $Now));  #Used in calls to #blog-summary-pagelist, as part of daterange
 SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',														# strip single-quotes
@@ -75,7 +76,7 @@ SDV($PmFormTemplatesFmt, array(
 bi_setFmtPV(array('bi_BlogIt_Enabled','Now','bi_DefaultGroup','bi_BlogGroups','bi_CommentGroup','bi_AuthorGroup',
 	'bi_CommentsEnabled','CategoryGroup','bi_DateEntryFormat','bi_DateDisplayFormat','bi_NewEntry',
 	'bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired', 'bi_EntriesPerPage','bi_Admin','bi_LinkToCommentSite',
-	'bi_StatAction','bi_AuthBlogs','bi_AuthComments'));
+	'bi_StatAction','bi_AuthBlogs','bi_AuthComments','bi_NowISOFormat'));
 bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_CommentType,
 	'$bi_BlogList'=>$bi_BlogList, '$bi_PageType'=>$bi_PageType));
 
@@ -152,8 +153,6 @@ Markup('blogit', 'fulltext', '/\(:blogit (more|intro|list|multiline|substr|tags)
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
-Markup('{earlymx(', '>{$var}', '/\{earlymx(\(\w+\b.*?\))\}/e',
-	"MarkupExpression(\$pagename, PSS('$1'))");
 if (IsEnabled($EnableGUIButtons,0)){
 	if ($entryType && $entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'') || $pagename == $bi_NewEntry)
 		include_once("$FarmD/scripts/guiedit.php");  #PmWiki only includes this automatically if action=edit.
@@ -166,6 +165,7 @@ $Conditions['bi_isdate'] = 'bi_IsDate($condparm)';
 $Conditions['bi_isemail'] = 'bi_IsEmail($condparm)';
 $Conditions['bi_auth'] = 'bi_Auth($condparm)';
 $Conditions['bi_isnull'] = 'bi_IsNull($condparm)==""';
+$Conditions['bi_lt'] = '($args[0]<$args[1] ?true :false)';
 
 # ----------------------------------------
 # - Markup Expressions
@@ -173,12 +173,8 @@ $Conditions['bi_isnull'] = 'bi_IsNull($condparm)==""';
 $MarkupExpr['bi_ifnull'] = '( bi_IsNull($args[0])!="" ?( bi_IsNull($args[2])=="" ?$args[0] :$args[2]) :$args[1])';
 $MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull($args[0]),ENT_QUOTES)';
 # bi_param "group" "group_val"   Returns: group="group_val" is group_val != "" else returns ""   0:param name; 1:value
-$MarkupExpr['bi_param'] = '( (empty($args[1]) || substr($args[1],0,2)==\'{$\') ?"" :"$args[0]=\"$args[1]\"")';
-# bi_cond "!equal" "{$var}" "val" "&&"   Returns: [3] 0 1 2  if 2 != ""; returns "" if "val"="" or substr(1 or 2)="{$"  Sample Output: && !equal "{$var}" "val"
-$MarkupExpr['bi_cond'] = '( (empty($args[2]) || substr($args[2],0,2)==\'{$\' || substr($args[1],0,2)==\'{$\') '
-	.'?"" : "$args[0] \"$args[1]\" " .($args[0]=="date" ?"" :"\"") .$args[2] .($args[0]=="date" ?"" :"\"") .$args[3])';
+$MarkupExpr['bi_param'] = '( bi_IsNull($args[1])=="" ?"" :"$args[0]=\"$args[1]\"")';
 $MarkupExpr['bi_base'] = 'bi_BasePage($args[0])';
-$MarkupExpr['bi_lt'] = '($args[0]<$args[1]?"true":"false")';
 $MarkupExpr['bi_url'] = 'bi_URL($args)';
 $MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_NewEntry .'" ?"' .$bi_DefaultGroup .'." :$args[0])';
 
