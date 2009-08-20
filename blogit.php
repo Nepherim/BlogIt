@@ -126,7 +126,7 @@ if ($Group == $CategoryGroup) $GroupFooterFmt = $bi_GroupFooterFmt;
 
 # ----------------------------------------
 # - SearchPatterns
-$SearchPatterns['blogit'][] = '!\.(All)?Recent(Changes|Uploads|Comments)$!';
+$SearchPatterns['blogit'][] = '!\.(All)?Recent(Changes|Uploads|' .$bi_CommentGroup .')$!';
 $SearchPatterns['blogit'][] = '!\.Group(Print)?(Header|Footer|Attributes)$!';
 $SearchPatterns['blogit'][] = '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki)\.!';
 $SearchPatterns['blogit'][] = FmtPageName('!^$FullName$!', $pagename);
@@ -143,7 +143,7 @@ $PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'.{$Group}-{$Name}-' .d
 $oldBrowse=$HandleActions['browse'];  #Store old browse action so we can perform actions prior.
 $oldUrlApprove=$HandleActions['approvesites'];
 $HandleActions['browse']='bi_HandleBrowse';
-#$HandleActions['approvsites']='bi_HandleApprove';
+#$HandleActions['approvsites']='bi_HandleApprove';  #TODO: Place holder for approveurl
 SDV($HandleActions['blogitapprove'], 'bi_ApproveComment'); SDV($HandleAuth['blogitapprove'], 'admin');
 
 # ----------------------------------------
@@ -363,11 +363,15 @@ function bi_IsEmail($e){
 		,$e);
 }
 function bi_Auth($e){
+#$Conditions['authgroup'] = '$GLOBALS["AuthList'][$condparm] > 0';
+#global $AuthList;
 	if ($e=='*'){
 		foreach ($GLOBALS['bi_Auth'] as $k => $v)
 			if (NoCache(CondAuth($GLOBALS['pagename'], $v))) return true;
+#			if ($AuthList['@editors'] > 0)
 	} else
 		return NoCache(CondAuth($GLOBALS['pagename'], $GLOBALS['bi_Auth'][$e]));
+#		return if ($AuthList['@' .$GLOBALS['bi_Auth'][$e]] > 0)
 	return false;
 }
 function bi_IsNull($e){
