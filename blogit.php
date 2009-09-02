@@ -5,7 +5,7 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2009-08-30';
+$RecipeInfo['BlogIt']['Version'] = '2009-09-1';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.0 or later.</h3>");
 $BlogIt['debug']=true; bi_debugLog('--------------------');
 #foreach ($_REQUEST as $p=>$k) bi_debugLog($p .'=' .$k, true);
@@ -15,12 +15,12 @@ $BlogIt['debug']=true; bi_debugLog('--------------------');
 # - Common user settable
 # ----------------------------------------
 SDV($EnablePostCaptchaRequired, 1);
-SDV($bi_DefaultGroup, 'Blog');	#Pre-populates the Pagename field; blogs can exist in *any* group, not simply the default defined here.
+SDV($bi_DefaultGroup, 'Blog');  #Pre-populates the Pagename field; blogs can exist in *any* group, not simply the default defined here.
 SDV($bi_CommentGroup, 'Comments');
 SDV($bi_CommentsEnabled, 'true');
-SDV($bi_BlogGroups, $bi_DefaultGroup);	#OPTIONAL: Comma separated list of Blog groups. This is purely to speed up pagelists. Defining this list does not mean all pages in the group are 'blog-pages'.
+SDV($bi_BlogGroups, $bi_DefaultGroup);  #OPTIONAL: Comma separated list of Blog groups. This is purely to speed up pagelists. Defining this list does not mean all pages in the group are 'blog-pages'.
 SDV($CategoryGroup, 'Tags');
-SDV($bi_AuthorGroup, 'Profiles'); #$AuthorGroup
+SDV($bi_AuthorGroup, 'Profiles');  #$AuthorGroup
 SDV($bi_EntriesPerPage, 15);
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_DateEntryFormat, '%d-%m-%Y %H:%M');
@@ -35,7 +35,7 @@ SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you c
 SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');
 SDV($bi_BlogIt_Enabled, 1);
 SDVA($bi_Auth, array('comment-edit'=>$bi_AuthComments, 'comment-approve'=>$bi_AuthComments,
-	'blog-edit'=>$bi_AuthBlogs, 'blog-new'=>$bi_AuthBlogs, 'sidebar'=>$bi_AuthBlogs));
+	'blog-edit'=>$bi_AuthBlogs, 'blog-new'=>$bi_AuthBlogs, 'sidebar'=>$bi_AuthBlogs));  #$k=action; $v=role
 SDV($bi_BodyBreak, 'break');
 SDV($bi_ReadMore, '%readmore%[[{$FullName}#' .$bi_BodyBreak .' | $[Read more...]]]');
 SDV($bi_TagSeparator, ', ');
@@ -85,8 +85,6 @@ bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_Comm
 # ----------------------------------------
 $bi_BlogForm = 'blogit-entry';
 $bi_CommentForm = 'blogit-comments';
-# New entries are available to all, but the post will be caught by the edit password.
-if (bi_Auth('*') || $pagename == $bi_NewEntry ) $EnablePostCaptchaRequired = 0;  #Needs to be before all CondAuth statements, and before possible reset of edit password.
 if($action=='pmform'){
 	if (@$_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){  #Cancel button clicked
 		Redirect($pagename);
@@ -95,16 +93,15 @@ if($action=='pmform'){
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
 	}
 }
-if ($BlogIt['debug']) echo (
-	NoCache(CondAuth($pagename,$bi_AuthBlogs)?"AuthBlogs":"No AuthBlogs")
-	.' - '. (NoCache (CondAuth($pagename,$bi_AuthComments)?"AuthComments":"No AuthComments"))
-	.' - '. (NoCache (CondAuth($pagename,'edit')?"edit":"No edit"))
-	.' - '. (NoCache (CondAuth($pagename,'admin')?"admin":"No admin"))
-);
+bi_debugLog ((NoCache(CondAuth($pagename,$bi_AuthBlogs))?"AuthBlogs ":" ") .(NoCache(CondAuth($pagename,$bi_AuthComments))?"AuthComments ":" ") .(NoCache (CondAuth($pagename,'edit'))?"edit ":" ") .(NoCache (CondAuth($pagename,'admin'))?"admin ":" "));
+bi_debugLog ((bi_Auth('blog-new')? 'blog-new ' :' ') .(bi_Auth('blog-edit')? 'blog-edit ' :' ') .(bi_Auth('comment-edit')? 'comment-edit ' :'') .(bi_Auth('comment-approve')? '=comment-approve ' :'') .(bi_Auth('sidebar')? 'sidebar' :''));
+
+# New entries are available to all, but the post will be caught by the edit password.
+#if ( ((IsEnabled($EnableAuthUser) && !empty($AuthId)) || !IsEnabled($EnableAuthUser)) && bi_Auth('*') )
+if ( bi_Auth('*') ) $EnablePostCaptchaRequired = 0;
 
 # ----------------------------------------
 # - Pagination
-# ----------------------------------------
 $FmtPV['$bi_PageNext'] = (isset($_REQUEST['page']) ? $_REQUEST['page']+1 : 2);
 $FmtPV['$bi_PagePrev'] = (isset($_REQUEST['page']) && ($_REQUEST['page']>0) ? $_REQUEST['page']-1 : 0);
 $FmtPV['$bi_EntryStart'] = (($FmtPV['$bi_PageNext']-2) * (isset($_REQUEST['count']) ?$_REQUEST['count'] :$bi_EntriesPerPage)) + 1;
@@ -112,9 +109,7 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_REQUEST['count'])
 
 # ----------------------------------------
 # - PmWiki Config
-# ----------------------------------------
-# Prevent viewing source and diff, primarily for Comments, as this would reveal email.
-$HandleAuth['source'] = $HandleAuth['diff'] = 'edit';
+$HandleAuth['source'] = $HandleAuth['diff'] = 'edit';  # Prevent viewing source and diff, primarily for Comments, as this would reveal email.
 include_once($FarmD.'/cookbook/pmform.php');
 bi_addPageStore();
 
@@ -239,11 +234,10 @@ if (@$action=='blogitadmin' && isset($_REQUEST['s'])){
 
 if (@$entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 	$GroupHeaderFmt = '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error.
-	if ( ( ($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit'))
-		|| ($pagename == $bi_NewEntry) ) //&& bi_Auth('blog-new')
+	if ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
 		$GroupHeaderFmt = '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 
-}elseif ($Group == $bi_CommentGroup && $action=='browse' && bi_Auth($pagename, 'comment-edit'))  #After editing/deleting a comment page
+}elseif ($Group == $bi_CommentGroup && $action=='browse' && bi_Auth('comment-edit'))  #After editing/deleting a comment page
 	bi_Redirect($pagename);
 
 # ----------------------------------------
@@ -362,7 +356,7 @@ function bi_IsDate($d){
 	elseif (preg_match('!^' .$re_m .$re_sep .$re_d .$re_sep .$re_y. $re_time. '$!',$d,$m))  #mm-dd-yyyy
 		$ret = checkdate($m[1], $m[2], $m[3]);
 	else $ret = false;
-	return $ret; # && strtotime($d);
+	return $ret;
 }
 function bi_IsEmail($e){
 	return (bool)preg_match(
@@ -371,14 +365,16 @@ function bi_IsEmail($e){
 }
 function bi_Auth($e){
 #$Conditions['authgroup'] = '$GLOBALS["AuthList'][$condparm] > 0';
-#global $AuthList;
+global $AuthList, $bi_Auth, $pagename, $EnableAuthUser;
 	if ($e=='*'){
-		foreach ($GLOBALS['bi_Auth'] as $k => $v)
-			if (NoCache(CondAuth($GLOBALS['pagename'], $v))) return true;
-#			if ($AuthList['@editors'] > 0)
-	} else
-		return NoCache(CondAuth($GLOBALS['pagename'], $GLOBALS['bi_Auth'][$e]));
-#		return if ($AuthList['@' .$GLOBALS['bi_Auth'][$e]] > 0)
+		foreach ($bi_Auth as $k => $v){
+			if (IsEnabled($EnableAuthUser)) { if ($AuthList['@'.$v] > 0) return true; }
+			else { if (NoCache(CondAuth($pagename, $v))) return true; }
+		}
+	} else {
+		if (IsEnabled($EnableAuthUser)) return ($AuthList['@' .$bi_Auth[$e]] > 0);
+		else return NoCache(CondAuth($pagename, $bi_Auth[$e]));
+	}
 	return false;
 }
 function bi_IsNull($e){
