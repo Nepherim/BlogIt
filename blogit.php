@@ -5,11 +5,11 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2009-09-1';
+$RecipeInfo['BlogIt']['Version'] = '2009-09-06';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.0 or later.</h3>");
-$BlogIt['debug']=true; bi_debugLog('--------------------');
-#foreach ($_REQUEST as $p=>$k) bi_debugLog($p .'=' .$k, true);
+$BlogIt['debug']=false; bi_debugLog('--------------------');
 #FPLCountA
+$bi_Method = 0; #SteP: Set to 0 for CondAuth processing; set to 1 for alternate processing.
 
 # ----------------------------------------
 # - Common user settable
@@ -25,17 +25,14 @@ SDV($bi_EntriesPerPage, 15);
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($bi_DateDisplayFormat, $TimeFmt);
-SDV($bi_AuthBlogs,'edit');
-SDV($bi_AuthComments,'edit');
 SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 
 # ----------------------------------------
 # - Less frequently user settable
 # ----------------------------------------
-SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');
 SDV($bi_BlogIt_Enabled, 1);
-SDVA($bi_Auth, array('comment-edit'=>$bi_AuthComments, 'comment-approve'=>$bi_AuthComments,
-	'blog-edit'=>$bi_AuthBlogs, 'blog-new'=>$bi_AuthBlogs, 'sidebar'=>$bi_AuthBlogs));  #$k=action; $v=role
+SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');
+SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar')));  #key: role; value: array of actions
 SDV($bi_BodyBreak, 'break');
 SDV($bi_ReadMore, '%readmore%[[{$FullName}#' .$bi_BodyBreak .' | $[Read more...]]]');
 SDV($bi_TagSeparator, ', ');
@@ -76,29 +73,34 @@ SDV($PmFormTemplatesFmt, array(
 bi_setFmtPV(array('bi_BlogIt_Enabled','Now','bi_DefaultGroup','bi_BlogGroups','bi_CommentGroup','bi_AuthorGroup',
 	'bi_CommentsEnabled','CategoryGroup','bi_DateEntryFormat','bi_DateDisplayFormat','bi_NewEntry',
 	'bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired', 'bi_EntriesPerPage','bi_Admin','bi_LinkToCommentSite',
-	'bi_StatAction','bi_AuthBlogs','bi_AuthComments','bi_NowISOFormat'));
+	'bi_StatAction','bi_NowISOFormat'));
 bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_CommentType,
 	'$bi_BlogList'=>$bi_BlogList, '$bi_PageType'=>$bi_PageType));
 
 # ----------------------------------------
 # - Internal
 # ----------------------------------------
+bi_debugLog('=== action: '.$action. '    Target: '.$_REQUEST['target'] .'   Save: '.@$_REQUEST['save']);
 $bi_BlogForm = 'blogit-entry';
 $bi_CommentForm = 'blogit-comments';
+#SessionAuth($pagename);  #Needed to set AuthId and AuthPw
+#bi_debugLog('Security: ['.(empty($AuthId)?'authid]:[':']:[').(empty($AuthPw)?'authpw]':']'));
 if($action=='pmform'){
 	if (@$_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){  #Cancel button clicked
 		Redirect($pagename);
 		exit;
-	}elseif ($bi_CommentsEnabled=='true' && @$_REQUEST['target']==$bi_CommentForm){
+	}elseif ($bi_CommentsEnabled=='true' && @$_REQUEST['target']==$bi_CommentForm && !bi_Auth('*') ){ #!(isset($AuthId) || isset($AuthPw)) ){
+		$bi_Commenting = true;
+bi_debugLog('*** remove password');
 		$DefaultPasswords['edit']='';  #Remove edit password to allow initial posting of comment.
 	}
 }
-bi_debugLog ((NoCache(CondAuth($pagename,$bi_AuthBlogs))?"AuthBlogs ":" ") .(NoCache(CondAuth($pagename,$bi_AuthComments))?"AuthComments ":" ") .(NoCache (CondAuth($pagename,'edit'))?"edit ":" ") .(NoCache (CondAuth($pagename,'admin'))?"admin ":" "));
-bi_debugLog ((bi_Auth('blog-new')? 'blog-new ' :' ') .(bi_Auth('blog-edit')? 'blog-edit ' :' ') .(bi_Auth('comment-edit')? 'comment-edit ' :'') .(bi_Auth('comment-approve')? '=comment-approve ' :'') .(bi_Auth('sidebar')? 'sidebar' :''));
+#bi_debugLog ((NoCache(CondAuth($pagename,'edit'))?"AuthBlogs ":" ") .(NoCache(CondAuth($pagename,'edit'))?"AuthComments ":" ") .(NoCache (CondAuth($pagename,'edit'))?"edit ":" ") .(NoCache (CondAuth($pagename,'admin'))?"admin ":" "));
+#bi_debugLog ((bi_Auth('blog-new')? 'blog-new ' :' ') .(bi_Auth('blog-edit')? 'blog-edit ' :' ') .(bi_Auth('comment-edit')? 'comment-edit ' :'') .(bi_Auth('comment-approve')? 'comment-approve ' :'') .(bi_Auth('sidebar')? 'sidebar' :''));
+if ( !$bi_Commenting && bi_Auth('*') ) $EnablePostCaptchaRequired = 0;
 
 # New entries are available to all, but the post will be caught by the edit password.
 #if ( ((IsEnabled($EnableAuthUser) && !empty($AuthId)) || !IsEnabled($EnableAuthUser)) && bi_Auth('*') )
-if ( bi_Auth('*') ) $EnablePostCaptchaRequired = 0;
 
 # ----------------------------------------
 # - Pagination
@@ -145,7 +147,7 @@ $oldBrowse=$HandleActions['browse'];  #Store old browse action so we can perform
 $oldUrlApprove=$HandleActions['approvesites'];
 $HandleActions['browse']='bi_HandleBrowse';
 #$HandleActions['approvsites']='bi_HandleApprove';  #TODO: Place holder for approveurl
-SDV($HandleActions['blogitapprove'], 'bi_ApproveComment'); SDV($HandleAuth['blogitapprove'], 'admin');
+SDV($HandleActions['blogitapprove'], 'bi_ApproveComment'); SDV($HandleAuth['blogitapprove'], 'comment-approve');
 
 # ----------------------------------------
 # - Markup
@@ -182,7 +184,7 @@ $MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_NewEntry .'" ?"' .$bi_Defaul
 # ----------------------------------------
 # - Main Processing
 # ----------------------------------------
-bi_debugLog('entryType: '.$entryType. '   action: '.$action. '    Target: '.$_REQUEST['target'] .'   Save: '.@$_REQUEST['save']);
+bi_debugLog('entryType: '.$entryType);
 # Allow URL access to sections within $bi_TemplateList, including passed parameters.
 if (@$action=='blogitadmin' && isset($_REQUEST['s'])){
 	$args = bi_Implode($_REQUEST, ' ', '=', array('n'=>'','action'=>'','s'=>''));
@@ -260,25 +262,29 @@ function bi_HandleApprove($pagename){
 	$GLOBALS['HandleActions']['approvesites']=$GLOBALS['oldUrlApprove'];
 #	HandleDispatch($pagename, 'browse');
 }
-function bi_ApproveComment($src, $auth='admin') {
+function bi_ApproveComment($src, $auth='comment-approve') {
 global $_REQUEST, $_POST;
-	$ap = @$_REQUEST['pn']; #(isset($GLOBALS['_GET']['pn']) ? $GLOBALS['_GET']['pn'] : '');  #Page to approve
-	if ($ap) $old = RetrieveAuthPage($ap,$auth,0, READPAGE_CURRENT);
-	if($old){
-		$new = $old;
-		$new['csum'] = $new['csum:' .$GLOBALS['Now'] ] = $GLOBALS['ChangeSummary'] = 'Approved comment';
-		$_POST['diffclass']='minor';
-		$new['text'] = preg_replace('/\(:commentapproved:(false):\)/', '(:commentapproved:true:)',$new['text']);
-		PostPage($ap,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
+	if (bi_Auth($auth)){
+		$ap = @$_REQUEST['pn']; #(isset($GLOBALS['_GET']['pn']) ? $GLOBALS['_GET']['pn'] : '');  #Page to approve
+		if ($ap) $old = RetrieveAuthPage($ap,'read',0, READPAGE_CURRENT);
+		if($old){
+			$new = $old;
+			$new['csum'] = $new['csum:' .$GLOBALS['Now'] ] = $GLOBALS['ChangeSummary'] = 'Approved comment';
+			$_POST['diffclass']='minor';
+			$new['text'] = preg_replace('/\(:commentapproved:(false):\)/', '(:commentapproved:true:)',$new['text']);
+			PostPage($ap,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
+		}
 	}
-	bi_Redirect($src);
+	bi_Redirect();#$src);
 }
 function bi_Redirect($src=''){
 global $_SERVER;
+bi_debugLog('redirecting: '.$src);
 	# Direct back to the refering page or $src
 	if (!empty($src) || empty($_SERVER['HTTP_REFERER'])) Redirect(bi_BasePage($src));
 	else {
 		$r=$_SERVER['HTTP_REFERER'];
+bi_debugLog('reloc: '.$r);
 		header("Location: $r");
 		header("Content-type: text/html");
 		echo "<html><head>
@@ -363,18 +369,25 @@ function bi_IsEmail($e){
 		"/^[-_a-z0-9\'+*$^&%=~!?{}]++(?:\.[-_a-z0-9\'+*$^&%=~!?{}]+)*+@(?:(?![-.])[-a-z0-9.]+(?<![-.])\.[a-z]{2,6}|\d{1,3}(?:\.\d{1,3}){3})(?::\d++)?$/iD"
 		,$e);
 }
-function bi_Auth($e){
-#$Conditions['authgroup'] = '$GLOBALS["AuthList'][$condparm] > 0';
-global $AuthList, $bi_Auth, $pagename, $EnableAuthUser;
-	if ($e=='*'){
-		foreach ($bi_Auth as $k => $v){
-			if (IsEnabled($EnableAuthUser)) { if ($AuthList['@'.$v] > 0) return true; }
-			else { if (NoCache(CondAuth($pagename, $v))) return true; }
+function bi_Auth($action){
+global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $SiteGroup, $bi_Commenting,$bi_Method;
+bi_debugLog('authorised for '.$action.' ('.$pagename.')?');
+	foreach ($bi_Auth as $role => $action_list){
+bi_debugLog('...checking role '.$role. ($bi_Commenting?' (commenting)':''));
+		if ( !$bi_Commenting && ($action=='*' || in_array($action, $action_list)) ){
+bi_debugLog('...role has action');
+			if ($bi_Method==1 && IsEnabled($EnableAuthUser)) { if ($AuthList['@'.$role] > 0) return true; }
+			else{
+				$bi_Page = preg_match('/^' .$SiteGroup .'\.BlogIt-.*/',$pagename);
+bi_debugLog(($bi_Page?'...blogit page':''));
+			# Allow Edit access to view the sidebar; CondAuth will try to determine Edit access on BlogIt-* pages, which may be false.
+				if ( NoCache(CondAuth($pagename, ($action=='sidebar' && $bi_Page && !IsEnabled($EnableAuthUser) ?'read' :$role) )) ) return true;
+#				if ( NoCache(CondAuth($pagename, $role) )) return true;
+			}
+bi_debugLog('...but not authorized');
 		}
-	} else {
-		if (IsEnabled($EnableAuthUser)) return ($AuthList['@' .$bi_Auth[$e]] > 0);
-		else return NoCache(CondAuth($pagename, $bi_Auth[$e]));
 	}
+bi_debugLog('...role has NO permission');
 	return false;
 }
 function bi_IsNull($e){
