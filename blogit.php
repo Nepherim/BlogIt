@@ -233,7 +233,8 @@ if ($action=='blogitadmin' && isset($_REQUEST['s'])){
 
 if (@$entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 	$GroupHeaderFmt = '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error.
-	if ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
+	if ($action=='print') $GroupPrintHeaderFmt = $GroupHeaderFmt;
+	elseif ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
 		$GroupHeaderFmt = '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 
 }elseif ($Group == $bi_CommentGroup && $action=='browse' && bi_Auth('comment-edit'))  #After editing/deleting a comment page
