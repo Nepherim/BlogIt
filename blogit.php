@@ -5,9 +5,9 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2009-09-06';
+$RecipeInfo['BlogIt']['Version'] = '2009-09-21';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.0 or later.</h3>");
-$BlogIt['debug']=true; bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
+$BlogIt['debug']=false; bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
 #FPLCountA
 
 # ----------------------------------------
@@ -91,15 +91,10 @@ $FmtPV['$bi_PageNext'] = (isset($_GET['page']) ? $_GET['page']+1 : 2);
 $FmtPV['$bi_PagePrev'] = (isset($_GET['page']) && ($_GET['page']>0) ? $_GET['page']-1 : 0);
 $FmtPV['$bi_EntryStart'] = (($FmtPV['$bi_PageNext']-2) * (isset($_GET['count']) ?$_GET['count'] :$bi_EntriesPerPage)) + 1;
 $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_GET['count'] :$bi_EntriesPerPage) - 1;
-/*
-$FmtPV['$bi_PageNext'] = (isset($_REQUEST['page']) ? $_REQUEST['page']+1 : 2);
-$FmtPV['$bi_PagePrev'] = (isset($_REQUEST['page']) && ($_REQUEST['page']>0) ? $_REQUEST['page']-1 : 0);
-$FmtPV['$bi_EntryStart'] = (($FmtPV['$bi_PageNext']-2) * (isset($_REQUEST['count']) ?$_REQUEST['count'] :$bi_EntriesPerPage)) + 1;
-$FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_REQUEST['count']) ?$_REQUEST['count'] :$bi_EntriesPerPage) - 1;
-*/
 
 # ----------------------------------------
 # - PmWiki Config
+# ----------------------------------------
 $HandleAuth['source'] = $HandleAuth['diff'] = 'edit';  # Prevent viewing source and diff, primarily for Comments, as this would reveal email.
 include_once($FarmD.'/cookbook/pmform.php');
 bi_addPageStore();
@@ -133,11 +128,11 @@ $PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'.{$Group}-{$Name}-' .d
 
 # ----------------------------------------
 # - Handle Actions
-#TODO: SDV($HandleActions['blogitadmin'], 'bi_Admin'); SDV($HandleAuth['blogitadmin'], 'admin');
 $oldBrowse=$HandleActions['browse'];  #Store old browse action so we can perform actions prior.
 $oldUrlApprove=$HandleActions['approvesites'];
 $HandleActions['browse']='bi_HandleBrowse';
-#$HandleActions['approvsites']='bi_HandleApprove';  #TODO: Place holder for approveurl
+#SDV($HandleActions['approvsites'],'bi_HandleApprove');  #TODO: Place holder for approveurl
+SDV($HandleActions['blogitadmin'], 'bi_Admin'); SDV($HandleAuth['blogitadmin'], 'blogit-admin');
 SDV($HandleActions['blogitapprove'], 'bi_ApproveComment'); SDV($HandleAuth['blogitapprove'], 'comment-approve');
 
 # ----------------------------------------
@@ -182,13 +177,8 @@ $MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_NewEntry .'" ?"' .$bi_Defaul
 # - Main Processing
 # ----------------------------------------
 bi_debugLog('entryType: '.$entryType);
-# Allow URL access to sections within $bi_TemplateList, including passed parameters.
-if ($action=='blogitadmin' && isset($_REQUEST['s'])){
-	$args = bi_Implode($_REQUEST, ' ', '=', array('n'=>'','action'=>'','s'=>''));
-	$GroupHeaderFmt = '(:title $[' .$_REQUEST['s'] .']:)(:includesection "#' .$_REQUEST['s'] ." $args \":)";
-
 # Blog entry being saved; performed before PmForm action handler.
-}elseif ($action=='pmform'){
+if ($action=='pmform'){
 	$bi_ResetPmFormField = array();
 	$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
 	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']>''){
@@ -228,17 +218,14 @@ if ($action=='blogitadmin' && isset($_REQUEST['s'])){
 		$_POST['ptv_commentdate'] = $Now;
 	}
 
-}else
-	bi_AddMarkup();
+}else	bi_AddMarkup();  #TODO: Remove, as performed in Browse handler?
 
 if (@$entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 	$GroupHeaderFmt = '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error.
 	if ($action=='print') $GroupPrintHeaderFmt = $GroupHeaderFmt;
 	elseif ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
 		$GroupHeaderFmt = '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
-
-}elseif ($Group == $bi_CommentGroup && $action=='browse' && bi_Auth('comment-edit'))  #After editing/deleting a comment page
-	bi_Redirect($pagename);
+}
 
 # ----------------------------------------
 # - HandleActions Functions
@@ -246,8 +233,10 @@ if (@$entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 # If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling
 # in Main Processing, as markup (tags) isn't processed if markup is defined.
 function bi_HandleBrowse($pagename){
-global $_REQUEST, $bi_ResetPmFormField, $FmtPV, $HandleActions, $oldBrowse;
-	if (isset($bi_ResetPmFormField))
+global $_REQUEST, $bi_ResetPmFormField, $FmtPV, $HandleActions, $oldBrowse, $Group, $bi_CommentGroup;
+	if ($Group == $bi_CommentGroup && bi_Auth('comment-edit'))  #After editing/deleting a comment page
+		bi_Redirect($pagename);
+	elseif (isset($bi_ResetPmFormField))
 		foreach ($bi_ResetPmFormField  as $k => $v) {
 			$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
 			$FmtPV['$bi_Default_'.$k]='"'.$v.'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
@@ -275,14 +264,18 @@ global $_REQUEST, $_POST;
 	}
 	bi_Redirect();#$src);
 }
-/*
-function bi_Admin($src, $auth='admin') {
-	bi_DebugLog('s:'.$GLOBALS['_GET']['s']);
-	if (isset($GLOBALS['_GET']['s']))
-		$GLOBALS['GroupHeaderFmt'] = '(:includesection "#'.$GLOBALS['$_REQUEST']['s'].'":)';
+# Allow URL access to sections within $bi_TemplateList, including passed parameters.
+function bi_Admin($src, $auth='blogit-admin') {
+global $_REQUEST, $GroupHeaderFmt;
+	if (bi_Auth($auth)){
+		if (isset($_REQUEST['s'])){
+			$args = bi_Implode($_REQUEST, ' ', '=', array('n'=>'','action'=>'','s'=>''));
+			$GroupHeaderFmt = '(:title $[' .$_REQUEST['s'] .']:)(:includesection "#' .$_REQUEST['s'] ." $args \":)";
+		}
+	}
 	HandleDispatch($src, 'browse');
 }
-*/
+
 # ----------------------------------------
 # - Markup Functions
 # ----------------------------------------
@@ -356,7 +349,7 @@ function bi_Auth($condparm){
 global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $SiteGroup;
 
 	@list($action, $pn) = explode(' ', $condparm, 2);
-	$pn = ($pn > '') ?MakePageName($pagename, $pn) :($action=='sidebar' ?$bi_AuthPage :$pagename);
+	if (!IsEnabled($EnableAuthUser))	$pn = ($pn > '') ?MakePageName($pagename, $pn) :($action=='sidebar' ?$bi_AuthPage :$pagename);
 	foreach ($bi_Auth as $role => $action_list){
 		if ( $action=='*' || in_array($action, $action_list) ){
 			if ( IsEnabled($EnableAuthUser) && $AuthList['@'.$role] > 0 ) return true;
