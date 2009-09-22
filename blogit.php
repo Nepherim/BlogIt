@@ -95,26 +95,31 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_
 # ----------------------------------------
 # - PmWiki Config
 # ----------------------------------------
-$HandleAuth['source'] = $HandleAuth['diff'] = 'edit';  # Prevent viewing source and diff, primarily for Comments, as this would reveal email.
+$HandleAuth['source'] = $HandleAuth['diff'] = 'edit';  #[1] Prevent viewing source and diff, primarily for Comments, as this would reveal email.
 include_once($FarmD.'/cookbook/pmform.php');
 bi_addPageStore();
 
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s';
 $entryType = PageVar($pagename,'$:entrytype');  # MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
-#if (preg_match("/^(.*)\./", $pagename, $match)) $Group = $match[1];
 list($Group, $Name) = explode('.', ResolvePageName($pagename));
 if ( (isset($entryType)||$pagename==$bi_NewEntry) && bi_Auth('*') ) $EnablePostCaptchaRequired = 0;  #$EditFunctions = array_diff($EditFunctions, array('RequireCaptcha') );
 
 # ----------------------------------------
-# - Categories
-# Doesn't pick up categories defined as page variables.
-$LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>";
-$AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
-if ($Group == $CategoryGroup) $GroupFooterFmt = $bi_GroupFooterFmt;
+# - Default Skin
+if (!isset($Skin) || $Skin=='pmwiki'){
+	$HTMLStylesFmt['bi-pmwiki'] .= '.blogit-listmore{text-align:right;} .blogit-next-entries, .blogit-previous-entries{padding-right: 5px;} ';
+}
 
 # ----------------------------------------
-# - SearchPatterns
+# - Categories
+# Doesn't pick up categories defined as page variables.
+$LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>"; #[1]
+$AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now); #[1]
+if ($Group == $CategoryGroup) $GroupFooterFmt = $bi_GroupFooterFmt; #[1]?
+
+# ----------------------------------------
+# - SearchPatterns [1]
 $SearchPatterns['blogit'][] = '!\.(All)?Recent(Changes|Uploads|' .$bi_CommentGroup .')$!';
 $SearchPatterns['blogit'][] = '!\.Group(Print)?(Header|Footer|Attributes)$!';
 $SearchPatterns['blogit'][] = '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki)\.!';
@@ -131,9 +136,10 @@ $PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'.{$Group}-{$Name}-' .d
 $oldBrowse=$HandleActions['browse'];  #Store old browse action so we can perform actions prior.
 $oldUrlApprove=$HandleActions['approvesites'];
 $HandleActions['browse']='bi_HandleBrowse';
-#SDV($HandleActions['approvsites'],'bi_HandleApprove');  #TODO: Place holder for approveurl
+#TODO: SDV($HandleActions['approvsites'],'bi_HandleApprove');  #approveurl
 SDV($HandleActions['blogitadmin'], 'bi_Admin'); SDV($HandleAuth['blogitadmin'], 'blogit-admin');
 SDV($HandleActions['blogitapprove'], 'bi_ApproveComment'); SDV($HandleAuth['blogitapprove'], 'comment-approve');
+#TODO: SDV($HandleActions['blogitedit'], 'bi_HandleEdit'); SDV($HandleAuth['blogitedit'], 'blog-edit');
 
 # ----------------------------------------
 # - Authentication
@@ -221,7 +227,7 @@ if ($action=='pmform'){
 }else	bi_AddMarkup();  #TODO: Remove, as performed in Browse handler?
 
 if (@$entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
-	$GroupHeaderFmt = '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error.
+	$GroupHeaderFmt = '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
 	if ($action=='print') $GroupPrintHeaderFmt = $GroupHeaderFmt;
 	elseif ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
 		$GroupHeaderFmt = '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
