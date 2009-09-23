@@ -104,7 +104,7 @@ $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::
 $entryType = PageVar($pagename,'$:entrytype');  # MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 $entryStatus = PageVar($pagename,'$:entrystatus');
 list($Group, $Name) = explode('.', ResolvePageName($pagename));
-if ( (isset($entryType)||$pagename==$bi_NewEntry) && bi_Auth('*') ) $EnablePostCaptchaRequired = 0;  #$EditFunctions = array_diff($EditFunctions, array('RequireCaptcha') );
+if ( (isset($entryType)||$pagename==$bi_NewEntry) && bi_Auth('*') ) $EnablePostCaptchaRequired = 0;
 
 # ----------------------------------------
 # - Default Skin
@@ -116,7 +116,9 @@ if (!isset($Skin) || $Skin=='pmwiki'){
 # - Categories
 # Doesn't pick up categories defined as page variables.
 $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>"; #[1]
-$AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now); #[1]
+if ( ($pagename==$bi_NewEntry && $_POST['ptv_entrystatus']!=$bi_EntryStatus_DRAFT)
+	|| ($entryType==trim($FmtPV['$bi_PageType_BLOG'],'\'') && $entryStatus!=$bi_EntryStatus_DRAFT) )
+	$AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
 if ($Group == $CategoryGroup) $GroupFooterFmt = $bi_GroupFooterFmt; #[1]?
 
 # ----------------------------------------
@@ -198,10 +200,7 @@ if ($action=='pmform'){
 		$ROSPatterns['/\(:pmmarkup:(.*?)(\(:title .*?:\)):\)/s'] = '(::pmmarkup:$1$2::)';  #This field contains (:TITLE:), so need to find .*?:)
 
 		# Determine page name from title, replacing ' ' with '-' for seo.
-		$MakePageNamePatterns = array_merge(
-			(isset($MakePageNamePatterns) ?$MakePageNamePatterns :array()),	# merge with prior patterns (perhaps ISO char patterns)
-			$bi_MakePageNamePatterns
-		);
+		bi_setMakePageNamePatterns();
 
 		# url will be inherited from title, and will include a group from the url or the default group. If title is blank it is derived from url.
 		if (!strpos($_POST['ptv_entryurl'], '.')) $pg = $_POST['ptv_entryurl'];
@@ -356,7 +355,7 @@ function bi_IsEmail($e){
 function bi_Auth($condparm){
 global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $SiteGroup;
 	@list($action, $pn) = explode(' ', $condparm, 2);
-	$action=explode(',', trim($action,'\'"'));	#if (preg_match('/,/',$action))
+	$action=explode(',', trim($action,'\'"'));
 	if (!IsEnabled($EnableAuthUser))	$pn = ($pn > '') ?MakePageName($pagename, $pn) :($action=='sidebar' ?$bi_AuthPage :$pagename);
 
 	foreach ($action as $a)
@@ -422,6 +421,8 @@ function bi_AddMarkup(){
 # Combines categories in body [[!...]] with separated tag list in tag-field.
 # Stores combined list in tag-field in PmWiki format [[!...]][[!...]].
 function bi_SaveTags($body, $user_tags, $sep) {
+global $pagename;
+	bi_setMakePageNamePatterns();
 	# Read tags from body, strip [[!...]]
 	if ($body) $bodyTags = (preg_match_all('/\[\[\!(\w+)\]\]/', $body, $match) ? $match[1] : array());  #array of tags contained in [[!...]] markup.
 
@@ -431,8 +432,17 @@ function bi_SaveTags($body, $user_tags, $sep) {
 	# Concatenate the tag-field tags, with those in the body,
 	$allTags = array_unique(array_merge((array)$fieldTags, (array)$bodyTags));
 	sort($allTags);
-	#  generate a new separated string.
+	foreach ($allTags as &$k) list($g, $allTags[$k]) = explode('.', MakePageName($pagename,$k));
+
+	# generate a new separated string.
 	return ($allTags ?'[[!'.implode(']]'.$sep.'[[!', $allTags).']]' :'');
+}
+function bi_setMakePageNamePatterns(){
+global $MakePageNamePatterns, $bi_MakePageNamePatterns;
+	$MakePageNamePatterns = array_merge(
+		(isset($MakePageNamePatterns) ?$MakePageNamePatterns :array()),	# merge with prior patterns (perhaps ISO char patterns)
+		$bi_MakePageNamePatterns
+	);
 }
 
 # ----------------------------------------
