@@ -32,8 +32,8 @@ SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you c
 # ----------------------------------------
 SDV($bi_AuthPage, $bi_DefaultGroup .'.' .$DefaultName);  #Need edit/admin users need edit access to this page if not using AuthUser
 SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');
-SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar')));  #key: role; value: array of actions
-SDV($bi_BodyBreak, 'break');
+SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
+SDV($bi_BodyBreak, XL('break'));
 SDV($bi_ReadMore, '%readmore%[[{$FullName}#' .$bi_BodyBreak .' | $[Read more...]]]');
 SDV($bi_TagSeparator, ', ');
 SDV($bi_TitleSeparator, '-');
