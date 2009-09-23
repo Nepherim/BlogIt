@@ -5,9 +5,9 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2009-09-21';
+$RecipeInfo['BlogIt']['Version'] = '2009-09-23';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.0 or later.</h3>");
-$BlogIt['debug']=false; bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
+$BlogIt['debug']=true; bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
 #FPLCountA
 
 # ----------------------------------------
@@ -72,7 +72,7 @@ SDV($PmFormTemplatesFmt, array(
 bi_setFmtPV(array('bi_BlogIt_Enabled','Now','bi_DefaultGroup','bi_BlogGroups','bi_CommentGroup','bi_AuthorGroup',
 	'bi_CommentsEnabled','CategoryGroup','bi_DateEntryFormat','bi_DateDisplayFormat','bi_NewEntry',
 	'bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired', 'bi_EntriesPerPage','bi_Admin','bi_LinkToCommentSite',
-	'bi_StatAction','bi_NowISOFormat', '$bi_AuthPage'));
+	'bi_StatAction','bi_NowISOFormat', 'bi_AuthPage', 'bi_PageType_Comment'));
 bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_CommentType,
 	'$bi_BlogList'=>$bi_BlogList, '$bi_PageType'=>$bi_PageType));
 
@@ -102,6 +102,7 @@ bi_addPageStore();
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s';
 $entryType = PageVar($pagename,'$:entrytype');  # MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
+$entryStatus = PageVar($pagename,'$:entrystatus');
 list($Group, $Name) = explode('.', ResolvePageName($pagename));
 if ( (isset($entryType)||$pagename==$bi_NewEntry) && bi_Auth('*') ) $EnablePostCaptchaRequired = 0;  #$EditFunctions = array_diff($EditFunctions, array('RequireCaptcha') );
 
@@ -119,7 +120,7 @@ $AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now); #[1]
 if ($Group == $CategoryGroup) $GroupFooterFmt = $bi_GroupFooterFmt; #[1]?
 
 # ----------------------------------------
-# - SearchPatterns [1]
+# - SearchPatterns
 $SearchPatterns['blogit'][] = '!\.(All)?Recent(Changes|Uploads|' .$bi_CommentGroup .')$!';
 $SearchPatterns['blogit'][] = '!\.Group(Print)?(Header|Footer|Attributes)$!';
 $SearchPatterns['blogit'][] = '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki)\.!';
@@ -227,10 +228,11 @@ if ($action=='pmform'){
 }else	bi_AddMarkup();  #TODO: Remove, as performed in Browse handler?
 
 if (@$entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
-	$GroupHeaderFmt = '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
+	if ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
+		$GroupHeaderFmt .= '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
+	elseif ($entryStatus!=$bi_StatusType['draft'] || ($entryStatus==$bi_StatusType['draft'] && bi_Auth('blog-edit,blog-new,blogit-admin')) )
+		$GroupHeaderFmt .= '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
 	if ($action=='print') $GroupPrintHeaderFmt = $GroupHeaderFmt;
-	elseif ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
-		$GroupHeaderFmt = '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 }
 
 # ----------------------------------------
@@ -276,7 +278,7 @@ global $_REQUEST, $GroupHeaderFmt;
 	if (bi_Auth($auth)){
 		if (isset($_REQUEST['s'])){
 			$args = bi_Implode($_REQUEST, ' ', '=', array('n'=>'','action'=>'','s'=>''));
-			$GroupHeaderFmt = '(:title $[' .$_REQUEST['s'] .']:)(:includesection "#' .$_REQUEST['s'] ." $args \":)";
+			$GroupHeaderFmt .= '(:title $[' .$_REQUEST['s'] .']:)(:includesection "#' .$_REQUEST['s'] ." $args \":)";
 		}
 	}
 	HandleDispatch($src, 'browse');
@@ -353,15 +355,17 @@ function bi_IsEmail($e){
 # Determine whether the current user is authorized for an action
 function bi_Auth($condparm){
 global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $SiteGroup;
-
 	@list($action, $pn) = explode(' ', $condparm, 2);
+	$action=explode(',', trim($action,'\'"'));	#if (preg_match('/,/',$action))
 	if (!IsEnabled($EnableAuthUser))	$pn = ($pn > '') ?MakePageName($pagename, $pn) :($action=='sidebar' ?$bi_AuthPage :$pagename);
-	foreach ($bi_Auth as $role => $action_list){
-		if ( $action=='*' || in_array($action, $action_list) ){
-			if ( IsEnabled($EnableAuthUser) && $AuthList['@'.$role] > 0 ) return true;
-			elseif ( RetrieveAuthPage($pn, $role, false, READPAGE_CURRENT) ) return true;
+
+	foreach ($action as $a)
+		foreach ($bi_Auth as $role => $action_list){
+			if ( $a=='*' || in_array($a, $action_list) ){
+				if ( IsEnabled($EnableAuthUser) && $AuthList['@'.$role] > 0 ) return true;
+				elseif ( RetrieveAuthPage($pn, $role, false, READPAGE_CURRENT) ) return true;
+			}
 		}
-	}
 	return false;
 }
 function bi_IsNull($e){
@@ -385,8 +389,8 @@ function bi_URL($args){
 # ----------------------------------------
 function bi_BlogItAuth($pagename, $level, $authprompt=true, $since=0) {
 global $action, $bi_AuthFunction, $bi_CommentsEnabled, $bi_CommentGroup, $entryType, $FmtPV;
-	if ( $action=='pmform' && (($level=='edit') || ($level=='publish')) && @$entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'') && IsEnabled($bi_CommentsEnabled,1) && preg_match("/^" .$bi_CommentGroup ."\./", $pagename) )
-		$page = $bi_AuthFunction($pagename, 'read', false, READPAGE_CURRENT);
+	if ( $action=='pmform' && (($level=='edit') || ($level=='publish')) && $entryType == trim($FmtPV['$bi_PageType_BLOG'],'\'') && IsEnabled($bi_CommentsEnabled,1) && preg_match("/^" .$bi_CommentGroup ."\./", $pagename) )
+		$page = $bi_AuthFunction($pagename, 'read', false, $since);
 	else $page = $bi_AuthFunction($pagename, $level, $authprompt, $since);
 	return $page;
 }
