@@ -119,7 +119,7 @@ $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkTex
 if ( ($pagename==$bi_NewEntry && $_POST['ptv_entrystatus']!=$bi_EntryStatus_DRAFT)
 	|| ($entryType==trim($FmtPV['$bi_PageType_BLOG'],'\'') && $entryStatus!=$bi_EntryStatus_DRAFT) )
 	$AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
-if ($Group == $CategoryGroup) $GroupFooterFmt = $bi_GroupFooterFmt; #[1]?
+if ($Group == $CategoryGroup) $GroupFooterFmt .= $bi_GroupFooterFmt;
 
 # ----------------------------------------
 # - SearchPatterns
@@ -428,11 +428,10 @@ global $pagename;
 
 	# Make sure tag-field entries are in standard separated format, and place in array
 	if ($user_tags) $fieldTags = explode($sep, preg_replace('/'.trim($sep).'\s*/', $sep, $user_tags));
-
 	# Concatenate the tag-field tags, with those in the body,
 	$allTags = array_unique(array_merge((array)$fieldTags, (array)$bodyTags));
 	sort($allTags);
-	foreach ($allTags as &$k) list($g, $allTags[$k]) = explode('.', MakePageName($pagename,$k));
+	foreach ($allTags as &$pn) list($g, $pn) = explode('.', MakePageName($pagename,$pn));
 
 	# generate a new separated string.
 	return ($allTags ?'[[!'.implode(']]'.$sep.'[[!', $allTags).']]' :'');
