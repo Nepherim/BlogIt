@@ -5,10 +5,11 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2009-09-23';
+$RecipeInfo['BlogIt']['Version'] = '2009-09-24';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.0 or later.</h3>");
-$BlogIt['debug']=true; bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
-#FPLCountA
+SDV($BlogIt['debug'],true);
+bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
+#TODO: FPLCountA
 
 # ----------------------------------------
 # - Common user settable
@@ -66,6 +67,7 @@ SDV($FPLTemplatePageFmt, array(
 SDV($PmFormTemplatesFmt, array(
 	(isset($Skin)?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate',
 	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PmFormTemplates'));
+SDV($bi_Cookie, $CookiePrefix.'blogit-');
 
 # ----------------------------------------
 # - Usable on Wiki Pages
@@ -80,10 +82,19 @@ bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_Comm
 # - Internal
 $bi_BlogForm = 'blogit-entry';
 $bi_CommentForm = 'blogit-comments';
+
+# ----------------------------------------
+# - Cookies to store the previous page (for returning on Cancel, comments approval, etc)
+$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
 if($action=='pmform' && @$_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){  #Cancel button clicked
-	Redirect($pagename);
+	$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-2']; #need to go back 2, since when in this code we're already moved forward
+	bi_Redirect();
 	exit;
 }
+$q = bi_Implode($_GET);
+$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-1'];
+setcookie($bi_Cookie.'back-2', $bi_PrevUrl, $Now+60*60*24*30);
+setcookie($bi_Cookie.'back-1', FmtPageName('$PageUrl',$pagename) .(!empty($q) ?'?'.$q :''), $Now+60*60*24*30); #set to current url
 
 # ----------------------------------------
 # - Pagination
@@ -257,13 +268,13 @@ function bi_HandleApprove($pagename){
 #	HandleDispatch($pagename, 'browse');
 }
 function bi_ApproveComment($src, $auth='comment-approve') {
-global $_REQUEST, $_POST;
+global $_REQUEST, $_POST, $Now, $ChangeSummary;
 	if (bi_Auth($auth)){
-		$ap = @$_REQUEST['pn']; #(isset($GLOBALS['_GET']['pn']) ? $GLOBALS['_GET']['pn'] : '');  #Page to approve
+		$ap = @$_REQUEST['pn'];
 		if ($ap) $old = RetrieveAuthPage($ap,'read',0, READPAGE_CURRENT);
 		if($old){
 			$new = $old;
-			$new['csum'] = $new['csum:' .$GLOBALS['Now'] ] = $GLOBALS['ChangeSummary'] = 'Approved comment';
+			$new['csum'] = $new['csum:' .$Now] = $ChangeSummary = 'Approved comment';
 			$_POST['diffclass']='minor';
 			$new['text'] = preg_replace('/\(:commentapproved:(false):\)/', '(:commentapproved:true:)',$new['text']);
 			PostPage($ap,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
@@ -326,9 +337,10 @@ function bi_includeSection($pagename, $inclspec){
 # - Condition Functions
 # ----------------------------------------
 function bi_IsPage($pn){
-	$mp = MakePageName($GLOBALS['pagename'], $pn);
+global $pagename;
+	$mp = MakePageName($pagename, $pn);
 	if (empty($mp)) return true;
-	if ($mp==$GLOBALS['pagename']) return false;
+	if ($mp==$pagename) return false;
 	return PageExists($mp);
 }
 function bi_IsDate($d){
@@ -379,8 +391,9 @@ function bi_BasePage($pn){
 }
 # 0:fullname 1:param 2:val
 function bi_URL($args){
-	$GLOBALS['_GET'][$args[1]]=$args[2];
-	return $args[0].'?'.bi_Implode($GLOBALS['_GET']);
+global $_GET;
+	$_GET[$args[1]]=$args[2];
+	return $args[0].'?'.bi_Implode($_GET);
 }
 
 # ----------------------------------------
@@ -397,20 +410,18 @@ global $action, $bi_AuthFunction, $bi_CommentsEnabled, $bi_CommentGroup, $entryT
 # ----------------------------------------
 # - Internal Functions
 # ----------------------------------------
+# Direct back to the refering page or $src
 function bi_Redirect($src=''){
-global $_SERVER;
-	# Direct back to the refering page or $src
-	if (!empty($src) || empty($_SERVER['HTTP_REFERER'])) Redirect(bi_BasePage($src));
-	else {
-		$r=$_SERVER['HTTP_REFERER'];
-		header("Location: $r");
-		header("Content-type: text/html");
-		echo "<html><head>
-		<meta http-equiv='Refresh' Content='URL=$r' />
-		<title>Redirect</title></head><body></body></html>";
-	}
+global $bi_PrevUrl;
+	$r = (!empty($src) ?FmtPageName('$PageUrl', bi_BasePage($src)) :$bi_PrevUrl);
+	header("Location: $r");
+	header("Content-type: text/html");
+	echo "<html><head>
+	<meta http-equiv='Refresh' Content='URL=$r' />
+	<title>Redirect</title></head><body></body></html>";
 	exit;
 }
+# Used to create a URL parameter string from an array, removing ?n= parameter.
 function bi_Implode($a, $p='&', $s='=', $ignore=array('n'=>'')){
 	foreach($a as $k => $v) if(!isset($ignore[$k])!==false) $o .= $p.$k.$s.$v;
 	return substr($o,1);
@@ -458,10 +469,11 @@ function bi_setFmtPVA ($a){
 			$GLOBALS['FmtPV'][$var .'_' .strtoupper($k)] = "'" .$v ."'";
 }
 function bi_addPageStore ($n='wikilib.d'){
+global $WikiLibDirs;
 	$PageStorePath = dirname(__FILE__) ."/$n/{\$FullName}";
-	$where = count($GLOBALS['WikiLibDirs']);
+	$where = count($WikiLibDirs);
 	if ($where>1) $where--;
-	array_splice($GLOBALS['WikiLibDirs'], $where, 0, array(new PageStore($PageStorePath)));
+	array_splice($WikiLibDirs, $where, 0, array(new PageStore($PageStorePath)));
 }
 function bi_debugLog ($msg, $out=false){
 	if ($out || (!$out && $GLOBALS['BlogIt']['debug']) )
