@@ -36,6 +36,7 @@ SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');
 SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
 SDV($bi_BodyBreak, XL('break'));
 SDV($bi_ReadMore, '%readmore%[[{$FullName}#' .$bi_BodyBreak .' | $[Read more...]]]');
+SDV($bi_CommentSideBarLen, 60);
 SDV($bi_TagSeparator, ', ');
 SDV($bi_TitleSeparator, '-');
 SDV($bi_EnablePostDirectives, true);
@@ -43,6 +44,7 @@ SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
 SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
 SDV($bi_NowISOFormat, strftime('%Y%m%d', $Now));  #Used in calls to #blog-summary-pagelist, as part of daterange
+SDV($bi_UnstyleFn, '');
 SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',														# strip single-quotes
@@ -163,8 +165,8 @@ $AuthFunction = 'bi_BlogItAuth';
 
 # ----------------------------------------
 # - Markup
-# (:blogit [more|intro|list|multiline|substr|tags] options:)text(:blogitend:)
-Markup('blogit', 'fulltext', '/\(:blogit (more|intro|list|multiline|substr|tags)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
+# (:blogit [more|intro|list|multiline|cleantext|tags] options:)text(:blogitend:)
+Markup('blogit', 'fulltext', '/\(:blogit (more|intro|list|multiline|cleantext|tags)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
@@ -314,11 +316,14 @@ function blogitMU_list($name, $text){
 function blogitMU_multiline($options, $text){
 	return preg_replace('/\n/', '<br />', $text);  #Because pmform strips \n, and we end up with comments on a single line.
 }
-#Markup expression substr doesn't work with multi-line input.
-function blogitMU_substr($options, $text){
-	list($from, $len) = explode(' ',$options,2);
-	$m = min(strpos($text,"\n"),$len);
-	return substr($text,$from,empty($m)?$len:$m);
+# options is the length of the string, or use $bi_CommentSideBarLen is empty
+function blogitMU_cleantext($options, $text){
+global $bi_CommentSideBarLen, $pagename, $bi_UnstyleFn;
+	$m = min(strpos($text, "\n"), (!empty($options) ?$options :$bi_CommentSideBarLen));
+	return (empty($bi_UnstyleFn)
+		?substr($text, 0, empty($m) ?$bi_CommentSideBarLen :$m)
+		:$bi_UnstyleFn($pagename, substr($text, 0, empty($m) ?$bi_CommentSideBarLen :$m))
+	);
 }
 function blogitMU_tags($options, $tags){
 	return bi_SaveTags('', $tags, $GLOBALS['bi_TagSeparator']);
