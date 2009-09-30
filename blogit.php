@@ -20,7 +20,7 @@ SDV($bi_CommentGroup, 'Comments');
 SDV($bi_CommentsEnabled, 'true');
 SDV($bi_BlogGroups, $bi_DefaultGroup);  #OPTIONAL: Pipe separated list of Blog groups. If you define it then only those groups are searched for entries. If set to null all groups are searched.
 SDV($CategoryGroup, 'Tags');
-SDV($bi_AuthorGroup, 'Profiles');  #$AuthorGroup
+SDV($bi_AuthorGroup, 'Profiles');
 SDV($bi_EntriesPerPage, 15);
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_DateEntryFormat, '%d-%m-%Y %H:%M');
@@ -104,6 +104,8 @@ if ($bi_CurrUrl!=$bi_PrevUrl){ #don't replace cookies if user is reloading the c
 # - PmWiki Config
 $HandleAuth['source'] = $HandleAuth['diff'] = 'edit';  #[1] Prevent viewing source and diff, primarily for Comments, as this would reveal email.
 bi_addPageStore();
+$bi_OldAsSpaced_Function = $AsSpacedFunction;
+$AsSpacedFunction = 'AsSpacedHyphens';
 
 # ----------------------------------------
 # - PmForms Setup
@@ -201,7 +203,7 @@ if (@$bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 	elseif ($bi_EntryStatus!=$bi_StatusType['draft'] || ($bi_EntryStatus==$bi_StatusType['draft'] && bi_Auth('blog-edit,blog-new,blogit-admin')) )
 		$GroupHeaderFmt .= '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
 	if ($action=='print')  $GroupPrintHeaderFmt .= $GroupHeaderFmt;
-}
+} elseif ($Group == $CategoryGroup)  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction(PageVar($pagename, '$Name')).':)';
 
 # ----------------------------------------
 # - HandleActions Functions
@@ -445,7 +447,6 @@ global $pagename;
 	# Concatenate the tag-field tags, with those in the body,
 	$allTags = array_unique(array_merge((array)$fieldTags, (array)$bodyTags));
 	sort($allTags);
-	foreach ($allTags as &$pn)  list($g, $pn) = explode('.', MakePageName($pagename,$pn));
 
 	# generate a new separated string.
 	return ($allTags ?'[[!'.implode(']]'.$sep.'[[!', $allTags).']]' :'');
@@ -456,6 +457,11 @@ global $MakePageNamePatterns, $bi_MakePageNamePatterns;
 		(isset($MakePageNamePatterns) ?$MakePageNamePatterns :array()),	# merge with prior patterns (perhaps ISO char patterns)
 		$bi_MakePageNamePatterns
 	);
+}
+function AsSpacedHyphens($text) {
+global $bi_OldAsSpaced_Function, $bi_EntryType, $Group, $CategoryGroup;
+	if ($Group == $CategoryGroup || isset($bi_EntryType))  return (strtr($bi_OldAsSpaced_Function($text),'-',' '));
+	else  return ($bi_OldAsSpaced_Function($text));
 }
 
 # ----------------------------------------
