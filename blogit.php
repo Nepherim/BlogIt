@@ -212,9 +212,9 @@ if (@$bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 # in Main Processing, as markup (tags) isn't processed if markup is defined.
 function bi_HandleBrowse($pagename){
 global $_REQUEST, $bi_ResetPmFormField, $FmtPV, $HandleActions, $bi_OldHandleActions, $Group, $bi_CommentGroup;
-	if ($Group == $bi_CommentGroup && bi_Auth('comment-edit'))  #After editing/deleting a comment page
-		bi_Redirect($pagename);
-	elseif (isset($bi_ResetPmFormField))
+	if ($Group == $bi_CommentGroup && bi_Auth('comment-edit')){  #After editing/deleting a comment page
+		bi_Redirect($pagename); return;
+	} elseif (isset($bi_ResetPmFormField))
 		foreach ($bi_ResetPmFormField  as $k => $v) {
 			$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
 			$FmtPV['$bi_Default_'.$k]='"'.$v.'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
@@ -241,7 +241,7 @@ global $_REQUEST, $_POST, $Now, $ChangeSummary;
 			PostPage($ap,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
 		}
 	}
-	bi_Redirect();#$src);
+	bi_Redirect();
 }
 # Allow URL access to sections within $bi_TemplateList, including passed parameters.
 function bi_Admin($src, $auth='blogit-admin') {
