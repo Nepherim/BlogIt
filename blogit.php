@@ -18,7 +18,7 @@ SDV($EnablePostCaptchaRequired, 0);
 SDV($bi_DefaultGroup, 'Blog');  #Pre-populates the Pagename field; blogs can exist in *any* group, not simply the default defined here.
 SDV($bi_CommentGroup, 'Comments');
 SDV($bi_CommentsEnabled, 'true');
-SDV($bi_BlogGroups, $bi_DefaultGroup);  #OPTIONAL: Comma separated list of Blog groups. This is purely to speed up pagelists. Defining this list does not mean all pages in the group are 'blog-pages'.
+SDV($bi_BlogGroups, $bi_DefaultGroup);  #OPTIONAL: Pipe separated list of Blog groups. If you define it then only those groups are searched for entries. If set to null all groups are searched.
 SDV($CategoryGroup, 'Tags');
 SDV($bi_AuthorGroup, 'Profiles');  #$AuthorGroup
 SDV($bi_EntriesPerPage, 15);
@@ -37,7 +37,7 @@ SDV($bi_ReadMore, '%readmore%[[{$FullName}#' .$bi_BodyBreak .' | $[Read more...]
 SDV($bi_CommentSideBarLen, 60);
 SDV($bi_TagSeparator, ', ');
 SDV($bi_TitleSeparator, '-');
-SDV($bi_EnablePostDirectives, true);  #Determine whether to mask markup directives like (:xxx:) within posts.
+SDV($bi_EnablePostDirectives, true);  #Set to true to allow posting of directives of form (: :) in blog entries.
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
 SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
@@ -64,15 +64,23 @@ SDV($bi_PageType_Comment, 'comment');  #Not in PageType list, since we don't wan
 SDV($FPLTemplatePageFmt, array(
 	'{$FullName}', (isset($Skin)?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate',
 	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'));
+SDV($bi_CommentPattern, '/^' .$GLOBALS['bi_CommentGroup'] .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/');
+SDVA($SearchPatterns['blogit-comments'], array('comments' => $bi_CommentPattern));
+SDVA($SearchPatterns['blogit'], $bi_BlogGroups>'' ?array('blogit' => '/^(' .$bi_BlogGroups .')\./')
+	: array(
+		'recent' => '!\.(All)?Recent(Changes|Uploads|' .$bi_CommentGroup .')$!',
+		'group' => '!\.Group(Print)?(Header|Footer|Attributes)$!',
+		'pmwiki' => '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki)\.!',
+		'self' => FmtPageName('!^$FullName$!', $pagename)
+));
 $bi_BlogForm = 'blogit-entry';
 $bi_CommentForm = 'blogit-comments';
 
 # ----------------------------------------
 # - Usable on Wiki Pages
-bi_setFmtPV(array('bi_BlogIt_Enabled','Now','bi_DefaultGroup','bi_BlogGroups','bi_CommentGroup','bi_AuthorGroup',
-	'bi_CommentsEnabled','CategoryGroup','bi_DateEntryFormat','bi_DateDisplayFormat','bi_NewEntry',
-	'bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired', 'bi_EntriesPerPage','bi_Admin','bi_LinkToCommentSite',
-	'bi_StatAction','bi_NowISOFormat', 'bi_AuthPage', 'bi_PageType_Comment'));
+bi_setFmtPV(array('bi_BlogIt_Enabled','Now','bi_DefaultGroup','bi_AuthorGroup','bi_CommentsEnabled','CategoryGroup',
+	'bi_DateEntryFormat','bi_DateDisplayFormat','bi_NewEntry','bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired',
+	'bi_EntriesPerPage','bi_Admin','bi_LinkToCommentSite','bi_StatAction','bi_NowISOFormat', 'bi_AuthPage', 'bi_PageType_Comment'));
 bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_CommentType,
 	'$bi_BlogList'=>$bi_BlogList, '$bi_PageType'=>$bi_PageType));
 
@@ -154,13 +162,6 @@ if ( ($pagename==$bi_NewEntry && $_POST['ptv_entrystatus']!=$bi_StatusType['draf
 if ($Group == $CategoryGroup) $GroupFooterFmt .= $bi_GroupFooterFmt;
 
 # ----------------------------------------
-# - SearchPatterns
-$SearchPatterns['blogit'][] = '!\.(All)?Recent(Changes|Uploads|' .$bi_CommentGroup .')$!';
-$SearchPatterns['blogit'][] = '!\.Group(Print)?(Header|Footer|Attributes)$!';
-$SearchPatterns['blogit'][] = '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki)\.!';
-$SearchPatterns['blogit'][] = FmtPageName('!^$FullName$!', $pagename);
-
-# ----------------------------------------
 # - Markup
 # (:blogit [more|intro|list|multiline|cleantext|tags] options:)text(:blogitend:)
 Markup('blogit', 'fulltext', '/\(:blogit (more|intro|list|multiline|cleantext|tags)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
@@ -234,7 +235,7 @@ global $_REQUEST, $_POST, $Now, $ChangeSummary;
 			$new = $old;
 			$new['csum'] = $new['csum:' .$Now] = $ChangeSummary = 'Approved comment';
 			$_POST['diffclass']='minor';
-			$new['text'] = preg_replace('/\(:commentapproved:(false):\)/', '(:commentapproved:true:)',$new['text']);
+			$new['text'] = preg_replace('/\(:commentapproved:false:\)/', '(:commentapproved:true:)',$new['text']);
 			PostPage($ap,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
 		}
 	}
@@ -258,9 +259,8 @@ global $bi_ResetPmFormField, $_POST, $RecipeInfo, $bi_BlogForm, $bi_EnablePostDi
 	$bi_ResetPmFormField = array();
 	$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
 	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']>''){
-		# Null out the PostPatterns so that directive markup doesn't get replaced.
-		# Set to true to allow posting of directives of form (: :) in blog entries.
-		if ($bi_EnablePostDirectives) $PmFormPostPatterns = array();
+		$EnablePost = 1;
+		if ($bi_EnablePostDirectives) $PmFormPostPatterns = array();  # Null out the PostPatterns so that directive markup doesn't get replaced.
 
 		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body
 		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '(::entrybody:$1::)';  #entrybody MUST be the last variable.
@@ -290,7 +290,6 @@ global $bi_ResetPmFormField, $_POST, $RecipeInfo, $bi_BlogForm, $bi_EnablePostDi
 		$_POST['ptv_commentapproved'] = 'false';
 		$_POST['ptv_commentdate'] = $Now;
 	}
-	$EnablePost = 1;
 	$bi_OldHandleActions['pmform']($src, $auth);
 }
 
@@ -390,7 +389,7 @@ function bi_IsNull($e){
 # - Markup Expression Functions
 # ----------------------------------------
 function bi_BasePage($pn){
-	return preg_replace('/^' .$GLOBALS['bi_CommentGroup'] .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/','${1}.${2}',$pn);
+	return preg_replace($GLOBALS['bi_CommentPattern'],'${1}.${2}',$pn);
 }
 # 0:fullname 1:param 2:val
 function bi_URL($args){
@@ -404,7 +403,8 @@ global $_GET;
 # ----------------------------------------
 function bi_BlogItAuth($pagename, $level, $authprompt=true, $since=0) {
 global $action, $bi_AuthFunction, $bi_CommentsEnabled, $bi_CommentGroup, $bi_EntryType, $FmtPV;
-	if ( $action=='pmform' && (($level=='edit') || ($level=='publish')) && $bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'') && IsEnabled($bi_CommentsEnabled,1) && preg_match("/^" .$bi_CommentGroup ."\./", $pagename) )
+	if ( $action=='pmform' && (($level=='edit') || ($level=='publish')) && $bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')
+		&& IsEnabled($bi_CommentsEnabled,1) && preg_match("/^" .$bi_CommentGroup ."\./", $pagename) )
 		$page = $bi_AuthFunction($pagename, 'read', false, $since);
 	else $page = $bi_AuthFunction($pagename, $level, $authprompt, $since);
 	return $page;
