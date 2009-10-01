@@ -140,7 +140,7 @@ $bi_EntryType = PageVar($pagename,'$:entrytype');
 $bi_EntryStatus = PageVar($pagename,'$:entrystatus');
 list($Group, $Name) = explode('.', ResolvePageName($pagename));
 if ( (isset($bi_EntryType)||$pagename==$bi_NewEntryPage) && bi_Auth('*') ) $EnablePostCaptchaRequired = 0;
-bi_debugLog('entryType: '.$bi_EntryType);
+bi_debugLog('entryType: '.$bi_EntryType.' status: '.$bi_EntryStatus);
 
 # ----------------------------------------
 # - Pagination
@@ -158,10 +158,6 @@ if (!isset($Skin) || $Skin=='pmwiki')
 # - Categories
 # Doesn't pick up categories defined as page variables.
 $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>"; #[1]
-if ( ($pagename==$bi_NewEntryPage && $_POST['ptv_entrystatus']!=$bi_StatusType['draft'])
-	|| ($bi_EntryType==trim($FmtPV['$bi_PageType_BLOG'],'\'') && $bi_EntryStatus!=$bi_StatusType['draft']) )
-	$AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
-if ($Group == $CategoryGroup) $GroupFooterFmt .= $bi_GroupFooterFmt;
 
 # ----------------------------------------
 # - Markup
@@ -196,7 +192,7 @@ $MarkupExpr['bi_url'] = 'bi_URL($args)';
 $MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_NewEntryPage .'" ?"' .$bi_DefaultGroup .'." :$args[0])';
 
 # ----------------------------------------
-# - Set GroupHeaderFmt
+# - Set GroupHeaderFmt and Footer
 if (@$bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 	if ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
 		$GroupHeaderFmt .= '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
@@ -205,6 +201,7 @@ if (@$bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 	if ($action=='print')  $GroupPrintHeaderFmt .= $GroupHeaderFmt;
 }
 elseif ($Group == $CategoryGroup)  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction(PageVar($pagename, '$Name')).':)';
+if ($Group == $CategoryGroup) $GroupFooterFmt .= $bi_GroupFooterFmt;
 
 # ----------------------------------------
 # - HandleActions Functions
@@ -256,13 +253,13 @@ global $_REQUEST, $GroupHeaderFmt;
 	HandleDispatch($src, 'browse');
 }
 function bi_HandleProcessForm ($src, $auth='read'){
-global $bi_ResetPmFormField, $_POST, $RecipeInfo, $bi_BlogForm, $bi_EnablePostDirectives, $PmFormPostPatterns, $ROSPatterns, $bi_PageType,
-	$pagename, $bi_DefaultGroup, $bi_TagSeparator, $bi_CommentsEnabled, $bi_CommentForm, $bi_PageType_Comment, $Now, $bi_OldHandleActions, $EnablePost;
+global $bi_ResetPmFormField, $_POST, $RecipeInfo, $bi_BlogForm, $bi_EnablePostDirectives, $PmFormPostPatterns, $ROSPatterns, $bi_PageType,$CategoryGroup,$bi_StatusType,
+	$pagename, $bi_DefaultGroup, $bi_TagSeparator, $bi_CommentsEnabled, $bi_CommentForm, $bi_PageType_Comment, $Now, $bi_OldHandleActions, $EnablePost, $AutoCreate;
 
 	$bi_ResetPmFormField = array();
 	$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
 	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']>''){
-		$EnablePost = 1;
+		if ( $_POST['ptv_entrystatus']!=$bi_StatusType['draft'] )  $AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
 		if ($bi_EnablePostDirectives) $PmFormPostPatterns = array();  # Null out the PostPatterns so that directive markup doesn't get replaced.
 
 		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body
