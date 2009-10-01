@@ -7,7 +7,7 @@
 */
 $RecipeInfo['BlogIt']['Version'] = '2009-10-01';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
-SDV($BlogIt['debug'],true);
+SDV($BlogIt['debug'],false);
 bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
 #TODO: FPLCountA
 
