@@ -283,7 +283,7 @@ global $bi_ResetPmFormField, $_POST, $RecipeInfo, $bi_BlogForm, $bi_EnablePostDi
 		}else  $bi_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
 
 		$_POST['ptv_entrytype'] = $bi_PageType['blog'];  #Prevent spoofing.
-		$_POST['ptv_entrytitle'] = (empty($_POST['ptv_entrytitle'])?$pg:$_POST['ptv_entrytitle']);
+		$_POST['ptv_entrytitle'] = (empty($_POST['ptv_entrytitle']) ?$pg :$_POST['ptv_entrytitle']);
 		$_POST['ptv_entryurl'] = MakePageName($pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .( empty($pg) ?$_POST['ptv_entrytitle'] :$pg) );
 		$_POST['ptv_pmmarkup'] = bi_SaveTags($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $bi_TagSeparator) .'(:title ' .$_POST['ptv_entrytitle'] .':)';
 
@@ -412,15 +412,12 @@ global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_AuthPage, $bi_AuthFu
 			:(isset($pn)) ?$pn :$pagename;
 
 	foreach ($action as $a){
-bi_debugLog('AUTH'.(IsEnabled($EnableAuthUser)?' [authuser]':'').': '.$a.' for '.$pn);
 		foreach ($bi_Auth as $role => $action_list){
 			if ( $a=='*' || in_array($a, $action_list) ){  #Is the action assigned to a role?
-bi_debugLog('...found: '.$a.' for role '.$role);
 				if ( (IsEnabled($EnableAuthUser) && $AuthList['@'.$role] > 0)  #the user is assigned to this role
 					|| (!IsEnabled($EnableAuthUser) && $bi_AuthFunction($pn, $role, false, READPAGE_CURRENT)) )  #the user has these role privs on this page
 					return true;
 	}}}
-bi_debugLog('...no privs');
 	return false;
 }
 
