@@ -5,7 +5,7 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2009-09-24';
+$RecipeInfo['BlogIt']['Version'] = '2009-10-01';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
 SDV($BlogIt['debug'],true);
 bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
@@ -105,7 +105,7 @@ if ($bi_CurrUrl!=$bi_PrevUrl){ #don't replace cookies if user is reloading the c
 $HandleAuth['source'] = $HandleAuth['diff'] = 'edit';  #[1] Prevent viewing source and diff, primarily for Comments, as this would reveal email.
 bi_addPageStore();
 $bi_OldAsSpaced_Function = $AsSpacedFunction;
-$AsSpacedFunction = 'AsSpacedHyphens';
+$AsSpacedFunction = 'AsSpacedHyphens';  #[1]
 
 # ----------------------------------------
 # - PmForms Setup
@@ -151,8 +151,8 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_
 
 # ----------------------------------------
 # - Default Skin
-if (!isset($Skin) || $Skin=='pmwiki')
-	$HTMLStylesFmt['bi-pmwiki'] .= '#wikiedit .inputbutton{margin:2px;} .blogit-listmore{text-align:right;} .blogit-next-entries, .blogit-previous-entries{padding-right: 5px;} ';
+if (!isset($Skin) || $Skin=='pmwiki')  $HTMLStylesFmt['bi-pmwiki'] .=
+	'#wikiedit .inputbutton{margin:2px;} .blogit-listmore{text-align:right;} .blogit-next-entries, .blogit-previous-entries{padding-right: 5px;} ';
 
 # ----------------------------------------
 # - Categories

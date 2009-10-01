@@ -9,7 +9,3 @@ name=Site.BlogIt-Admin
 rev=3
 targets=
 text=(:if false:)%0aThis page is intentionally blank. Content will be dynamically included from blogit.php, as part of the PageHeader when ?action=blogitadmin or ?action=blogitnewentry%0a(:if:)
-time=1254349253
-author:1254349253=
-diff:1254349253:1234134616:=2c2%0a%3c This page is intentionally blank. Content will be dynamically included from blogit.php, as part of the PageHeader when ?action=blogitadmin or ?action=blogitnewentry%0a---%0a> This page is intentionally blank. Content will be dynamically included from blogit.php, as part of the PageHeader when ?action=blogitadmin%0a
-host:1254349253=127.0.0.1
