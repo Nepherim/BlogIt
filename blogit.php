@@ -57,6 +57,7 @@ SDVA($bi_MakePageNamePatterns, array(
 # - Internal Use Only
 # ----------------------------------------
 SDV($bi_AdminPage, $SiteGroup .'.BlogIt-Admin');
+SDV($bi_NewEntryPage, $SiteGroup .'.BlogIt-NewEntry');
 SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
 SDVA($bi_PageType, array('blog'=>'blog'));
 SDV($bi_PageType_Comment, 'comment');  #Not in PageType list, since we don't want bloggers to be able to select 'comment' types.
@@ -79,7 +80,7 @@ $bi_CommentForm = 'blogit-comments';
 # - Usable on Wiki Pages
 bi_setFmtPV(array('bi_BlogIt_Enabled','Now','bi_DefaultGroup','bi_AuthorGroup','bi_CommentsEnabled','CategoryGroup',
 	'bi_DateEntryFormat','bi_DateDisplayFormat','bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired',
-	'bi_EntriesPerPage','bi_AdminPage','bi_LinkToCommentSite','bi_StatAction','bi_NowISOFormat', 'bi_AuthPage', 'bi_PageType_Comment'));
+	'bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_LinkToCommentSite','bi_StatAction','bi_NowISOFormat', 'bi_AuthPage', 'bi_PageType_Comment'));
 bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_CommentType,
 	'$bi_BlogList'=>$bi_BlogList, '$bi_PageType'=>$bi_PageType));
 
@@ -138,7 +139,7 @@ $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::
 $bi_EntryType = PageVar($pagename,'$:entrytype');
 $bi_EntryStatus = PageVar($pagename,'$:entrystatus');
 list($Group, $Name) = explode('.', ResolvePageName($pagename));
-if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage) && bi_Auth('*') ) $EnablePostCaptchaRequired = 0;
+if ( (isset($bi_EntryType)||$pagename==$bi_NewEntryPage) && bi_Auth('*') ) $EnablePostCaptchaRequired = 0;
 bi_debugLog('entryType: '.$bi_EntryType);
 
 # ----------------------------------------
@@ -157,7 +158,7 @@ if (!isset($Skin) || $Skin=='pmwiki')
 # - Categories
 # Doesn't pick up categories defined as page variables.
 $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>"; #[1]
-if ( ($action=='blogitnewentry' && $pagename==$bi_AdminPage && $_POST['ptv_entrystatus']!=$bi_StatusType['draft'])
+if ( ($pagename==$bi_NewEntryPage && $_POST['ptv_entrystatus']!=$bi_StatusType['draft'])
 	|| ($bi_EntryType==trim($FmtPV['$bi_PageType_BLOG'],'\'') && $bi_EntryStatus!=$bi_StatusType['draft']) )
 	$AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
 if ($Group == $CategoryGroup) $GroupFooterFmt .= $bi_GroupFooterFmt;
@@ -170,7 +171,7 @@ Markup('blogit', 'fulltext', '/\(:blogit (more|intro|list|multiline|cleantext|ta
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
 if (IsEnabled($EnableGUIButtons)){
-	if ($bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'') || $pagename == $bi_AdminPage)
+	if ($bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'') || $pagename == $bi_NewEntryPage)
 		include_once("$FarmD/scripts/guiedit.php");  #PmWiki only includes this automatically if action=edit.
 }else Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
 
@@ -192,7 +193,7 @@ $MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull($args[0]),ENT_QUOTES)';
 $MarkupExpr['bi_param'] = '( bi_IsNull($args[1])=="" ?"" :"$args[0]=\"$args[1]\"")';
 $MarkupExpr['bi_base'] = 'bi_BasePage($args[0])';
 $MarkupExpr['bi_url'] = 'bi_URL($args)';
-$MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_AdminPage .'" ?"' .$bi_DefaultGroup .'." :$args[0])';
+$MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_NewEntryPage .'" ?"' .$bi_DefaultGroup .'." :$args[0])';
 
 # ----------------------------------------
 # - Set GroupHeaderFmt
@@ -204,7 +205,6 @@ if (@$bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 	if ($action=='print')  $GroupPrintHeaderFmt .= $GroupHeaderFmt;
 }
 elseif ($Group == $CategoryGroup)  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction(PageVar($pagename, '$Name')).':)';
-elseif ($action=='blogitnewentry' && $pagename == $bi_AdminPage && bi_Auth('blog-new'))  $GroupHeaderFmt .= '(:pmform ' .$bi_BlogForm .':)';
 
 # ----------------------------------------
 # - HandleActions Functions
@@ -390,9 +390,10 @@ global $_GET;
 # ----------------------------------------
 function bi_BlogItAuth($pagename, $level, $authprompt=true, $since=0) {
 global $action, $bi_AuthFunction, $bi_CommentsEnabled, $bi_CommentGroup, $bi_EntryType, $FmtPV;
+	# Set level to read if a non-authenticated user is posting a comment.
 	if ( (($level=='edit') || ($level=='publish'))
-		&& ( ($action=='pmform' && $bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\''))  #saving/POSTing blog entry
-		|| (IsEnabled($bi_CommentsEnabled,1) && preg_match("/^" .$bi_CommentGroup ."\./", $pagename))) ){  #posting a comment
+		&& $action=='pmform' && $bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')
+		&& IsEnabled($bi_CommentsEnabled,1) && preg_match("/^" .$bi_CommentGroup ."\./", $pagename) ){
 		$level = 'read';
 		$authprompt = false;
 	}
@@ -400,11 +401,13 @@ global $action, $bi_AuthFunction, $bi_CommentsEnabled, $bi_CommentGroup, $bi_Ent
 }
 # Called as part of markup condition. Determine whether the current user is authorized for an action
 function bi_Auth($condparm){  #condparm: comma separated list of actions, and optional space separated pagename -- "blog-new,blog-edit Blog.This-entry"
-global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_AuthPage, $bi_AuthFunction, $bi_AdminPage;
+global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_AuthPage, $bi_AuthFunction, $bi_AdminPage, $bi_NewEntryPage;
 	@list($action, $pn) = explode(' ', $condparm, 2);
 	$action=explode(',', trim($action,'\'"'));
 	if (!IsEnabled($EnableAuthUser))
-		$pn = ( ($pagename==$bi_AdminPage && (in_array('blogit-admin',$action)||in_array('blog-new',$action))) || in_array('sidebar',$action) )
+		$pn = ( in_array('*',$action)	|| in_array('sidebar',$action)
+			||($pagename==$bi_AdminPage && in_array('blogit-admin',$action))
+			||($pagename==$bi_NewEntryPage && in_array('blog-new',$action)) )
 			?$bi_AuthPage
 			:(isset($pn)) ?$pn :$pagename;
 
@@ -416,9 +419,7 @@ bi_debugLog('...found: '.$a.' for role '.$role);
 				if ( (IsEnabled($EnableAuthUser) && $AuthList['@'.$role] > 0)  #the user is assigned to this role
 					|| (!IsEnabled($EnableAuthUser) && $bi_AuthFunction($pn, $role, false, READPAGE_CURRENT)) )  #the user has these role privs on this page
 					return true;
-			}
-		}
-	}
+	}}}
 bi_debugLog('...no privs');
 	return false;
 }
