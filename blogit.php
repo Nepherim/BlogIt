@@ -7,7 +7,7 @@
 */
 $RecipeInfo['BlogIt']['Version'] = '2009-10-01';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
-SDV($BlogIt['debug'],false);
+SDV($BlogIt['debug'],true);
 bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
 #TODO: FPLCountA
 
@@ -25,6 +25,7 @@ SDV($bi_EntriesPerPage, 15);
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($bi_DateDisplayFormat, $TimeFmt);
+SDV($bi_DisplayFuture, 'false');
 SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 
 # ----------------------------------------
@@ -41,7 +42,6 @@ SDV($bi_EnablePostDirectives, true);  #Set to true to allow posting of directive
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
 SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
-SDV($bi_NowISOFormat, strftime('%Y%m%d', $Now));  #Used in calls to #blog-summary-pagelist, as part of daterange
 SDV($bi_UnstyleFn, '');
 SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
@@ -65,6 +65,7 @@ SDV($FPLTemplatePageFmt, array(
 	'{$FullName}', (isset($Skin)?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate',
 	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'));
 SDV($bi_CommentPattern, '/^' .$GLOBALS['bi_CommentGroup'] .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/');
+SDV($bi_NowISOFormat, strftime('%Y%m%d', $Now));  #Used in calls to #blog-summary-pagelist, as part of daterange
 SDVA($SearchPatterns['blogit-comments'], array('comments' => $bi_CommentPattern));
 SDVA($SearchPatterns['blogit'], $bi_BlogGroups>'' ?array('blogit' => '/^(' .$bi_BlogGroups .')\./')
 	: array(
@@ -78,9 +79,9 @@ $bi_CommentForm = 'blogit-comments';
 
 # ----------------------------------------
 # - Usable on Wiki Pages
-bi_setFmtPV(array('bi_BlogIt_Enabled','Now','bi_DefaultGroup','bi_AuthorGroup','bi_CommentsEnabled','CategoryGroup',
-	'bi_DateEntryFormat','bi_DateDisplayFormat','bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired',
-	'bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_LinkToCommentSite','bi_StatAction','bi_NowISOFormat', 'bi_AuthPage', 'bi_PageType_Comment'));
+bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_AuthorGroup','bi_CommentsEnabled','CategoryGroup',
+	'bi_DateEntryFormat','bi_DateDisplayFormat','bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired','bi_DisplayFuture',
+	'bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_LinkToCommentSite','bi_StatAction','bi_NowISOFormat','bi_AuthPage','bi_PageType_Comment'));
 bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_CommentType,
 	'$bi_BlogList'=>$bi_BlogList, '$bi_PageType'=>$bi_PageType));
 
@@ -137,10 +138,9 @@ $AuthFunction = 'bi_BlogItAuth';
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s'; #[1]
 # PageVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 $bi_EntryType = PageVar($pagename,'$:entrytype');
-$bi_EntryStatus = PageVar($pagename,'$:entrystatus');
 list($Group, $Name) = explode('.', ResolvePageName($pagename));
 if ( (isset($bi_EntryType)||$pagename==$bi_NewEntryPage) && bi_Auth('*') ) $EnablePostCaptchaRequired = 0;
-bi_debugLog('entryType: '.$bi_EntryType.' status: '.$bi_EntryStatus);
+bi_debugLog('entryType: '.$bi_EntryType);
 
 # ----------------------------------------
 # - Pagination
@@ -152,7 +152,7 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_
 # ----------------------------------------
 # - Default Skin
 if (!isset($Skin) || $Skin=='pmwiki')  $HTMLStylesFmt['bi-pmwiki'] .=
-	'#wikiedit .inputbutton{margin:2px;} .blogit-listmore{text-align:right;} .blogit-next-entries, .blogit-previous-entries{padding-right: 5px;} ';
+	'#wikiedit .inputbutton{margin:2px;} .blogit-listmore{text-align:right;} .blogit-older-entries, .blogit-newer-entries{padding-right: 5px;} ';
 
 # ----------------------------------------
 # - Categories
@@ -161,6 +161,8 @@ $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkTex
 
 # ----------------------------------------
 # - Markup
+Markup('fieldset', 'inline', '/\\(:fieldset:\\)/i', "<fieldset>");
+Markup('fieldsetend', 'inline', '/\\(:fieldsetend:\\)/i', "</fieldset>");
 # (:blogit [more|intro|list|multiline|cleantext|tags] options:)text(:blogitend:)
 Markup('blogit', 'fulltext', '/\(:blogit (more|intro|list|multiline|cleantext|tags)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
@@ -194,12 +196,16 @@ $MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_NewEntryPage .'" ?"' .$bi_De
 # ----------------------------------------
 # - Set GroupHeaderFmt and Footer
 if (@$bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
+	$bi_EntryStatus = PageVar($pagename,'$:entrystatus');
 	if ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
 		$GroupHeaderFmt .= '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
-	elseif ($bi_EntryStatus!=$bi_StatusType['draft'] || ($bi_EntryStatus==$bi_StatusType['draft'] && bi_Auth('blog-edit,blog-new,blogit-admin')) )
+	elseif ( ($bi_EntryStatus!=$bi_StatusType['draft'] && (!bi_FuturePost($Now) || bi_Auth('blog-edit,blog-new,blogit-admin')) )
+		|| ($bi_EntryStatus==$bi_StatusType['draft'] && bi_Auth('blog-edit,blog-new,blogit-admin')) )
 		$GroupHeaderFmt .= '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
-	if ($action=='print')  $GroupPrintHeaderFmt .= $GroupHeaderFmt;
-}
+	if ($action=='print'){
+		$GroupPrintHeaderFmt .= $GroupHeaderFmt;
+		bi_AddMarkup();
+	}
 elseif ($Group == $CategoryGroup)  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction(PageVar($pagename, '$Name')).':)';
 if ($Group == $CategoryGroup) $GroupFooterFmt .= $bi_GroupFooterFmt;
 
@@ -259,7 +265,8 @@ global $bi_ResetPmFormField, $_POST, $RecipeInfo, $bi_BlogForm, $bi_EnablePostDi
 	$bi_ResetPmFormField = array();
 	$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
 	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']>''){
-		if ( $_POST['ptv_entrystatus']!=$bi_StatusType['draft'] )  $AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
+		if ( $_POST['ptv_entrystatus']!=$bi_StatusType['draft'] )  #Allow future posts to create tag -- otherwise may never happen.
+			$AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
 		if ($bi_EnablePostDirectives) $PmFormPostPatterns = array();  # Null out the PostPatterns so that directive markup doesn't get replaced.
 
 		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body
@@ -468,6 +475,10 @@ function AsSpacedHyphens($text) {
 global $bi_OldAsSpaced_Function, $bi_EntryType, $Group, $CategoryGroup;
 	if ($Group == $CategoryGroup || isset($bi_EntryType))  return (strtr($bi_OldAsSpaced_Function($text),'-',' '));
 	else  return ($bi_OldAsSpaced_Function($text));
+}
+function bi_FuturePost($now){
+	$bi_EntryDate = PageVar($pagename,'$:entrydate');
+	return ($bi_EntryDate < $now || $bi_DisplayFuture=='true');
 }
 
 # ----------------------------------------
