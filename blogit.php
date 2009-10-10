@@ -202,12 +202,14 @@ if (@$bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 	elseif ( ($bi_EntryStatus!=$bi_StatusType['draft'] && (!bi_FuturePost($Now) || bi_Auth('blog-edit,blog-new,blogit-admin')) )
 		|| ($bi_EntryStatus==$bi_StatusType['draft'] && bi_Auth('blog-edit,blog-new,blogit-admin')) )
 		$GroupHeaderFmt .= '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
-	if ($action=='print'){
-		$GroupPrintHeaderFmt .= $GroupHeaderFmt;
-		bi_AddMarkup();
-	}
-elseif ($Group == $CategoryGroup)  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction(PageVar($pagename, '$Name')).':)';
+} elseif ($Group == $CategoryGroup)  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction(PageVar($pagename, '$Name')).':)';
 if ($Group == $CategoryGroup) $GroupFooterFmt .= $bi_GroupFooterFmt;
+if ($action=='print'){
+	$GroupPrintHeaderFmt .= $GroupHeaderFmt;
+	$GroupPrintFooterFmt .= $GroupFooterFmt;  #Needed if trying to print tag list.
+	bi_AddMarkup();
+}
+
 
 # ----------------------------------------
 # - HandleActions Functions
@@ -267,7 +269,7 @@ global $bi_ResetPmFormField, $_POST, $RecipeInfo, $bi_BlogForm, $bi_EnablePostDi
 	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']>''){
 		if ( $_POST['ptv_entrystatus']!=$bi_StatusType['draft'] )  #Allow future posts to create tag -- otherwise may never happen.
 			$AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
-		if ($bi_EnablePostDirectives) $PmFormPostPatterns = array();  # Null out the PostPatterns so that directive markup doesn't get replaced.
+		if ($bi_EnablePostDirectives)  $PmFormPostPatterns = array();  # Null out the PostPatterns so that directive markup doesn't get replaced.
 
 		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body
 		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '(::entrybody:$1::)';  #entrybody MUST be the last variable.
