@@ -66,7 +66,6 @@ SDV($FPLTemplatePageFmt, array(
 	'{$FullName}', (isset($Skin)?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate',
 	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'));
 SDV($bi_CommentPattern, '/^' .$GLOBALS['bi_CommentGroup'] .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/');
-SDV($bi_NowISOFormat, strftime('%Y%m%d', $Now));  #Used in calls to #blog-summary-pagelist, as part of daterange
 SDVA($SearchPatterns['blogit-comments'], array('comments' => $bi_CommentPattern));
 SDVA($SearchPatterns['blogit'], $bi_BlogGroups>'' ?array('blogit' => '/^(' .$bi_BlogGroups .')\./')
 	: array(
@@ -82,7 +81,7 @@ $bi_CommentForm = 'blogit-comments';
 # - Usable on Wiki Pages
 bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_AuthorGroup','bi_CommentsEnabled','CategoryGroup','Now',
 	'bi_DateEntryFormat','bi_DateDisplayFormat','bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired','bi_DisplayFuture',
-	'bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_LinkToCommentSite','bi_StatAction','bi_NowISOFormat','bi_AuthPage','bi_PageType_Comment'));
+	'bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_LinkToCommentSite','bi_StatAction','bi_AuthPage','bi_PageType_Comment'));
 bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_CommentType,
 	'$bi_BlogList'=>$bi_BlogList, '$bi_PageType'=>$bi_PageType));
 
@@ -214,7 +213,6 @@ if ($action=='print'){
 	bi_AddMarkup();
 }
 
-
 # ----------------------------------------
 # - HandleActions Functions
 # ----------------------------------------
@@ -325,9 +323,7 @@ function blogitMU_list($name, $text){
 	return ($i==1?'':$label).$t;
 }
 function blogitMU_multiline($options, $text){
-#	return preg_replace('/\n/', '<br />', $text);  #Because pmform strips \n, and we end up with comments on a single line.
 	return strtr($text, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />'));  #Because pmform strips \n, and we end up with comments on a single line.
-#	return nl2br($text);  #Because pmform strips \n, and we end up with comments on a single line.
 }
 # options is the length of the string, or use $bi_CommentSideBarLen is empty
 function blogitMU_cleantext($options, $text){
@@ -487,7 +483,7 @@ global $bi_OldAsSpaced_Function, $bi_EntryType, $Group, $CategoryGroup;
 }
 function bi_FuturePost($now){
 	$bi_EntryDate = PageVar($pagename,'$:entrydate');
-	return ($bi_EntryDate < $now || $bi_DisplayFuture=='true');
+	return ($bi_EntryDate > $now || $bi_DisplayFuture=='true');
 }
 
 # ----------------------------------------
