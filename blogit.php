@@ -26,6 +26,7 @@ SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_DateEntryFormat, '%d-%m-%Y %H:%M');
 SDV($bi_DateDisplayFormat, $TimeFmt);
 SDV($bi_DisplayFuture, 'false');
+SDV($bi_DefaultCommentStatus, 'true');
 SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 
 # ----------------------------------------
@@ -79,7 +80,7 @@ $bi_CommentForm = 'blogit-comments';
 
 # ----------------------------------------
 # - Usable on Wiki Pages
-bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_AuthorGroup','bi_CommentsEnabled','CategoryGroup',
+bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_AuthorGroup','bi_CommentsEnabled','CategoryGroup','Now',
 	'bi_DateEntryFormat','bi_DateDisplayFormat','bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired','bi_DisplayFuture',
 	'bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_LinkToCommentSite','bi_StatAction','bi_NowISOFormat','bi_AuthPage','bi_PageType_Comment'));
 bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_CommentType,
@@ -199,9 +200,12 @@ if (@$bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 	$bi_EntryStatus = PageVar($pagename,'$:entrystatus');
 	if ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
 		$GroupHeaderFmt .= '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
-	elseif ( ($bi_EntryStatus!=$bi_StatusType['draft'] && (!bi_FuturePost($Now) || bi_Auth('blog-edit,blog-new,blogit-admin')) )
-		|| ($bi_EntryStatus==$bi_StatusType['draft'] && bi_Auth('blog-edit,blog-new,blogit-admin')) )
-		$GroupHeaderFmt .= '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
+	else{
+		$bi_AuthEditAdmin = bi_Auth('blog-edit,blog-new,blogit-admin');
+		if ( ($bi_EntryStatus!=$bi_StatusType['draft'] && (!bi_FuturePost($Now) || $bi_AuthEditAdmin) )
+		|| ($bi_EntryStatus==$bi_StatusType['draft'] && $bi_AuthEditAdmin) )
+			$GroupHeaderFmt .= '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
+	}
 } elseif ($Group == $CategoryGroup)  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction(PageVar($pagename, '$Name')).':)';
 if ($Group == $CategoryGroup) $GroupFooterFmt .= $bi_GroupFooterFmt;
 if ($action=='print'){
@@ -261,8 +265,9 @@ global $_REQUEST, $GroupHeaderFmt;
 	HandleDispatch($src, 'browse');
 }
 function bi_HandleProcessForm ($src, $auth='read'){
-global $bi_ResetPmFormField, $_POST, $RecipeInfo, $bi_BlogForm, $bi_EnablePostDirectives, $PmFormPostPatterns, $ROSPatterns, $bi_PageType,$CategoryGroup,$bi_StatusType,
-	$pagename, $bi_DefaultGroup, $bi_TagSeparator, $bi_CommentsEnabled, $bi_CommentForm, $bi_PageType_Comment, $Now, $bi_OldHandleActions, $EnablePost, $AutoCreate;
+global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirectives,$PmFormPostPatterns,$ROSPatterns,$bi_PageType,$CategoryGroup,
+	$bi_StatusType,$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$bi_CommentForm,$bi_PageType_Comment,$Now,$bi_OldHandleActions,
+	$EnablePost,$AutoCreate,$bi_DefaultCommentStatus;
 
 	$bi_ResetPmFormField = array();
 	$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
@@ -296,7 +301,7 @@ global $bi_ResetPmFormField, $_POST, $RecipeInfo, $bi_BlogForm, $bi_EnablePostDi
 	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']==$bi_CommentForm){
 		$_POST['ptv_entrytype'] = $bi_PageType_Comment;
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
-		$_POST['ptv_commentapproved'] = 'false';
+		$_POST['ptv_commentapproved'] = $bi_DefaultCommentStatus;
 		$_POST['ptv_commentdate'] = $Now;
 	}
 	$bi_OldHandleActions['pmform']($src, $auth);
@@ -306,10 +311,10 @@ global $bi_ResetPmFormField, $_POST, $RecipeInfo, $bi_BlogForm, $bi_EnablePostDi
 # - Markup Functions
 # ----------------------------------------
 function blogitMU_more($options, $text){
-	return (strpos($text, '[[#' .$GLOBALS['bi_BodyBreak'] .']]') !== false ? preg_replace('/{\$FullName}/', $options, $GLOBALS['bi_ReadMore']) : '');
+	return (strpos($text, '[[#' .$GLOBALS['bi_BodyBreak'] .']]') !== false ?preg_replace('/{\$FullName}/', $options, $GLOBALS['bi_ReadMore']) :'');
 }
 function blogitMU_intro($options, $text){
-	list($found,$null) = explode('[[#' .$GLOBALS['bi_BodyBreak'] .']]', $text);
+	list($found,$null) = explode('[[#' .$GLOBALS['bi_BodyBreak'] .']]', $text, 2);
 	return $found;
 }
 function blogitMU_list($name, $text){
@@ -320,7 +325,9 @@ function blogitMU_list($name, $text){
 	return ($i==1?'':$label).$t;
 }
 function blogitMU_multiline($options, $text){
-	return preg_replace('/\n/', '<br />', $text);  #Because pmform strips \n, and we end up with comments on a single line.
+#	return preg_replace('/\n/', '<br />', $text);  #Because pmform strips \n, and we end up with comments on a single line.
+	return strtr($text, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />'));  #Because pmform strips \n, and we end up with comments on a single line.
+#	return nl2br($text);  #Because pmform strips \n, and we end up with comments on a single line.
 }
 # options is the length of the string, or use $bi_CommentSideBarLen is empty
 function blogitMU_cleantext($options, $text){
