@@ -33,7 +33,6 @@ SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you c
 # - Less frequently user settable
 SDV($bi_AuthPage, $bi_DefaultGroup .'.' .$DefaultName);  #Need edit/admin users need edit access to this page if not using AuthUser
 SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');
-SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
 SDV($bi_BodyBreak, XL('break'));
 SDV($bi_ReadMore, '%blogit-readmore%[[{$FullName}#' .$bi_BodyBreak .' | $[Read more...]]]');
 SDV($bi_CommentSideBarLen, 60);
@@ -41,10 +40,12 @@ SDV($bi_TagSeparator, ', ');
 SDV($bi_TitleSeparator, '-');
 SDV($bi_EnablePostDirectives, true);  #Set to true to allow posting of directives of form (: :) in blog entries.
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
-SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
-SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
+SDV($bi_Cookie, $CookiePrefix.'blogit-');
 SDV($bi_UnstyleFn, '');
 SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
+SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
+SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
+SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
 SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',														# strip single-quotes
 	"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,	# convert everything else to hyphen
@@ -87,18 +88,20 @@ bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_Comm
 
 # ----------------------------------------
 # - Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
-$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
-if ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){  #Cancel button clicked
-	$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-2']; #need to go back 2, since when in this code we're already moved forward
-	bi_Redirect();
-	exit;
-}
-$bi_Params = bi_Implode($_GET);
-$bi_CurrUrl = FmtPageName('$PageUrl',$pagename) .(!empty($bi_Params) ?'?'.$bi_Params :'');
-$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-1'];
-if ($bi_CurrUrl!=$bi_PrevUrl){ #don't replace cookies if user is reloading the current page
-	setcookie($bi_Cookie.'back-2', $bi_PrevUrl, $Now+60*60*24*30);
-	setcookie($bi_Cookie.'back-1', $bi_CurrUrl, $Now+60*60*24*30); #set to current url
+if (isset($AuthId)){  #Only need cookies if user is authenticated
+	$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
+	if ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){  #Cancel button clicked
+		$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-2']; #need to go back 2, since when in this code we're already moved forward
+		bi_Redirect();
+		exit;
+	}
+	$bi_Params = bi_Implode($_GET);
+	$bi_CurrUrl = FmtPageName('$PageUrl',$pagename) .(!empty($bi_Params) ?'?'.$bi_Params :'');
+	$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-1'];
+	if ($bi_CurrUrl!=$bi_PrevUrl){ #don't replace cookies if user is reloading the current page
+		setcookie($bi_Cookie.'back-2', $bi_PrevUrl, $Now+60*60*24*30);
+		setcookie($bi_Cookie.'back-1', $bi_CurrUrl, $Now+60*60*24*30); #set to current url
+	}
 }
 
 # ----------------------------------------
@@ -112,7 +115,6 @@ $AsSpacedFunction = 'AsSpacedHyphens';  #[1]
 # - PmForms Setup
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
 array_unshift ($PmFormTemplatesFmt,	(isset($Skin) ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
-SDV($bi_Cookie, $CookiePrefix.'blogit-');
 include_once($FarmD.'/cookbook/pmform.php');
 $PmForm[$bi_BlogForm] = 'form=#blog-form-control fmt=#blog-post-control';
 $PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'.{$Group}-{$Name}-' .date('Ymd\THms')
