@@ -42,10 +42,11 @@ SDV($bi_EnablePostDirectives, true);  #Set to true to allow posting of directive
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDV($bi_Cookie, $CookiePrefix.'blogit-');
 SDV($bi_UnstyleFn, '');
-SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
+SDV($bi_PubListFmt, (isset($FarmPubDirUrl) ?array ($PubDirUrl.'/css', $FarmPubDirUrl.'/css') :array($PubDirUrl.'/css')));
 SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
 SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
 SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
+SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',														# strip single-quotes
 	"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,	# convert everything else to hyphen
@@ -152,9 +153,10 @@ $FmtPV['$bi_EntryStart'] = (($FmtPV['$bi_PageNext']-2) * (isset($_GET['count']) 
 $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_GET['count'] :$bi_EntriesPerPage) - 1;
 
 # ----------------------------------------
-# - Default Skin
-if (!isset($Skin) || $Skin=='pmwiki')  $HTMLStylesFmt['bi-pmwiki'] .=
-	'#wikiedit .inputbutton{margin:2px;} .blogit-listmore{text-align:right;} .blogit-older-entries, .blogit-newer-entries{padding-right: 5px;} ';
+# - Load skin stylesheet
+foreach($bi_PubListFmt as $k)
+	foreach((array)$bi_Stylesheets as $ss => $fn)
+		$HTMLHeaderFmt['blogit-stylesheet'][$ss] = "<link rel='stylesheet' type='text/css' href='" .FmtPageName($k.'/'.$fn, $pagename) ."' media='screen' />\n";
 
 # ----------------------------------------
 # - Categories
