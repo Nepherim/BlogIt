@@ -23,18 +23,14 @@ SDV($CategoryGroup, 'Tags');
 SDV($bi_AuthorGroup, 'Profiles');
 SDV($bi_EntriesPerPage, 15);
 SDV($bi_LinkToCommentSite, 'true');
-SDV($bi_DateEntryFormat, '%d-%m-%Y %H:%M');
-SDV($bi_DateDisplayFormat, $TimeFmt);
 SDV($bi_DisplayFuture, 'false');
 SDV($bi_DefaultCommentStatus, 'true');
 SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 
 # ----------------------------------------
-# - Less frequently user settable
+# - Advanced user settings
 SDV($bi_AuthPage, $bi_DefaultGroup .'.' .$DefaultName);  #Need edit/admin users need edit access to this page if not using AuthUser
 SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');
-SDV($bi_BodyBreak, XL('break'));
-SDV($bi_ReadMore, '%blogit-readmore%[[{$FullName}#' .$bi_BodyBreak .' | $[Read more...]]]');
 SDV($bi_CommentSideBarLen, 60);
 SDV($bi_TagSeparator, ', ');
 SDV($bi_TitleSeparator, '-');
@@ -67,43 +63,26 @@ SDV($bi_PageType_Comment, 'comment');  #Not in PageType list, since we don't wan
 SDV($FPLTemplatePageFmt, array(
 	'{$FullName}', (isset($Skin)?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate',
 	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'));
-SDV($bi_CommentPattern, '/^' .$GLOBALS['bi_CommentGroup'] .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/');
+SDV($bi_CommentPattern, '/^' .$bi_CommentGroup .'[\/\.](.*?)-(.*?)-\d{8}T\d{6}$/');
 SDVA($SearchPatterns['blogit-comments'], array('comments' => $bi_CommentPattern));
-SDVA($SearchPatterns['blogit'], $bi_BlogGroups>'' ?array('blogit' => '/^(' .$bi_BlogGroups .')\./')
-	: array(
+SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''
+	?array('blogit' => '/^(' .$bi_BlogGroups .')\./')
+	:array(
 		'recent' => '!\.(All)?Recent(Changes|Uploads|' .$bi_CommentGroup .')$!',
 		'group' => '!\.Group(Print)?(Header|Footer|Attributes)$!',
 		'pmwiki' => '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki)\.!',
 		'self' => FmtPageName('!^$FullName$!', $pagename)
-));
+)));
 $bi_BlogForm = 'blogit-entry';
 $bi_CommentForm = 'blogit-comments';
 
 # ----------------------------------------
 # - Usable on Wiki Pages
 bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_AuthorGroup','bi_CommentsEnabled','CategoryGroup','Now',
-	'bi_DateEntryFormat','bi_DateDisplayFormat','bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired','bi_DisplayFuture',
+	'bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired','bi_DisplayFuture',
 	'bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_LinkToCommentSite','bi_StatAction','bi_AuthPage','bi_PageType_Comment'));
 bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_CommentType,
 	'$bi_BlogList'=>$bi_BlogList, '$bi_PageType'=>$bi_PageType));
-
-# ----------------------------------------
-# - Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
-if (isset($AuthId)){  #Only need cookies if user is authenticated
-	$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
-	if ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){  #Cancel button clicked
-		$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-2']; #need to go back 2, since when in this code we're already moved forward
-		bi_Redirect();
-		exit;
-	}
-	$bi_Params = bi_Implode($_GET);
-	$bi_CurrUrl = FmtPageName('$PageUrl',$pagename) .(!empty($bi_Params) ?'?'.$bi_Params :'');
-	$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-1'];
-	if ($bi_CurrUrl!=$bi_PrevUrl){ #don't replace cookies if user is reloading the current page
-		setcookie($bi_Cookie.'back-2', $bi_PrevUrl, $Now+60*60*24*30);
-		setcookie($bi_Cookie.'back-1', $bi_CurrUrl, $Now+60*60*24*30); #set to current url
-	}
-}
 
 # ----------------------------------------
 # - PmWiki Config
@@ -142,7 +121,25 @@ $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::
 # PageVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 $bi_EntryType = PageVar($pagename,'$:entrytype');
 list($Group, $Name) = explode('.', ResolvePageName($pagename));
-if ( (isset($bi_EntryType)||$pagename==$bi_NewEntryPage) && bi_Auth('*') ) $EnablePostCaptchaRequired = 0;
+$bi_AuthAny = bi_Auth('*');
+if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage||$pagename==$bi_NewEntryPage) && $bi_AuthAny ){
+	$EnablePostCaptchaRequired = 0;
+	# ----------------------------------------
+	# - Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
+	$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
+	if ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){  #Cancel button clicked
+		$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-2']; #need to go back 2, since when in this code we're already moved forward
+		bi_Redirect();
+		exit;
+	}
+	$bi_Params = bi_Implode($_GET);
+	$bi_CurrUrl = FmtPageName('$PageUrl',$pagename) .(!empty($bi_Params) ?'?'.$bi_Params :'');
+	$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-1'];
+	if ($bi_CurrUrl!=$bi_PrevUrl){ #don't replace cookies if user is reloading the current page
+		setcookie($bi_Cookie.'back-2', $bi_PrevUrl, $Now+60*60*24*30);
+		setcookie($bi_Cookie.'back-1', $bi_CurrUrl, $Now+60*60*24*30); #set to current url
+	}
+}
 bi_debugLog('entryType: '.$bi_EntryType);
 
 # ----------------------------------------
@@ -170,6 +167,9 @@ Markup('fieldsetend', 'inline', '/\\(:fieldsetend:\\)/i', "</fieldset>");
 # (:blogit [more|intro|list|multiline|cleantext|tags] options:)text(:blogitend:)
 Markup('blogit', 'fulltext', '/\(:blogit (more|intro|list|multiline|cleantext|tags)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
+# (:blogit [more|intro|list|multiline|cleantext|tags] options:)text(:blogitend:)
+Markup('blogit-skin', 'fulltext', '/\(:blogit-skin (intro|author|tags|edit|commentcount|date)\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
+	"blogitSkinMU($1, PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
 if (IsEnabled($EnableGUIButtons)){
@@ -313,10 +313,10 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirect
 # - Markup Functions
 # ----------------------------------------
 function blogitMU_more($options, $text){
-	return (strpos($text, '[[#' .$GLOBALS['bi_BodyBreak'] .']]') !== false ?preg_replace('/{\$FullName}/', $options, $GLOBALS['bi_ReadMore']) :'');
+	return (strpos($text, '[[#' .XL('break') .']]') !== false ?preg_replace('/{\$FullName}/', $options, '%blogit-readmore%[[{$FullName}#$[break] | $[Read more...]]]') :'');
 }
 function blogitMU_intro($options, $text){
-	list($found,$null) = explode('[[#' .$GLOBALS['bi_BodyBreak'] .']]', $text, 2);
+	list($found,$null) = explode('[[#' .XL('break') .']]', $text, 2);
 	return $found;
 }
 function blogitMU_list($name, $text){
@@ -340,6 +340,24 @@ global $bi_CommentSideBarLen, $pagename, $bi_UnstyleFn;
 }
 function blogitMU_tags($options, $tags){
 	return bi_SaveTags('', $tags, $GLOBALS['bi_TagSeparator']);
+}
+function blogitSkinMU($fn, $opt, $txt){
+global $bi_AuthorGroup, $pagename, $bi_TagSeparator, $bi_CommentType_NONE, $bi_CommentsEnabled;
+	$args = ParseArgs($opt);  #$args['p'], args[]['s']
+	if ($fn=='intro') return '(:div999991 class="'.$args['class'].'":)' .blogitMU_intro('', $txt) ."%blogit-more%". blogitMU_more($args['page'], $txt) ."%%\n(:div99991end:)";
+	if ($fn=='author') return ($txt>''
+		?$args['pre_text'] .(PageExists(MakePageName($pagename, "$bi_AuthorGroup/$txt")) ?"[[$bi_AuthorGroup/$txt]]" :$txt) .$args['post_text']
+		:'');
+	if ($fn=='edit') return (bi_Auth('blog-edit '.$args['page']) ?$args['pre_text'] .'[['.$args['page'].'?action=blogitedit | '.$txt.']]'.$args['post-text'] :'');
+	if ($fn=='tags') return ($txt>'' ?$args['pre_text'].bi_SaveTags('', $txt, $bi_TagSeparator).$args['post_text'] :'');
+	if ($fn=='commentcount'){
+#		bi_debugLog('grp: '.$args['group'].'  name: '.$args['name'] .'  status: '.$args['status'].'  pre: '.$args['pre_text'].'  post: '.$args['post_text']);
+		return ($args['status']!=$bi_CommentType_NONE && $bi_CommentsEnabled
+		?$args['pre_text'].'[['.$args['group'].'.'.$args['name'].'#commentblock | '.
+			'(:includesection "#comments-count-pagelist entrygroup=\''.$args['group'].'\' entryname=\''.$args['name'].'\' commentstatus=true":)'.
+			$txt.']]'.$args['post_text']
+		:'');
+	}
 }
 function bi_includeSection($pagename, $inclspec){
 	$args = ParseArgs($inclspec);
@@ -366,7 +384,7 @@ function bi_IsDate($d){
 	$re_sep='[\/\-\.]';
 	$re_time='( (([0-1]?\d)|(2[0-3])):[0-5]\d)?';
 	$re_d='(0?[1-9]|[12][0-9]|3[01])'; $re_m='(0?[1-9]|1[012])'; $re_y='(19\d\d|20\d\d)';
-	if (preg_match('!\d{5,}!',$d)) $d=strftime($GLOBALS['bi_DateEntryFormat'],$d);  #Convert Unix timestamp to EntryFormat
+	if (preg_match('!\d{5,}!',$d)) $d=strftime(XL('%d-%m-%Y %H:%M'),$d);  #Convert Unix timestamp to EntryFormat
 	if (preg_match('!^' .$re_d .$re_sep .$re_m .$re_sep .$re_y. $re_time. '$!',$d,$m))  #dd-mm-yyyy
 		$ret = checkdate($m[2], $m[1], $m[3]);
 	elseif (preg_match('!^' .$re_y .$re_sep .$re_m .$re_sep .$re_d. $re_time. '$!',$d,$m))  #yyyy-mm-dd
