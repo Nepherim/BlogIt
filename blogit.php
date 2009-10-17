@@ -7,7 +7,7 @@
 */
 $RecipeInfo['BlogIt']['Version'] = '2009-10-01';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
-SDV($BlogIt['debug'],false);
+SDV($BlogIt['debug'],true);
 bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
 #TODO: FPLCountA
 
@@ -93,9 +93,9 @@ $AsSpacedFunction = 'AsSpacedHyphens';  #[1]
 
 # ----------------------------------------
 # - PmForms Setup
+include_once($FarmD.'/cookbook/pmform.php');
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
 array_unshift ($PmFormTemplatesFmt,	(isset($Skin) ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
-include_once($FarmD.'/cookbook/pmform.php');
 $PmForm[$bi_BlogForm] = 'form=#blog-form-control fmt=#blog-post-control';
 $PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'.{$Group}-{$Name}-' .date('Ymd\THms')
 	.'" form=#comment-form-control fmt=#comment-post-control';
@@ -108,6 +108,8 @@ $HandleActions['browse']='bi_HandleBrowse';
 #TODO: SDV($HandleActions['approvsites'],'bi_HandleApprove');  #approveurl
 SDV($HandleActions['blogitadmin'], 'bi_HandleAdmin'); SDV($HandleAuth['blogitadmin'], 'blogit-admin');
 SDV($HandleActions['blogitapprove'], 'bi_HandleApproveComment'); SDV($HandleAuth['blogitapprove'], 'comment-approve');
+SDV($HandleActions['blogitunapprove'], 'bi_HandleUnapproveComment'); SDV($HandleAuth['blogitunapprove'], 'comment-approve');
+SDV($HandleActions['blogitcommentdelete'], 'bi_HandleDeleteComment'); SDV($HandleAuth['blogitcommentdelete'], 'comment-edit');
 #TODO: SDV($HandleActions['blogitedit'], 'bi_HandleEdit'); SDV($HandleAuth['blogitedit'], 'blog-edit');
 
 # ----------------------------------------
@@ -120,12 +122,13 @@ $AuthFunction = 'bi_BlogItAuth';
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s'; #[1]
 # PageVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 $bi_EntryType = PageVar($pagename,'$:entrytype');
+bi_debugLog('entryType: '.$bi_EntryType);
 list($Group, $Name) = explode('.', ResolvePageName($pagename));
-if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage||$pagename==$bi_NewEntryPage) && bi_Auth('*') ){
+if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage||$pagename==$bi_NewEntryPage) && bi_Auth('*') ){  #TODO: put blogit pages in array
 	$EnablePostCaptchaRequired = 0;
 	# Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
 	$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
-	if ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm && @$_REQUEST['cancel']>''){  #Cancel button clicked
+	if ( ( ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm) || ($action=='edit') ) && @$_REQUEST['cancel']>''){  #Cancel button clicked
 		$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-2']; #need to go back 2, since when in this code we're already moved forward
 		bi_Redirect();
 		exit;
@@ -138,7 +141,6 @@ if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage||$pagename==$bi_NewEntryPag
 		setcookie($bi_Cookie.'back-1', $bi_CurrUrl, $Now+60*60*24*30); #set to current url
 	}
 }
-bi_debugLog('entryType: '.$bi_EntryType);
 
 # ----------------------------------------
 # - Pagination
@@ -167,7 +169,7 @@ Markup('blogit', 'fulltext', '/\(:blogit (more|intro|list|cleantext|tags)\s?(.*?
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
 # (:blogit [more|intro|list|multiline|cleantext|tags] options:)text(:blogitend:)
 Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
-	'(date|intro|author|tags|edit|commentcount|date|commentauthor|commentapprove|commentedit|commenttext|commentsubhead|commentid)'.
+	'(date|intro|author|tags|edit|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commenttext|commentid)'.
 	'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
 	"blogitSkinMU($1, PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
@@ -223,7 +225,7 @@ if ($action=='print'){
 # If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling
 # in Main Processing, as markup (tags) isn't processed if markup is defined.
 function bi_HandleBrowse($pagename){
-global $_REQUEST, $bi_ResetPmFormField, $FmtPV, $HandleActions, $bi_OldHandleActions, $Group, $bi_CommentGroup;
+global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OldHandleActions,$Group,$bi_CommentGroup;
 	if ($Group == $bi_CommentGroup && bi_Auth('comment-edit')){  #After editing/deleting a comment page
 		bi_Redirect($pagename); return;
 	} elseif (isset($bi_ResetPmFormField))
@@ -235,29 +237,28 @@ global $_REQUEST, $bi_ResetPmFormField, $FmtPV, $HandleActions, $bi_OldHandleAct
 	bi_AddMarkup();
 	HandleDispatch($pagename, 'browse');
 }
-#TODO
-function bi_HandleApprove($pagename){
-	$GLOBALS['HandleActions']['approvesites']=$GLOBALS['oldUrlApprove'];
-#	HandleDispatch($pagename, 'browse');
+function bi_HandleUnapproveComment($src, $auth='comment-approve'){
+	bi_HandleApproveComment($src,$auth,false);
 }
-function bi_HandleApproveComment($src, $auth='comment-approve'){
-global $_REQUEST, $_POST, $Now, $ChangeSummary;
+function bi_HandleApproveComment($src, $auth='comment-approve', $approve=true){
+global $_REQUEST,$_POST,$Now,$ChangeSummary;
 	if (bi_Auth($auth)){
-		$ap = @$_REQUEST['pn'];
-		if ($ap) $old = RetrieveAuthPage($ap,'read',0, READPAGE_CURRENT);
+		if ($src) $old = RetrieveAuthPage($src,'read',0, READPAGE_CURRENT);
 		if($old){
 			$new = $old;
-			$new['csum'] = $new['csum:' .$Now] = $ChangeSummary = 'Approved comment';
+			$new['csum'] = $new['csum:' .$Now] = $ChangeSummary = ($approve?'A':'Una').'pproved comment';
 			$_POST['diffclass']='minor';
-			$new['text'] = preg_replace('/\(:commentapproved:false:\)/', '(:commentapproved:true:)',$new['text']);
-			PostPage($ap,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
+			$new['text'] = preg_replace(
+				'/\(:commentapproved:'.($approve?'false':'true').':\)/', '(:commentapproved:'.($approve?'true':'false').':)',
+				$new['text']);
+			PostPage($src,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
 		}
 	}
 	bi_Redirect();
 }
 # Allow URL access to sections within $bi_TemplateList, including passed parameters.
 function bi_HandleAdmin($src, $auth='blogit-admin'){
-global $_REQUEST, $GroupHeaderFmt;
+global $_REQUEST,$GroupHeaderFmt;
 	if (bi_Auth($auth)){
 		if (isset($_REQUEST['s'])){
 			$args = bi_Implode($_REQUEST, ' ', '=', array('n'=>'','action'=>'','s'=>''));
@@ -308,6 +309,12 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirect
 	}
 	$bi_OldHandleActions['pmform']($src, $auth);
 }
+function bi_HandleDeleteComment($src, $auth='comment-edit') {  #action=blogitcommentdelete
+global $bi_CommentGroup,$WikiDir,$Group;
+	if ($Group == $bi_CommentGroup && bi_Auth($auth.' '.$src) && RetrieveAuthPage($src,'read',0, READPAGE_CURRENT))
+		$WikiDir->delete($src);
+	bi_Redirect();
+}
 
 # ----------------------------------------
 # - Markup Functions
@@ -341,9 +348,9 @@ function blogitMU_tags($options, $tags){
 function blogitSkinMU($fn, $opt, $txt){
 global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentType_NONE,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern;
 	$args = ParseArgs($opt);  #$args['p'], args[]['s']
-	$dateFmt = array('long'=>'$[%B %d, %Y, at %I:%M %p]', 'short'=>'$[%B %d, %Y]', 'entry'=>'$[%d-%m-%Y %H:%M]');
+	$dateFmt = array('long'=>'%B %d, %Y, at %I:%M %p', 'short'=>'%B %d, %Y', 'entry'=>'%d-%m-%Y %H:%M');
 	switch ($fn) {
-		case 'date': return ME_ftime($dateFmt[$args['fmt']], '@'.$txt);
+		case 'date': return ME_ftime(XL($dateFmt[$args['fmt']]), '@'.$txt);
 		case 'intro': return '(:div999991 class="'.$args['class'].'":)' .blogitMU_intro('', $txt) .'%blogit-more%'. blogitMU_more($args['page'], $txt) ."%%\n(:div99991end:)";
 		case 'author': return ($txt>''
 			?$args['pre_text'] .(PageExists(MakePageName($pagename, "$bi_AuthorGroup/$txt")) ?"[[$bi_AuthorGroup/$txt]]" :$txt) .$args['post_text']
@@ -356,10 +363,11 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentType_NONE,$bi_Comme
 				$txt.']]'.$args['post_text']
 			:'');
 		case 'commentauthor': return ($bi_LinkToCommentSite=='true' && $args['website']>'' ?'[['.$args['website'].' | '.$args['author'].']]' :$args['author']);
-		case 'commentapprove': return ($args['status']=='false' && bi_Auth('comment-approve '.$args['basepage'])
-			?$args['pre_text'].'[['.$args['commentpage'].'?action=blogitapprove&pn='.$args['basepage'].' | $[approve]]]'.$args['post_text']
+		case 'commentapprove': return (bi_Auth('comment-approve '.bi_BasePage($txt))
+			?$args['pre_text'].'[['.$txt.'?action=blogit'.($args['status']=='true'?'un':'').'approve | $['.($args['status']=='true'?'un':'').'approve]]]'.$args['post_text']
 			:'');
-		case 'commentedit': return (bi_Auth('comment-edit '.$args['page']) ?'[['.$args['page'].'?action=edit | $[edit]]]' :'');
+		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=edit | $[edit]]]'.$args['post_text'] :'');
+		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=blogitcommentdelete | $[delete]]]'.$args['post_text'] :'');
 		case 'commenttext': return ( strtr($txt, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />')) );
 		case 'commentid': {
 			$x = preg_match($bi_CommentPattern, $txt, $m );
@@ -466,7 +474,7 @@ global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_AuthPage, $bi_AuthFu
 # Direct back to the refering page or $src
 function bi_Redirect($src=''){
 global $bi_PrevUrl;
-	$r = FmtPageName('$PageUrl', (!empty($src) ?bi_BasePage($src) :$bi_PrevUrl));
+	$r = FmtPageName('$PageUrl', (!empty($src)&&!empty($bi_PrevUrl) ?bi_BasePage($src) :$bi_PrevUrl));
 	header("Location: $r");
 	header("Content-type: text/html");
 	echo "<html><head>
@@ -514,6 +522,19 @@ global $bi_OldAsSpaced_Function, $bi_EntryType, $Group, $CategoryGroup;
 function bi_FuturePost($now){
 	$bi_EntryDate = PageVar($pagename,'$:entrydate');
 	return ($bi_EntryDate > $now || $bi_DisplayFuture=='true');
+}
+function MakeSerialNumber($pagename, $grp="", $name="" ) {
+   global $SerialStart;
+   $len = strlen($SerialStart);
+   if (!$grp) $grp = PageVar($pagename, '$Group');
+   $n = $SerialStart-1;
+   foreach(ListPages("/^$grp.$name\\d/") as $p) {
+      preg_match("/.*[^\\d](\\d+)$/",$p, $m);
+		$mlen = strlen($m[1]);
+		if($mlen>$len) $len = $mlen;
+		$n = max($n,$m[1]);
+   }
+   return sprintf("%0{$len}d",$n+1);
 }
 
 # ----------------------------------------
