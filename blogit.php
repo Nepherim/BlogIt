@@ -9,7 +9,6 @@ $RecipeInfo['BlogIt']['Version'] = '2009-10-01';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
 SDV($BlogIt['debug'],true);
 bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
-#TODO: FPLCountA
 
 # ----------------------------------------
 # - User settings
@@ -105,7 +104,7 @@ $PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'.{$Group}-{$Name}-' .d
 $bi_OldHandleActions = $HandleActions;
 $HandleActions['pmform']='bi_HandleProcessForm';
 $HandleActions['browse']='bi_HandleBrowse';
-#TODO: SDV($HandleActions['approvsites'],'bi_HandleApprove');  #approveurl
+#TODO: SDV($HandleActions['approvsites'],'bi_HandleUrlApprove');  #approveurl
 SDV($HandleActions['blogitadmin'], 'bi_HandleAdmin'); SDV($HandleAuth['blogitadmin'], 'blogit-admin');
 SDV($HandleActions['blogitapprove'], 'bi_HandleApproveComment'); SDV($HandleAuth['blogitapprove'], 'comment-approve');
 SDV($HandleActions['blogitunapprove'], 'bi_HandleUnapproveComment'); SDV($HandleAuth['blogitunapprove'], 'comment-approve');
@@ -120,8 +119,7 @@ $AuthFunction = 'bi_BlogItAuth';
 
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s'; #[1]
-# PageVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
-$bi_EntryType = PageVar($pagename,'$:entrytype');
+$bi_EntryType = PageVar($pagename,'$:entrytype');  #PageVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 bi_debugLog('entryType: '.$bi_EntryType);
 list($Group, $Name) = explode('.', ResolvePageName($pagename));
 if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage||$pagename==$bi_NewEntryPage) && bi_Auth('*') ){  #TODO: put blogit pages in array
@@ -144,8 +142,8 @@ if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage||$pagename==$bi_NewEntryPag
 
 # ----------------------------------------
 # - Pagination
-$FmtPV['$bi_PageNext'] = (isset($_GET['page']) ? $_GET['page']+1 : 2);
-$FmtPV['$bi_PagePrev'] = (isset($_GET['page']) && ($_GET['page']>0) ? $_GET['page']-1 : 0);
+$FmtPV['$bi_PageNext'] = (isset($_GET['page']) ?$_GET['page']+1 :2);
+$FmtPV['$bi_PagePrev'] = (isset($_GET['page']) && ($_GET['page']>0) ?$_GET['page']-1 :0);
 $FmtPV['$bi_EntryStart'] = (($FmtPV['$bi_PageNext']-2) * (isset($_GET['count']) ?$_GET['count'] :$bi_EntriesPerPage)) + 1;
 $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_GET['count'] :$bi_EntriesPerPage) - 1;
 
@@ -175,7 +173,7 @@ Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
 if (IsEnabled($EnableGUIButtons)){
-	if ($bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'') || $pagename == $bi_NewEntryPage)
+	if ($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm) || $pagename == $bi_NewEntryPage)
 		include_once("$FarmD/scripts/guiedit.php");  #PmWiki only includes this automatically if action=edit.
 }else Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
 
@@ -258,11 +256,11 @@ global $_REQUEST,$_POST,$Now,$ChangeSummary;
 }
 # Allow URL access to sections within $bi_TemplateList, including passed parameters.
 function bi_HandleAdmin($src, $auth='blogit-admin'){
-global $_REQUEST,$GroupHeaderFmt;
+global $_GET,$GroupHeaderFmt;
 	if (bi_Auth($auth)){
-		if (isset($_REQUEST['s'])){
-			$args = bi_Implode($_REQUEST, ' ', '=', array('n'=>'','action'=>'','s'=>''));
-			$GroupHeaderFmt .= '(:title $[' .$_REQUEST['s'] .']:)(:includesection "#' .$_REQUEST['s'] ." $args \":)";
+		if (isset($_GET['s'])){
+			$args = bi_Implode($_GET, ' ', '=', array('n'=>'','action'=>'','s'=>''));
+			$GroupHeaderFmt .= '(:title $[' .$_GET['s'] .']:)(:includesection "#' .$_GET['s'] ." $args \":)";
 		}
 	}
 	HandleDispatch($src, 'browse');
@@ -376,8 +374,8 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentType_NONE,$bi_Comme
 	}
 }
 function bi_includeSection($pagename, $inclspec){
-	$args = ParseArgs($inclspec);
-	$anc = array_shift($args['']);
+	$args = ParseArgs($inclspec);  #$inclspec: "params"
+	$anc = array_shift($args['']);  #$anc: parameters for include; $args: include-paths
 	if($anc>'' && $anc{0}!="#")  return '';
 	foreach($args[''] as $v){
 		$x = IncludeText($pagename, "$v$anc");
@@ -525,20 +523,20 @@ global $bi_OldAsSpaced_Function, $bi_EntryType, $Group, $CategoryGroup;
 }
 function bi_FuturePost($now){
 	$bi_EntryDate = PageVar($pagename,'$:entrydate');
-	return ($bi_EntryDate > $now || $bi_DisplayFuture=='true');
+	return ($bi_EntryDate>$now || $bi_DisplayFuture=='true');
 }
-function MakeSerialNumber($pagename, $grp="", $name="" ) {
-   global $SerialStart;
-   $len = strlen($SerialStart);
-   if (!$grp) $grp = PageVar($pagename, '$Group');
-   $n = $SerialStart-1;
-   foreach(ListPages("/^$grp.$name\\d/") as $p) {
-      preg_match("/.*[^\\d](\\d+)$/",$p, $m);
+function MakeSerialNumber($pagename, $grp='', $name='') {
+global $SerialStart;
+	$len = strlen($SerialStart);
+	if (!$grp) $grp = PageVar($pagename, '$Group');
+	$n = $SerialStart-1;
+	foreach(ListPages("/^$grp.$name\\d/") as $p) {
+		preg_match("/.*[^\\d](\\d+)$/",$p, $m);
 		$mlen = strlen($m[1]);
 		if($mlen>$len) $len = $mlen;
 		$n = max($n,$m[1]);
-   }
-   return sprintf("%0{$len}d",$n+1);
+	}
+	return sprintf("%0{$len}d",$n+1);
 }
 
 # ----------------------------------------
