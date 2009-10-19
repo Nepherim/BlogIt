@@ -5,9 +5,9 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2009-10-01';
+$RecipeInfo['BlogIt']['Version'] = '2009-10-19';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
-SDV($BlogIt['debug'],true);
+SDV($BlogIt['debug'],false);
 bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
 
 # ----------------------------------------
@@ -109,7 +109,6 @@ SDV($HandleActions['blogitadmin'], 'bi_HandleAdmin'); SDV($HandleAuth['blogitadm
 SDV($HandleActions['blogitapprove'], 'bi_HandleApproveComment'); SDV($HandleAuth['blogitapprove'], 'comment-approve');
 SDV($HandleActions['blogitunapprove'], 'bi_HandleUnapproveComment'); SDV($HandleAuth['blogitunapprove'], 'comment-approve');
 SDV($HandleActions['blogitcommentdelete'], 'bi_HandleDeleteComment'); SDV($HandleAuth['blogitcommentdelete'], 'comment-edit');
-#TODO: SDV($HandleActions['blogitedit'], 'bi_HandleEdit'); SDV($HandleAuth['blogitedit'], 'blog-edit');
 
 # ----------------------------------------
 # - Authentication
@@ -162,10 +161,8 @@ $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkTex
 # - Markup
 Markup('fieldset', 'inline', '/\\(:fieldset:\\)/i', "<fieldset>");
 Markup('fieldsetend', 'inline', '/\\(:fieldsetend:\\)/i', "</fieldset>");
-# (:blogit [more|intro|list|multiline|cleantext|tags] options:)text(:blogitend:)
 Markup('blogit', 'fulltext', '/\(:blogit (more|intro|list|cleantext|tags)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
-# (:blogit [more|intro|list|multiline|cleantext|tags] options:)text(:blogitend:)
 Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
 	'(date|intro|author|tags|edit|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commenttext|commentid)'.
 	'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
@@ -524,19 +521,6 @@ global $bi_OldAsSpaced_Function, $bi_EntryType, $Group, $CategoryGroup;
 function bi_FuturePost($now){
 	$bi_EntryDate = PageVar($pagename,'$:entrydate');
 	return ($bi_EntryDate>$now || $bi_DisplayFuture=='true');
-}
-function MakeSerialNumber($pagename, $grp='', $name='') {
-global $SerialStart;
-	$len = strlen($SerialStart);
-	if (!$grp) $grp = PageVar($pagename, '$Group');
-	$n = $SerialStart-1;
-	foreach(ListPages("/^$grp.$name\\d/") as $p) {
-		preg_match("/.*[^\\d](\\d+)$/",$p, $m);
-		$mlen = strlen($m[1]);
-		if($mlen>$len) $len = $mlen;
-		$n = max($n,$m[1]);
-	}
-	return sprintf("%0{$len}d",$n+1);
 }
 
 # ----------------------------------------
