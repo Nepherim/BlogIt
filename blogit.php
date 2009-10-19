@@ -118,6 +118,7 @@ $AuthFunction = 'bi_BlogItAuth';
 
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s'; #[1]
+$pagename = FmtPageName('$FullName',$pagename);
 $bi_EntryType = PageVar($pagename,'$:entrytype');  #PageVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 bi_debugLog('entryType: '.$bi_EntryType);
 list($Group, $Name) = explode('.', ResolvePageName($pagename));
@@ -131,7 +132,7 @@ if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage||$pagename==$bi_NewEntryPag
 		exit;
 	}
 	$bi_Params = bi_Implode($_GET);
-	$bi_CurrUrl = FmtPageName('$FullName',$pagename) .(!empty($bi_Params) ?'?'.$bi_Params :'');
+	$bi_CurrUrl = $pagename .(!empty($bi_Params) ?'?'.$bi_Params :'');
 	$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-1'];
 	if ($bi_CurrUrl!=$bi_PrevUrl){ #don't replace cookies if user is reloading the current page
 		setcookie($bi_Cookie.'back-2', $bi_PrevUrl, $Now+60*60*24*30);
