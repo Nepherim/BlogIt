@@ -186,7 +186,7 @@ $Conditions['bi_isdate'] = 'bi_IsDate($condparm)';
 $Conditions['bi_isemail'] = 'bi_IsEmail($condparm)';
 $Conditions['bi_auth'] = 'bi_Auth($condparm)';
 $Conditions['bi_isnull'] = 'bi_IsNull($condparm)==""';
-$Conditions['bi_lt'] = '($args[0]<$args[1] ?true :false)';
+$Conditions['bi_lt'] = 'bi_LT($condparm)';
 
 # ----------------------------------------
 # - Markup Expressions
@@ -417,6 +417,10 @@ function bi_IsEmail($e){
 }
 function bi_IsNull($e){
 	return (!empty($e) && substr($e,0,3)!='{*$' && substr($e,0,2)!='{$' && substr($e,0,3)!='{=$' ?$e :'');
+}
+function bi_LT($arg){
+	$arg = ParseArgs($arg);
+	return (@$arg[''][0]<@$arg[''][1]);
 }
 
 # ----------------------------------------
