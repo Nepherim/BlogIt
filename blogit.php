@@ -160,8 +160,6 @@ $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkTex
 
 # ----------------------------------------
 # - Markup
-Markup('fieldset', 'inline', '/\\(:fieldset:\\)/i', "<fieldset>");
-Markup('fieldsetend', 'inline', '/\\(:fieldsetend:\\)/i', "</fieldset>");
 Markup('blogit', 'fulltext', '/\(:blogit (more|intro|list|cleantext|tags)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
 Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
@@ -306,9 +304,11 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirect
 	$bi_OldHandleActions['pmform']($src, $auth);
 }
 function bi_HandleDeleteComment($src, $auth='comment-edit') {  #action=blogitcommentdelete
-global $bi_CommentGroup,$WikiDir,$Group;
-	if ($Group == $bi_CommentGroup && bi_Auth($auth.' '.$src) && RetrieveAuthPage($src,'read',0, READPAGE_CURRENT))
+global $bi_CommentGroup,$WikiDir,$Group,$LastModFile;
+	if ($Group == $bi_CommentGroup && bi_Auth($auth.' '.$src) && RetrieveAuthPage($src,'read',0, READPAGE_CURRENT)){
 		$WikiDir->delete($src);
+		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
+	}
 	bi_Redirect();
 }
 
