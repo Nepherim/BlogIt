@@ -3,12 +3,10 @@
     This file is blogit.php; you can redistribute it and/or modify it under the terms of the GNU General Public
     License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
-    For installation and usage instructions refer to: http://pmwiki.com/Cookbook/BlogIt
+    For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookbook/BlogIt
 */
 $RecipeInfo['BlogIt']['Version'] = '2009-10-19';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
-SDV($BlogIt['debug'],false);
-bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
 
 # ----------------------------------------
 # - User settings
@@ -54,6 +52,7 @@ SDVA($bi_MakePageNamePatterns, array(
 # ----------------------------------------
 # - Internal Use Only
 # ----------------------------------------
+SDV($BlogIt['debug'],false); bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
 SDV($bi_AdminPage, $SiteGroup .'.BlogIt-Admin');
 SDV($bi_NewEntryPage, $SiteGroup .'.BlogIt-NewEntry');
 SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
@@ -77,11 +76,10 @@ $bi_CommentForm = 'blogit-comments';
 
 # ----------------------------------------
 # - Usable on Wiki Pages
-bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_AuthorGroup','bi_CommentsEnabled','CategoryGroup','Now',
-	'bi_BlogForm','bi_CommentForm', 'EnablePostCaptchaRequired','bi_DisplayFuture',
-	'bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_LinkToCommentSite','bi_StatAction','bi_AuthPage','bi_PageType_Comment'));
-bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType, '$bi_CommentType'=>$bi_CommentType,
-	'$bi_BlogList'=>$bi_BlogList, '$bi_PageType'=>$bi_PageType));
+bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_AuthorGroup','bi_CommentsEnabled','CategoryGroup','Now','bi_BlogForm','bi_CommentForm',
+	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_LinkToCommentSite','bi_StatAction',
+	'bi_AuthPage','bi_PageType_Comment'));
+bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType,'$bi_CommentType'=>$bi_CommentType,'$bi_BlogList'=>$bi_BlogList,'$bi_PageType'=>$bi_PageType));
 
 # ----------------------------------------
 # - PmWiki Config
@@ -89,6 +87,8 @@ $HandleAuth['source'] = $HandleAuth['diff'] = 'edit';  #[1] Prevent viewing sour
 bi_addPageStore();
 $bi_OldAsSpaced_Function = $AsSpacedFunction;
 $AsSpacedFunction = 'AsSpacedHyphens';  #[1]
+# Doesn't pick up categories defined as page variables.
+$LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>"; #[1]
 
 # ----------------------------------------
 # - PmForms Setup
@@ -118,10 +118,10 @@ $AuthFunction = 'bi_BlogItAuth';
 
 # Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s'; #[1]
-$pagename = FmtPageName('$FullName',$pagename);
-$bi_EntryType = PageVar($pagename,'$:entrytype');  #PageVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
+$pagename = ResolvePageName($pagename);
+$bi_EntryType = PageTextVar($pagename,'entrytype');  #PageVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 bi_debugLog('entryType: '.$bi_EntryType);
-list($Group, $Name) = explode('.', ResolvePageName($pagename));
+list($Group, $Name) = explode('.', $pagename);
 if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage||$pagename==$bi_NewEntryPage) && bi_Auth('*') ){  #TODO: put blogit pages in array
 	$EnablePostCaptchaRequired = 0;
 	# Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
@@ -151,12 +151,8 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_
 # - Load skin stylesheet
 foreach($bi_PubListFmt as $k)
 	foreach((array)$bi_Stylesheets as $ss => $fn)
-		$HTMLHeaderFmt['blogit-stylesheet'][$ss] = "<link rel='stylesheet' type='text/css' href='" .FmtPageName($k.'/'.$fn, $pagename) ."' media='screen' />\n";
-
-# ----------------------------------------
-# - Categories
-# Doesn't pick up categories defined as page variables.
-$LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>"; #[1]
+		$HTMLHeaderFmt['blogit-stylesheet'][$ss] =
+			"<link rel='stylesheet' type='text/css' href='" .FmtPageName($k.'/'.$fn, $pagename) ."' media='screen' />\n";
 
 # ----------------------------------------
 # - Markup
@@ -165,7 +161,7 @@ Markup('blogit', 'fulltext', '/\(:blogit (more|intro|list|cleantext|tags)\s?(.*?
 Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
 	'(date|intro|author|tags|edit|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commenttext|commentid)'.
 	'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
-	"blogitSkinMU($1, PSS('$2'), PSS('$3'))");
+	"blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
 if (IsEnabled($EnableGUIButtons)){
@@ -196,7 +192,7 @@ $MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_NewEntryPage .'" ?"' .$bi_De
 # ----------------------------------------
 # - Set GroupHeaderFmt and Footer
 if (@$bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
-	$bi_EntryStatus = PageVar($pagename,'$:entrystatus');
+	$bi_EntryStatus = PageTextVar($pagename,'entrystatus');
 	if ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
 		$GroupHeaderFmt .= '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	else{
@@ -227,8 +223,8 @@ global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OldHandleActions
 			$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
 			$FmtPV['$bi_Default_'.$k]='"'.$v.'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
 		}
-	$HandleActions['browse']=$bi_OldHandleActions['browse'];
 	bi_AddMarkup();
+	$HandleActions['browse']=$bi_OldHandleActions['browse'];
 	HandleDispatch($pagename, 'browse');
 }
 function bi_HandleUnapproveComment($src, $auth='comment-approve'){
@@ -364,7 +360,7 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentType_NONE,$bi_Comme
 			:'');
 		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=edit | $[edit]]]'.$args['post_text'] :'');
 		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=blogitcommentdelete | $[delete]]]'.$args['post_text'] :'');
-		case 'commenttext': return ( strtr($txt, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />')) );
+		case 'commenttext': return ( strtr($txt, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />', "\x0B" => '<br />')) );
 		case 'commentid': {
 			$x = preg_match($bi_CommentPattern, $txt, $m );
 			return 'ID'.$m[3];  #1-group; 2-name; 3-commentid
@@ -435,16 +431,17 @@ global $_GET;
 # ----------------------------------------
 # - Authentication Functions
 # ----------------------------------------
-function bi_BlogItAuth($pagename, $level, $authprompt=true, $since=0) {
-global $action, $bi_AuthFunction, $bi_CommentsEnabled, $bi_CommentGroup, $bi_EntryType, $FmtPV;
+function bi_BlogItAuth($pn, $level, $authprompt=true, $since=0) {
+global $pagename, $action, $bi_AuthFunction, $bi_CommentsEnabled, $bi_CommentGroup, $bi_EntryType, $FmtPV;
 	# Set level to read if a non-authenticated user is posting a comment.
 	if ( (($level=='edit') || ($level=='publish'))
 		&& $action=='pmform' && $bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')
-		&& IsEnabled($bi_CommentsEnabled,1) && preg_match("/^" .$bi_CommentGroup ."\./", $pagename) ){
+		&& IsEnabled($bi_CommentsEnabled,1) && preg_match("/^" .$bi_CommentGroup ."\./", $pn) ){
 		$level = 'read';
 		$authprompt = false;
 	}
-	return $bi_AuthFunction($pagename, $level, $authprompt, $since);
+	$page=$bi_AuthFunction($pn, $level, $authprompt, $since);
+	return $page;
 }
 # Called as part of markup condition. Determine whether the current user is authorized for an action
 function bi_Auth($condparm){  #condparm: comma separated list of actions, and optional space separated pagename -- "blog-new,blog-edit Blog.This-entry"
@@ -520,7 +517,7 @@ global $bi_OldAsSpaced_Function, $bi_EntryType, $Group, $CategoryGroup;
 	else  return ($bi_OldAsSpaced_Function($text));
 }
 function bi_FuturePost($now){
-	$bi_EntryDate = PageVar($pagename,'$:entrydate');
+	$bi_EntryDate = PageTextVar($pagename,'entrydate');
 	return ($bi_EntryDate>$now || $bi_DisplayFuture=='true');
 }
 
