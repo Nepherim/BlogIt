@@ -470,8 +470,8 @@ global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_AuthPage, $bi_AuthFu
 # ----------------------------------------
 # Direct back to the refering page or $src
 function bi_Redirect($src=''){
-global $bi_PrevUrl;
-	$r = FmtPageName('$PageUrl', (!empty($src)&&!empty($bi_PrevUrl) ?bi_BasePage($src) :$bi_PrevUrl));
+global $bi_PrevUrl, $pagename;
+	$r = FmtPageName('$PageUrl', (!empty($src)||empty($bi_PrevUrl) ?bi_BasePage(($src>'' ?$src :$pagename)) :$bi_PrevUrl));
 	header("Location: $r");
 	header("Content-type: text/html");
 	echo "<html><head>
