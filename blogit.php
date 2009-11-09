@@ -35,7 +35,6 @@ SDV($bi_EnablePostDirectives, true);  #Set to true to allow posting of directive
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDV($bi_Cookie, $CookiePrefix.'blogit-');
 SDV($bi_UnstyleFn, '');
-SDV($bi_PubListFmt, (isset($FarmPubDirUrl) ?array ($PubDirUrl.'/css', $FarmPubDirUrl.'/css') :array($PubDirUrl.'/css')));
 SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
 SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
 SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
@@ -147,13 +146,6 @@ $FmtPV['$bi_PageNext'] = (isset($_GET['page']) ?$_GET['page']+1 :2);
 $FmtPV['$bi_PagePrev'] = (isset($_GET['page']) && ($_GET['page']>0) ?$_GET['page']-1 :0);
 $FmtPV['$bi_EntryStart'] = (($FmtPV['$bi_PageNext']-2) * (isset($_GET['count']) ?$_GET['count'] :$bi_EntriesPerPage)) + 1;
 $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_GET['count'] :$bi_EntriesPerPage) - 1;
-
-# ----------------------------------------
-# - Load skin stylesheet
-foreach($bi_PubListFmt as $k)
-	foreach((array)$bi_Stylesheets as $ss => $fn)
-		$HTMLHeaderFmt['blogit-stylesheet'][$ss] =
-			"<link rel='stylesheet' type='text/css' href='" .FmtPageName($k.'/'.$fn, $pagename) ."' media='screen' />\n";
 
 # ----------------------------------------
 # - Markup
