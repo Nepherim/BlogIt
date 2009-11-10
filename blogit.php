@@ -126,7 +126,7 @@ if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage||$pagename==$bi_NewEntryPag
 	$EnablePostCaptchaRequired = 0;
 	# Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
 	$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
-	if ( ( ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm) || ($action=='edit') ) && @$_REQUEST['cancel']>''){  #Cancel button clicked
+	if ( ( ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm) || ($action=='edit') ) && @$_POST['cancel']){  #Cancel button clicked
 		$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-2']; #need to go back 2, since when in this code we're already moved forward
 		bi_Redirect();
 		exit;
@@ -256,8 +256,7 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirect
 	$EnablePost,$AutoCreate,$bi_DefaultCommentStatus;
 
 	$bi_ResetPmFormField = array();
-	$_POST['ptv_bi_version'] = $RecipeInfo['BlogIt']['Version'];  #Prevent spoofing.
-	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']>''){
+	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']){
 		if ( $_POST['ptv_entrystatus']!=$bi_StatusType['draft'] )  #Allow future posts to create tag -- otherwise may never happen.
 			$AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
 		if ($bi_EnablePostDirectives)  $PmFormPostPatterns = array();  # Null out the PostPatterns so that directive markup doesn't get replaced.
