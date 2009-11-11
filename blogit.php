@@ -111,7 +111,7 @@ SDV($HandleActions['blogitunapprove'], 'bi_HandleUnapproveComment'); SDV($Handle
 SDV($HandleActions['blogitcommentdelete'], 'bi_HandleDeleteComment'); SDV($HandleAuth['blogitcommentdelete'], 'comment-edit');
 SDV($HandleActions['blogitupgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['blogitupgrade'], 'admin');
 # Cannot be done as part of handler due to scoping issues when include done in function
-if ($action=='blogitupgrade')  include_once($bi_Paths['convert']);  
+if ($action=='blogitupgrade')  include_once($bi_Paths['convert']);
 
 # ----------------------------------------
 # - Authentication
@@ -153,7 +153,7 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_
 
 # ----------------------------------------
 # - Markup
-Markup('blogit', 'fulltext', '/\(:blogit (more|intro|list|cleantext|tags)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
+Markup('blogit', 'fulltext', '/\(:blogit (list|cleantext)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
 Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
 	'(date|intro|author|tags|edit|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commenttext|commentid)'.
@@ -328,9 +328,6 @@ global $bi_CommentSideBarLen, $pagename, $bi_UnstyleFn;
 		?substr($text, 0, empty($m) ?$bi_CommentSideBarLen :$m)
 		:$bi_UnstyleFn($pagename, substr($text, 0, empty($m) ?$bi_CommentSideBarLen :$m))
 	);
-}
-function blogitMU_tags($options, $tags){
-	return bi_SaveTags('', $tags, $GLOBALS['bi_TagSeparator']);
 }
 function blogitSkinMU($fn, $opt, $txt){
 global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentType_NONE,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern;
