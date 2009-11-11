@@ -47,6 +47,7 @@ SDVA($bi_MakePageNamePatterns, array(
 	($Charset=='UTF-8' ?"/^([\\xc0-\\xdf].)/e" :'//') => ($Charset=='UTF-8' ?"utf8toupper('$1')" :''),  # uppercase first letter
 	"/^([a-z])/e" => "strtoupper('$1')"
 ));
+SDVA($bi_Paths,array('pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/scripts/guiedit.php", 'convert'=>"$FarmD/cookbook/blogit/blogit_upgrade.php"));
 
 # ----------------------------------------
 # - Internal Use Only
@@ -91,7 +92,7 @@ $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkTex
 
 # ----------------------------------------
 # - PmForms Setup
-include_once($FarmD.'/cookbook/pmform.php');
+include_once($bi_Paths['pmform']);
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
 array_unshift ($PmFormTemplatesFmt,	(isset($Skin) ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
 $PmForm[$bi_BlogForm] = 'form=#blog-form-control fmt=#blog-post-control';
@@ -108,6 +109,9 @@ SDV($HandleActions['blogitadmin'], 'bi_HandleAdmin'); SDV($HandleAuth['blogitadm
 SDV($HandleActions['blogitapprove'], 'bi_HandleApproveComment'); SDV($HandleAuth['blogitapprove'], 'comment-approve');
 SDV($HandleActions['blogitunapprove'], 'bi_HandleUnapproveComment'); SDV($HandleAuth['blogitunapprove'], 'comment-approve');
 SDV($HandleActions['blogitcommentdelete'], 'bi_HandleDeleteComment'); SDV($HandleAuth['blogitcommentdelete'], 'comment-edit');
+SDV($HandleActions['blogitupgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['blogitupgrade'], 'admin');
+# Cannot be done as part of handler due to scoping issues when include done in function
+if ($action=='blogitupgrade')  include_once($bi_Paths['convert']);  
 
 # ----------------------------------------
 # - Authentication
@@ -115,8 +119,8 @@ SDV($AuthFunction,'PmWikiAuth');
 $bi_AuthFunction = $AuthFunction;
 $AuthFunction = 'bi_BlogItAuth';
 
-# Need to save entrybody in an alternate format (::entrybody:...::), to prevent (:...:) markup confusing the end of the variable definition.
-$PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s'; #[1]
+# Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
+$PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_-\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';
 
 $pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
 $bi_EntryType = PageTextVar($pagename,'entrytype');  #PageVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
@@ -159,7 +163,7 @@ Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
 if (IsEnabled($EnableGUIButtons)){
 	if ($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm) || $pagename == $bi_NewEntryPage)
-		include_once("$FarmD/scripts/guiedit.php");  #PmWiki only includes this automatically if action=edit.
+		include_once($bi_Paths['guiedit']);  #PmWiki only includes this automatically if action=edit.
 }else Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
 
 # ----------------------------------------
@@ -194,7 +198,7 @@ if (@$bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
 		|| ($bi_EntryStatus==$bi_StatusType['draft'] && $bi_AuthEditAdmin) )
 			$GroupHeaderFmt .= '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
 	}
-} elseif  ($Group == $CategoryGroup)  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction(PageVar($pagename, '$Name')).':)';
+} elseif  ($Group == $CategoryGroup)  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction($Name).':)';
 if ($Group == $CategoryGroup)  $GroupFooterFmt .= $bi_GroupFooterFmt;
 if ($action=='print'){
 	$GroupPrintHeaderFmt .= $GroupHeaderFmt;
@@ -257,13 +261,13 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirect
 
 	$bi_ResetPmFormField = array();
 	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']){
-		if ( $_POST['ptv_entrystatus']!=$bi_StatusType['draft'] )  #Allow future posts to create tag -- otherwise may never happen.
-			$AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
+		#Allow future posts to create tag -- otherwise may never happen, since user may never edit the post again.
+		if ( $_POST['ptv_entrystatus']!=$bi_StatusType['draft'] )  $AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
 		if ($bi_EnablePostDirectives)  $PmFormPostPatterns = array();  # Null out the PostPatterns so that directive markup doesn't get replaced.
 
-		# Change field delimiters from (:...:...:) to (::...:...::) for tags and body
-		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '(::entrybody:$1::)';  #entrybody MUST be the last variable.
-		$ROSPatterns['/\(:pmmarkup:(.*?)(\(:title .*?:\)):\)/s'] = '(::pmmarkup:$1$2::)';  #This field contains (:TITLE:), so need to find .*?:)
+		# Change field delimiters from (:...:...:) to section-tags [[#blogit_XXX]] for tags and body
+		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '[[#blogit_entrybody]]$1[[#blogit_entrybodyend]]';  #entrybody MUST be the last variable.
+		$ROSPatterns['/\(:pmmarkup:(.*?)(\(:title .*?:\)):\)/s'] = '[[#blogit_pmmarkup]]$1$2[[#blogit_pmmarkupend]]';  #This field contains (:TITLE:), so need to find .*?:)
 
 		# Determine page name from title, replacing ' ' with '-' for seo.
 		bi_setMakePageNamePatterns();
@@ -274,14 +278,13 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirect
 
 		# If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
 		# NB: If page subsequently fails to post (due to incorrect p/w or captcha) then entrydate is already in unix time format.
-		if (bi_IsDate($_POST['ptv_entrydate'])){
-			if (!preg_match('!\d{5,}!',$_POST['ptv_entrydate']))  $_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']);
-		}else  $bi_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
+		if (bi_IsDate($_POST['ptv_entrydate'])){ if (!preg_match('!\d{5,}!',$_POST['ptv_entrydate']))  $_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']); }
+		else  $bi_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
 
 		$_POST['ptv_entrytype'] = $bi_PageType['blog'];  #Prevent spoofing.
 		$_POST['ptv_entrytitle'] = (empty($_POST['ptv_entrytitle']) ?$pg :$_POST['ptv_entrytitle']);
 		$_POST['ptv_entryurl'] = MakePageName($pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .( empty($pg) ?$_POST['ptv_entrytitle'] :$pg) );
-		$_POST['ptv_pmmarkup'] = bi_SaveTags($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $bi_TagSeparator) .'(:title ' .$_POST['ptv_entrytitle'] .':)';
+		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']);
 
 	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']==$bi_CommentForm){
 		$_POST['ptv_entrytype'] = $bi_PageType_Comment;
@@ -477,7 +480,8 @@ function bi_Implode($a, $p='&', $s='=', $ignore=array('n'=>'')){
 	return substr($o,1);
 }
 function bi_AddMarkup(){
-	Markup('textvar::', '<split', '/\(::\w[-\w]*:(?!\)).*?::\)/s', '');  # Prevent (::...:...:) markup from being displayed.
+global $PageTextVarPatterns;
+	Markup('[[#blogit_anchor]]', '<split', $PageTextVarPatterns['[[#anchor]]'], '');
 }
 # Combines categories in body [[!...]] with separated tag list in tag-field.
 # Stores combined list in tag-field in PmWiki format [[!...]][[!...]].
@@ -485,7 +489,7 @@ function bi_SaveTags($body, $user_tags, $sep) {
 global $pagename;
 	bi_setMakePageNamePatterns();
 	# Read tags from body, strip [[!...]]
-	if ($body)  $bodyTags = (preg_match_all('/\[\[\!(\w+)\]\]/', $body, $match) ? $match[1] : array());  #array of tags contained in [[!...]] markup.
+	if ($body)  $bodyTags = (preg_match_all('/\[\[\!(.*?)\]\]/e', $body, $match) ?$match[1] :array());  #array of tags contained in [[!...]] markup.
 
 	# Make sure tag-field entries are in standard separated format, and place in array
 	if ($user_tags) $fieldTags = explode($sep, preg_replace('/'.trim($sep).'\s*/', $sep, $user_tags));
@@ -504,13 +508,18 @@ global $MakePageNamePatterns, $bi_MakePageNamePatterns;
 	);
 }
 function AsSpacedHyphens($text) {
-global $bi_OldAsSpaced_Function, $bi_EntryType, $Group, $CategoryGroup;
-	if ($Group == $CategoryGroup || isset($bi_EntryType))  return (strtr($bi_OldAsSpaced_Function($text),'-',' '));
+global $bi_OldAsSpaced_Function,$bi_EntryType,$Group,$CategoryGroup,$action;
+	if ($Group==$CategoryGroup || isset($bi_EntryType) || $action='blogitupgrade')  return (strtr($bi_OldAsSpaced_Function($text),'-',' '));
 	else  return ($bi_OldAsSpaced_Function($text));
 }
 function bi_FuturePost($now){
+global $pagename,$bi_DisplayFuture;
 	$bi_EntryDate = PageTextVar($pagename,'entrydate');
 	return ($bi_EntryDate>$now || $bi_DisplayFuture=='true');
+}
+function bi_GetPmMarkup($body, $tags, $title){
+global $bi_TagSeparator;
+	return bi_SaveTags($body, $tags, $bi_TagSeparator) .'(:title ' .$title .':)';
 }
 
 # ----------------------------------------

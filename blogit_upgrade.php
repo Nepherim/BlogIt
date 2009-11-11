@@ -3,128 +3,117 @@
     This file is blogit_convert.php; you can redistribute it and/or modify it under the terms of the GNU General Public
     License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
-    For installation and usages instructions refer to: http://pmwiki.com/Cookbooks/BlogIt
+    For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookbook/BlogIt
 */
-if (!isset($RecipeInfo['BlogIt'])) include_once("$FarmD/cookbook/blogit/blogit.php");
-SDV($HandleActions['blogitupgrade'], 'bic_Upgrade'); SDV($HandleAuth['blogitupgrade'], 'admin');
+global $RecipeInfo,$SitemapSearchPatterns;
+if (!isset($RecipeInfo['BlogIt']['Version']))  Abort("<h3>Run this script by using ?action=blogitupgrade on any page.</h3>");
 
-SDVA($SitemapSearchPatterns, array());
-$SitemapSearchPatterns[] = '!\.(All)?Recent(Changes|Uploads|Pages)$!';
+$PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::\))/s'; #legacy format pre-2009-10-19
 
 #default: default value, if no old_value present.
 #format: final structure of field -- $1 replaced with repeated_format.
-#repeat_format: format for each value.
-#old_fields: name of old field base values (ie, non-formated); assumes to use old field of same name if 'old_fields'==null
-$bic_CurrentFields = array( #['20090227']
-	'bi_version'=> array('default'=> str_replace('-','',$GLOBALS['RecipeInfo']['BlogIt']['Version'])),
-	'pmmarkup'=> array('format'=>'(::pmmarkup:$1::)', 'repeat_format'=>'[[!$1]]', 'old_fields'=>'entrytags'),
-	'blogid'=> array('default'=> $GLOBALS['bi_BlogList']['blog1']),
-	'entrytype'=> array('default'=> $GLOBALS['bi_PageType']['blog']),
-	'entrydate'=> array(),
-	'entryauthor'=> array(), #hardcoded to get author name from page attribute.
-	'entrytitle'=> array(),
-	'entrystatus'=> array('default'=> $GLOBALS['bi_StatusType']['draft']),
-	'entrycomments'=> array('default'=> $GLOBALS['bi_CommentType']['open']),
-	'entrytags'=> array(), #[[!]] is automatically stripped.
-	'entrybody'=> array('format'=>'(::entrybody:$1::)')
-);
+$bi_ConvertRules = array(
+	'2009-10-19'=>array(
+		'old'=>array(
+			'pmmarkup'=> array(), 'blogid'=> array(), 'entrytype'=> array(), 'entrydate'=> array(), 'entryauthor'=> array(), 'entrytitle'=> array(),
+			'entrystatus'=> array(), 'entrycomments'=> array(), 'entrytags'=> array(), 'entrybody'=> array()
+		),
+		'new'=>array(
+			'pmmarkup'=> array('format'=>'[[#blogit_pmmarkup]]$1[[#blogit_pmmarkupend]]'),
+			'blogid'=> array(), 'entrytype'=> array(), 'entrydate'=> array(), 'entryauthor'=> array(), 'entrytitle'=> array(),
+			'entrystatus'=> array(), 'entrycomments'=> array(), 'entrytags'=> array(),
+			'entrybody'=> array('format'=>'[[#blogit_entrybody]]$1[[#blogit_entrybodyend]]')
+		)),
+	'convert'=>array(
+		'old'=>array(
+			'pmmarkup'=> array(), 'blogid'=> array(), 'entrytype'=> array(), 'entrydate'=> array(),
+			'entrytitle'=> array('format'=>'\(:title (.*):\)'),
+			'entrystatus'=> array(), 'entrycomments'=> array(), 'entrytags'=> array('format'=>'\[\[\!(.*?)\]\]'), 'entrybody'=> array()
+		),
+		'new'=>array(
+			'pmmarkup'=> array('default'=>'bi_GetPmMarkup($org["text"], "", $org["title"])',
+				'format'=>'[[#blogit_pmmarkup]]$1[[#blogit_pmmarkupend]]'),
+			'blogid'=> array('default'=> '(isset($_GET["blogid"]) ?$_GET["blogid"] :$bi_BlogList["blog1"])'),
+			'entrytype'=> array('default'=> $GLOBALS['bi_PageType']['blog']),
+			'entrydate'=> array('default'=> '$org["ctime"]'),
+			'entryauthor'=> array('default'=> '$org["author"]'),
+			'entrytitle'=> array('default'=> '(@$org["title"] ?str_replace("$", "&#036;", $org["title"]) :$AsSpacedFunction($name))'),
+			'entrystatus'=> array('default'=> $GLOBALS['bi_StatusType']['draft']),
+			'entrycomments'=> array('default'=> $GLOBALS['bi_CommentType']['open']),
+			'entrytags'=> array('default'=>'bi_SaveTags($org["text"], "", $GLOBALS["bi_TagSeparator"])'),
+			'entrybody'=> array('default'=>'$org["text"]', 'format'=>'[[#blogit_entrybody]]$1[[#blogit_entrybodyend]]')
+		))
+	);
 
+function bi_HandleUpgrade($src, $auth='admin'){
+global $_GET,$RecipeInfo;
+	$mode = (@$_GET['mode'] ?$_GET['mode'] :'upgrade');
+	$version = (@$_GET['version'] ?$_GET['version'] :$RecipeInfo['BlogIt']['Version']);
+	$pl = MatchPageNames(ListPages('/^.*/'),(@$_GET['pattern'] ?str_replace(',','|',$_GET['pattern']) :$src));
+	if ($mode=='upgrade')  bi_Convert($src, $auth, $version, $pl, $mode);
+	elseif ($mode=='convert'||$mode=='revert')  bi_Convert($src, $auth, $mode, $pl, $mode);
+	exit;  #Prevent original page loading.
+}
 
-#$bic_OldFields['2009-01-10'] = array( #Alpha2
-$bic_OldFields = array( #Alpha2
-	'blogid'=> array(),
-	'entrytype'=> array(),
-	'entrydate'=> array(),
-	'entrytitle'=> array('format'=>'\(:title (.*):\)'),
-	'entrystatus'=> array(),
-	'entrycomments'=> array(),
-	'entrytags'=> array('format'=>'\[\[\!(\w+)\]\]'),
-	'entrybody'=> array()
-);
-
-#pattern: Group.,Group.Page,Group.
+#pattern: Group.*,Group.Page, etc.
 #writetofile: only writes to file if this is true -- otherwise outputs results to browser.
 #mode=upgrade|convert|revert
 #blogid=string
-function bic_Upgrade($src, $auth='admin') {
-global $bic_OldFields, $bic_CurrentFields, $bi_BlogGroups, $SearchPatterns, $bi_PageType, $bi_TagSeparator, $RecipeInfo;
-$version = str_replace('-','',$RecipeInfo['BlogIt']['Version']);
+function bi_Convert($src, $auth='admin', $dataset, $pagelist, $mode) {
+global $bi_ConvertRules,$bi_BlogGroups,$bi_PageType,$bi_TagSeparator,$_GET,$bi_BlogList,$AsSpacedFunction;
+	$datarules = $bi_ConvertRules[$dataset];
 
-	#Parameters
-	$mode = (isset($_GET['mode']) ? $_GET['mode'] :'upgrade');
-	$write = ($_GET['writetofile']=='true');
-	$blogid = (isset($GLOBALS['_GET']['blogid']) ?$GLOBALS['_GET']['blogid'] :$GLOBALS['bi_BlogList']['blog1']);
-
-	$t = @ListPages('/^('. (isset($_GET['pattern']) ?str_replace(',','|',$_GET['pattern']) :$src) .')/');
-	foreach ($t as $i => $pn) {
+	foreach ($pagelist as $i => $pn) {
+		list($group, $name) = explode('.', $pn);  #$name used to derive title.
 		$pagetext = '';
 		$org = RetrieveAuthPage($pn,$auth,0, READPAGE_CURRENT);
-		if (!$org) {echo ('No privs to read<br/>'); continue;}
+		echo("<b>$pn</b><br/>");
+		if (!$org) {echo('No admin privs on page.<br/>'); continue;}
 
 		$entryType = PageTextVar($pn,'entrytype');
-		if ( ($mode=='convert' && empty($entryType)) || ($mode=='upgrade' && $entryType == $bi_PageType['blog'])) {
-			echo("<b>$pn</b><br/>");
+		if ( ($mode=='convert' && empty($entryType)) || ($mode=='upgrade' && $entryType==$bi_PageType['blog'])) {
 
-			foreach ($bic_CurrentFields as $new_field_name=>$new_field_attr){
+			#populate $new_field_val array for each $new_field_name based on $new_field_rules
+			foreach ($datarules['new'] as $new_field_name=>$new_field_rules){
 				$new_field_val[$new_field_name] = '';
 
 				#is the new field based on an old_field or was the field defined in the prior version, with the same name?
-				$old_field = (isset($bic_OldFields[$bic_CurrentFields[$new_field_name]['old_fields']])
-							?$bic_CurrentFields[$new_field_name]['old_fields']
-							:(isset($bic_OldFields[$new_field_name]) ?$new_field_name :''));
-
-				# Determine field value
-				if (!empty($old_field)){
-					$new_field_val[$new_field_name] = PageTextVar($pn,$old_field);
-
+				if (isset($datarules['old'][$new_field_name])){
+					$new_field_val[$new_field_name] = PageTextVar($pn,$new_field_name);
 					# Get basic separated list with no formatting
-					if ($bic_OldFields[$old_field]['format'])
+					if ($datarules['old'][$old_field]['format'])
 						$new_field_val[$new_field_name] = implode($bi_TagSeparator,
-							(preg_match_all('/'.$bic_OldFields[$old_field]['format'].'/', $new_field_val[$new_field_name], $m) ? $m[1] : array())
+							(preg_match_all('/'.$datarules['old'][$old_field]['format'].'/', $new_field_val[$new_field_name], $m) ? $m[1] : array())
 						);
 				}
 
-				if ($mode=='convert' && $new_field_name=='entrybody') $new_field_val[$new_field_name]=$org['text'];
-
-				if ($new_field_name=='blogid' && isset($blogid)) $new_field_val[$new_field_name] = $blogid;
-
-				if (empty($new_field_val[$new_field_name]))
-					if (isset($bic_CurrentFields[$new_field_name]['default'])) $new_field_val[$new_field_name] = $bic_CurrentFields[$new_field_name]['default'];
-					elseif ($version == '20090227')
-						if ($new_field_name=='entryauthor') $new_field_val[$new_field_name] = $org['author'];
-						elseif ($new_field_name=='entrydate') $new_field_val[$new_field_name] = $org['ctime'];
-
-				if (isset($bic_CurrentFields[$new_field_name]['repeat_format']) && !empty($new_field_val[$new_field_name])){
-					$new_field_val[$new_field_name] = '[[!'.implode(']]'.$bi_TagSeparator.'[[!', explode($bi_TagSeparator, $new_field_val[$new_field_name]) ).']]';
-				}
+				# Set default value if none calculated so far
+				if (empty($new_field_val[$new_field_name]) && isset($datarules['new'][$new_field_name]['default']))
+					$new_field_val[$new_field_name] = eval('return ('.$datarules['new'][$new_field_name]['default'].');');
 
 				# Format the field
-				if (isset($bic_CurrentFields[$new_field_name]['format']))
-					$new_field_val[$new_field_name] =
-						str_replace('$1',$new_field_val[$new_field_name],$bic_CurrentFields[$new_field_name]['format']);
+				if (isset($datarules['new'][$new_field_name]['format']))
+					$new_field_val[$new_field_name] = str_replace('$1',$new_field_val[$new_field_name],$datarules['new'][$new_field_name]['format']);
 				else
 					$new_field_val[$new_field_name] = '(:'.$new_field_name.':'.$new_field_val[$new_field_name].':)';
 
 				$pagetext .= $new_field_val[$new_field_name]."\n";
 			}
+		}elseif ($mode=='revert' && $entryType == $bi_PageType['blog']){
+			$pagetext = PageTextVar($pn,'entrybody')."\n\n".PageTextVar($pn,'pmmarkup');
+		}else  echo('Nothing to '.$mode .'<br/>');
 
-		}elseif ($mode=='revert' && $entryType == $bi_PageType['blog']) {
-			$pagetext = PageTextVar($pn,'entrybody');
-
-		}else echo ('<b>Nothing to '.$mode .'</b><br/>');
-
-		if ($write) {
+		if ($_GET['writetofile']=='true') {
 			if (!empty($pagetext)){
 				$new = $org;
 				$new['csum'] = $new['csum:' .$GLOBALS['Now'] ] = $GLOBALS['ChangeSummary'] = 'BlogIt Format: '.$mode;
 				$new['diffclass']='minor';
 				$new['text'] = $pagetext;
 				PostPage($pn,$org,$new);  #Don't need UpdatePage, as we don't require edit functions to run
-				echo ('<b>BlogIt page attributes written</b><br/>');
+				echo('BlogIt page attributes written.<br/>');
 			}else
-				echo ('<b>Nothing to write</b>');
+				echo('Nothing to write.<br/>');
 		}
-		echo (str_replace("\n",'<br>', $pagetext.'<br/><br/>'));
+		echo (str_replace("\n",'<br/>', $pagetext.'<br/>'));
 	}
-	exit;  #Prevent original page loading.
 }
