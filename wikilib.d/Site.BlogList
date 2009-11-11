@@ -6,5 +6,5 @@ ctime=1231905189
 host=127.0.0.1
 name=Site.BlogList
 rev=8
-text=(:includesection "#blog-summary-list-pagelist blogid=blog1 status={$bi_StatusType_PUBLISH} more=false":)
+text=(:includesection "#blog-yearly-archive-pagelist blogid=blog1 status={$bi_StatusType_PUBLISH}":)
 time=1235946300
