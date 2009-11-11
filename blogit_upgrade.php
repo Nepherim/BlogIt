@@ -49,7 +49,7 @@ function bi_HandleUpgrade($src, $auth='admin'){
 global $_GET,$RecipeInfo;
 	$mode = (@$_GET['mode'] ?$_GET['mode'] :'upgrade');
 	$version = (@$_GET['version'] ?$_GET['version'] :$RecipeInfo['BlogIt']['Version']);
-	$pl = MatchPageNames(ListPages('/^.*/'),(@$_GET['pattern'] ?str_replace(',','|',$_GET['pattern']) :$src));
+	$pl = ListPages('/^('. (isset($_GET['pattern']) ?str_replace(',','|',$_GET['pattern']) :$src) .')/');
 	if ($mode=='upgrade')  bi_Convert($src, $auth, $version, $pl, $mode);
 	elseif ($mode=='convert'||$mode=='revert')  bi_Convert($src, $auth, $mode, $pl, $mode);
 	exit;  #Prevent original page loading.
