@@ -16,13 +16,14 @@ SDV($bi_DefaultGroup, 'Blog');  #Pre-populates the Pagename field; blogs can exi
 SDV($bi_CommentGroup, 'Comments');
 SDV($bi_CommentsEnabled, 'true');
 SDV($bi_BlogGroups, $bi_DefaultGroup);  #OPTIONAL: Pipe separated list of Blog groups. If you define it then only those groups are searched for entries. If set to null all groups are searched.
-SDV($CategoryGroup, 'Tags');
+SDV($CategoryGroup, 'Tags');  #[1]
 SDV($bi_AuthorGroup, 'Profiles');
 SDV($bi_EntriesPerPage, 15);
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_DisplayFuture, 'false');
 SDV($bi_DefaultCommentStatus, 'true');
 SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
+SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
 
 # ----------------------------------------
 # - Advanced user settings
@@ -35,7 +36,6 @@ SDV($bi_EnablePostDirectives, true);  #Set to true to allow posting of directive
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDV($bi_Cookie, $CookiePrefix.'blogit-');
 SDV($bi_UnstyleFn, '');
-SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
 SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
 SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
 SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
@@ -213,7 +213,7 @@ if ($action=='print'){
 # in Main Processing, as markup (tags) isn't processed if markup is defined.
 function bi_HandleBrowse($pagename, $auth = 'read'){
 global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OldHandleActions,$Group,$bi_CommentGroup;
-	if ($Group == $bi_CommentGroup && bi_Auth('comment-edit')){  #After editing/deleting a comment page
+	if ($Group == $bi_CommentGroup){  #After editing/deleting a comment page
 		bi_Redirect(); return;
 	} elseif (isset($bi_ResetPmFormField))
 		foreach ($bi_ResetPmFormField  as $k => $v) {
