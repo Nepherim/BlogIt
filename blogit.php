@@ -52,7 +52,7 @@ SDVA($bi_Paths,array('pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/
 # ----------------------------------------
 # - Internal Use Only
 # ----------------------------------------
-SDV($BlogIt['debug'],true); bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
+SDV($BlogIt['debug'],false); bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
 SDV($bi_AdminPage, $SiteGroup .'.BlogIt-Admin');
 SDV($bi_NewEntryPage, $SiteGroup .'.BlogIt-NewEntry');
 SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
@@ -211,10 +211,10 @@ if ($action=='print'){
 # ----------------------------------------
 # If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling
 # in Main Processing, as markup (tags) isn't processed if markup is defined.
-function bi_HandleBrowse($pagename){
+function bi_HandleBrowse($pagename, $auth = 'read'){
 global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OldHandleActions,$Group,$bi_CommentGroup;
 	if ($Group == $bi_CommentGroup && bi_Auth('comment-edit')){  #After editing/deleting a comment page
-		bi_Redirect($pagename); return;
+		bi_Redirect(); return;
 	} elseif (isset($bi_ResetPmFormField))
 		foreach ($bi_ResetPmFormField  as $k => $v) {
 			$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
