@@ -139,8 +139,8 @@ if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage||$pagename==$bi_NewEntryPag
 	$bi_CurrUrl = $pagename .(!empty($bi_Params) ?'?'.$bi_Params :'');
 	$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-1'];
 	if ($bi_CurrUrl!=$bi_PrevUrl){  #don't replace cookies if user is reloading the current page
-		setcookie($bi_Cookie.'back-2', $bi_PrevUrl, $Now+60*60*24*30, '/');
-		setcookie($bi_Cookie.'back-1', $bi_CurrUrl, $Now+60*60*24*30, '/'); #set to current url
+		setcookie($bi_Cookie.'back-2', $bi_PrevUrl, 0, '/');
+		setcookie($bi_Cookie.'back-1', $bi_CurrUrl, 0, '/'); #set to current url
 	}
 }
 
