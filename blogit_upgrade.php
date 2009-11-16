@@ -13,7 +13,7 @@ $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::
 #default: default value, if no old_value present.
 #format: final structure of field -- $1 replaced with repeated_format.
 $bi_ConvertRules = array(
-	'2009-11-14'=>array(
+	'2009-11-16'=>array(
 		'old'=>array(
 			'pmmarkup'=> array(), 'blogid'=> array(), 'entrytype'=> array(), 'entrydate'=> array(), 'entryauthor'=> array(), 'entrytitle'=> array(),
 			'entrystatus'=> array(), 'entrycomments'=> array(), 'entrytags'=> array(), 'entrybody'=> array()
