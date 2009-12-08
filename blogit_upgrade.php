@@ -33,13 +33,13 @@ $bi_ConvertRules = array(
 		'new'=>array(
 			'pmmarkup'=> array('default'=>'bi_GetPmMarkup($org["text"], "", $org["title"])',
 				'format'=>'[[#blogit_pmmarkup]]$1[[#blogit_pmmarkupend]]'),
-			'blogid'=> array('default'=> '(isset($_GET["blogid"]) ?$_GET["blogid"] :$bi_BlogList["blog1"])'),
-			'entrytype'=> array('default'=> $GLOBALS['bi_PageType']['blog']),
+			'blogid'=> array('default'=> '(isset($_GET["blogid"]) ?$_GET["blogid"] :"blog1")'),
+			'entrytype'=> array('default'=> 'blog'),
 			'entrydate'=> array('default'=> '$org["ctime"]'),
 			'entryauthor'=> array('default'=> '$org["author"]'),
 			'entrytitle'=> array('default'=> '(@$org["title"] ?str_replace("$", "&#036;", $org["title"]) :$AsSpacedFunction($name))'),
-			'entrystatus'=> array('default'=> $GLOBALS['bi_StatusType']['draft']),
-			'entrycomments'=> array('default'=> $GLOBALS['bi_CommentType']['open']),
+			'entrystatus'=> array('default'=> 'draft'),
+			'entrycomments'=> array('default'=> 'open'),
 			'entrytags'=> array('default'=>'bi_SaveTags($org["text"], "", $GLOBALS["bi_TagSeparator"])'),
 			'entrybody'=> array('default'=>'$org["text"]', 'format'=>'[[#blogit_entrybody]]$1[[#blogit_entrybodyend]]')
 		))
@@ -60,7 +60,7 @@ global $_GET,$RecipeInfo;
 #mode=upgrade|convert|revert
 #blogid=string
 function bi_Convert($src, $auth='admin', $dataset, $pagelist, $mode) {
-global $bi_ConvertRules,$bi_BlogGroups,$bi_PageType,$bi_TagSeparator,$_GET,$bi_BlogList,$AsSpacedFunction;
+global $bi_ConvertRules,$bi_BlogGroups,$bi_TagSeparator,$_GET,$AsSpacedFunction;
 	$datarules = $bi_ConvertRules[$dataset];
 
 	foreach ($pagelist as $i => $pn) {
@@ -71,7 +71,7 @@ global $bi_ConvertRules,$bi_BlogGroups,$bi_PageType,$bi_TagSeparator,$_GET,$bi_B
 		if (!$org) {echo('No admin privs on page.<br/>'); continue;}
 
 		$entryType = PageTextVar($pn,'entrytype');
-		if ( ($mode=='convert' && empty($entryType)) || ($mode=='upgrade' && $entryType==$bi_PageType['blog'])) {
+		if ( ($mode=='convert' && empty($entryType)) || ($mode=='upgrade' && $entryType=='blog')) {
 
 			#populate $new_field_val array for each $new_field_name based on $new_field_rules
 			foreach ($datarules['new'] as $new_field_name=>$new_field_rules){
@@ -99,7 +99,7 @@ global $bi_ConvertRules,$bi_BlogGroups,$bi_PageType,$bi_TagSeparator,$_GET,$bi_B
 
 				$pagetext .= $new_field_val[$new_field_name]."\n";
 			}
-		}elseif ($mode=='revert' && $entryType == $bi_PageType['blog']){
+		}elseif ($mode=='revert' && $entryType == 'blog'){
 			$pagetext = PageTextVar($pn,'entrybody')."\n\n".PageTextVar($pn,'pmmarkup');
 		}else  echo('Nothing to '.$mode .'<br/>');
 

@@ -22,7 +22,7 @@ SDV($bi_DefaultCommentStatus, 'true');
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_EntriesPerPage, 15);
 SDV($bi_DisplayFuture, 'false');
-SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
+SDVA($bi_BlogList, array('blog1'));  #Ensure 'blog1' key remains; you can add other blogs.
 SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
 
 # ----------------------------------------
@@ -36,8 +36,8 @@ SDV($bi_EnablePostDirectives, true);  #Set to true to allow posting of directive
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDV($bi_Cookie, $CookiePrefix.'blogit-');
 SDV($bi_UnstyleFn, '');
-SDVA($bi_StatusType, array('draft'=>'draft', 'publish'=>'publish', 'sticky'=>'sticky'));
-SDVA($bi_CommentType, array('open'=>'open', 'readonly'=>'read only', 'none'=>'none'));
+SDVA($bi_StatusType, array('draft', 'publish', 'sticky'));
+SDVA($bi_CommentType, array('open', 'readonly', 'none'));
 SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',														# strip single-quotes
@@ -56,8 +56,7 @@ SDV($BlogIt['debug'],false); bi_debugLog('====== action: ' .$action .'    Target
 SDV($bi_AdminPage, $SiteGroup .'.BlogIt-Admin');
 SDV($bi_NewEntryPage, $SiteGroup .'.BlogIt-NewEntry');
 SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
-SDVA($bi_PageType, array('blog'=>'blog'));
-SDV($bi_PageType_Comment, 'comment');  #Not in PageType list, since we don't want bloggers to be able to select 'comment' types.
+SDVA($bi_PageType, array('blog'));  #Comment is not in PageType list, since we don't want bloggers to be able to select 'comment' types.
 SDV($FPLTemplatePageFmt, array(
 	'{$FullName}', (isset($Skin)?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate',
 	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'));
@@ -76,10 +75,8 @@ $bi_CommentForm = 'blogit-comments';
 
 # ----------------------------------------
 # - Usable on Wiki Pages
-bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_AuthorGroup','bi_CommentsEnabled','CategoryGroup','Now','bi_BlogForm','bi_CommentForm',
-	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_LinkToCommentSite','bi_StatAction',
-	'bi_AuthPage','bi_PageType_Comment'));
-bi_setFmtPVA(array('$bi_StatusType'=>$bi_StatusType,'$bi_CommentType'=>$bi_CommentType,'$bi_BlogList'=>$bi_BlogList,'$bi_PageType'=>$bi_PageType));
+bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','CategoryGroup','Now','bi_BlogForm','bi_CommentForm',
+	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_StatAction','bi_AuthPage'));
 
 # ----------------------------------------
 # - PmWiki Config
@@ -188,14 +185,14 @@ $MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_NewEntryPage .'" ?"' .$bi_De
 
 # ----------------------------------------
 # - Set GroupHeaderFmt and Footer
-if (@$bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')){
+if (@$bi_EntryType == 'blog'){
 	$bi_EntryStatus = PageTextVar($pagename,'entrystatus');
 	if ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
 		$GroupHeaderFmt .= '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	else{
 		$bi_AuthEditAdmin = bi_Auth('blog-edit,blog-new,blogit-admin');
-		if ( ($bi_EntryStatus!=$bi_StatusType['draft'] && (!bi_FuturePost($Now) || $bi_AuthEditAdmin) )
-		|| ($bi_EntryStatus==$bi_StatusType['draft'] && $bi_AuthEditAdmin) )
+		if ( ($bi_EntryStatus!='draft' && (!bi_FuturePost($Now) || $bi_AuthEditAdmin) )
+		|| ($bi_EntryStatus=='draft' && $bi_AuthEditAdmin) )
 			$GroupHeaderFmt .= '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
 	}
 } elseif  ($Group == $CategoryGroup)  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction($Name).':)';
@@ -255,14 +252,14 @@ global $_GET,$GroupHeaderFmt;
 	HandleDispatch($src, 'browse');
 }
 function bi_HandleProcessForm ($src, $auth='read'){
-global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirectives,$PmFormPostPatterns,$ROSPatterns,$bi_PageType,$CategoryGroup,
-	$bi_StatusType,$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$bi_CommentForm,$bi_PageType_Comment,$Now,$bi_OldHandleActions,
+global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirectives,$PmFormPostPatterns,$ROSPatterns,$CategoryGroup,
+	$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$bi_CommentForm,$Now,$bi_OldHandleActions,
 	$EnablePost,$AutoCreate,$bi_DefaultCommentStatus;
 
 	$bi_ResetPmFormField = array();
 	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']){
 		#Allow future posts to create tag -- otherwise may never happen, since user may never edit the post again.
-		if ( $_POST['ptv_entrystatus']!=$bi_StatusType['draft'] )  $AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
+		if ( $_POST['ptv_entrystatus']!='draft' )  $AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
 		if ($bi_EnablePostDirectives)  $PmFormPostPatterns = array();  # Null out the PostPatterns so that directive markup doesn't get replaced.
 
 		# Change field delimiters from (:...:...:) to section-tags [[#blogit_XXX]] for tags and body
@@ -281,13 +278,13 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirect
 		if (bi_IsDate($_POST['ptv_entrydate'])){ if (!preg_match('!\d{5,}!',$_POST['ptv_entrydate']))  $_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']); }
 		else  $bi_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
 
-		$_POST['ptv_entrytype'] = $bi_PageType['blog'];  #Prevent spoofing.
+		$_POST['ptv_entrytype'] = 'blog';  #Prevent spoofing.
 		$_POST['ptv_entrytitle'] = (empty($_POST['ptv_entrytitle']) ?$pg :$_POST['ptv_entrytitle']);
 		$_POST['ptv_entryurl'] = MakePageName($pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .( empty($pg) ?$_POST['ptv_entrytitle'] :$pg) );
 		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']);
 
 	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']==$bi_CommentForm){
-		$_POST['ptv_entrytype'] = $bi_PageType_Comment;
+		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
 		$_POST['ptv_commentapproved'] = $bi_DefaultCommentStatus;
 		$_POST['ptv_commentdate'] = $Now;
@@ -316,8 +313,8 @@ function blogitMU_intro($options, $text){
 function blogitMU_list($name, $text){
 	list($var, $label) = split('/', $text,2);
 	$i = count($GLOBALS[$var]);
-	foreach ($GLOBALS[$var] as $k => $v)
-		$t .= '(:input '. ($i==1?'hidden':'select') .' name=' .$name .' value="' .$k .'" label="' .$v .'" id="' .$var .'":)';
+	foreach ($GLOBALS[$var] as $k)
+		$t .= '(:input '. ($i==1 ?'hidden' :'select') .' name=' .$name .' value="' .$k .'" label="' .XL($k) .'" id="' .$var .'":)';
 	return ($i==1?'':$label).$t;
 }
 # options is the length of the string, or use $bi_CommentSideBarLen is empty
@@ -330,7 +327,7 @@ global $bi_CommentSideBarLen, $pagename, $bi_UnstyleFn;
 	);
 }
 function blogitSkinMU($fn, $opt, $txt){
-global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentType_NONE,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern;
+global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern;
 	$args = ParseArgs($opt);  #$args['p'], args[]['s']
 	$dateFmt = array('long'=>'%B %d, %Y, at %I:%M %p', 'short'=>'%B %d, %Y', 'entry'=>'%d-%m-%Y %H:%M');
 	switch ($fn) {
@@ -341,7 +338,7 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentType_NONE,$bi_Comme
 			:'');
 		case 'edit': return (bi_Auth('blog-edit '.$args['page']) ?$args['pre_text'] .'[['.$args['page'].'?action=blogitedit | '.$txt.']]'.$args['post-text'] :'');
 		case 'tags': return ($txt>'' ?$args['pre_text'].bi_SaveTags('', $txt, $bi_TagSeparator).$args['post_text'] :'');
-		case 'commentcount': return ($args['status']!=$bi_CommentType_NONE && $bi_CommentsEnabled
+		case 'commentcount': return ($args['status']!='none' && $bi_CommentsEnabled
 			?$args['pre_text'].'[['.$args['group'].'.'.$args['name'].'#commentblock | '.
 				'(:includesection "#comments-count-pagelist entrygroup=\''.$args['group'].'\' entryname=\''.$args['name'].'\' commentstatus=true":)'.
 				$txt.']]'.$args['post_text']
@@ -424,10 +421,10 @@ global $_GET;
 # - Authentication Functions
 # ----------------------------------------
 function bi_BlogItAuth($pn, $level, $authprompt=true, $since=0) {
-global $pagename, $action, $bi_AuthFunction, $bi_CommentsEnabled, $bi_CommentGroup, $bi_EntryType, $FmtPV;
+global $pagename, $action, $bi_AuthFunction, $bi_CommentsEnabled, $bi_CommentGroup, $bi_EntryType;
 	# Set level to read if a non-authenticated user is posting a comment.
 	if ( (($level=='edit') || ($level=='publish'))
-		&& $action=='pmform' && $bi_EntryType == trim($FmtPV['$bi_PageType_BLOG'],'\'')
+		&& $action=='pmform' && $bi_EntryType == 'blog'
 		&& IsEnabled($bi_CommentsEnabled,1) && preg_match("/^" .$bi_CommentGroup ."\./", $pn) ){
 		$level = 'read';
 		$authprompt = false;
@@ -524,12 +521,6 @@ global $bi_TagSeparator;
 # ----------------------------------------
 function bi_setFmtPV($a){
 	foreach ($a as $k)  $GLOBALS['FmtPV']['$'.$k]='$GLOBALS["'.$k.'"]';
-}
-# Sets $FmtPV variables named $key_VALUE. $a is an array with the key as the variable name, and values as indecies.
-function bi_setFmtPVA ($a){
-	foreach ($a as $var=>$vals)
-		foreach ($vals as $k=>$v)
-			$GLOBALS['FmtPV'][$var .'_' .strtoupper($k)] = "'" .$v ."'";
 }
 function bi_addPageStore ($n='wikilib.d'){
 global $WikiLibDirs;
