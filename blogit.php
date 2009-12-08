@@ -13,15 +13,15 @@ if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}.
 SDV($bi_BlogIt_Enabled, 1); if (!IsEnabled($bi_BlogIt_Enabled)) return;
 SDV($EnablePostCaptchaRequired, 0);
 SDV($bi_DefaultGroup, 'Blog');  #Pre-populates the Pagename field; blogs can exist in *any* group, not simply the default defined here.
-SDV($bi_CommentGroup, 'Comments');
-SDV($bi_CommentsEnabled, 'true');
 SDV($bi_BlogGroups, $bi_DefaultGroup);  #OPTIONAL: Pipe separated list of Blog groups. If you define it then only those groups are searched for entries. If set to null all groups are searched.
 SDV($CategoryGroup, 'Tags');  #[1]
 SDV($bi_AuthorGroup, 'Profiles');
-SDV($bi_EntriesPerPage, 15);
-SDV($bi_LinkToCommentSite, 'true');
-SDV($bi_DisplayFuture, 'false');
+SDV($bi_CommentGroup, 'Comments');
+SDV($bi_CommentsEnabled, 'true');
 SDV($bi_DefaultCommentStatus, 'true');
+SDV($bi_LinkToCommentSite, 'true');
+SDV($bi_EntriesPerPage, 15);
+SDV($bi_DisplayFuture, 'false');
 SDVA($bi_BlogList, array('blog1'=>'blog1'));  #Ensure 'blog1' key remains; you can rename the blog (2nd parameter). Also define other blogs.
 SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
 
