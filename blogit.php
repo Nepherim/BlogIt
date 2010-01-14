@@ -75,7 +75,7 @@ $bi_CommentForm = 'blogit-comments';
 
 # ----------------------------------------
 # - Usable on Wiki Pages
-bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','CategoryGroup','Now','bi_BlogForm','bi_CommentForm',
+bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','CategoryGroup','Now','bi_BlogForm','bi_CommentForm','bi_CommentGroup',
 	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_StatAction','bi_AuthPage'));
 
 # ----------------------------------------
