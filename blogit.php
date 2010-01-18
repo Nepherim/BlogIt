@@ -320,12 +320,15 @@ function blogitMU_list($name, $text){
 # options is the length of the string, or use $bi_CommentSideBarLen is empty
 function blogitMU_cleantext($options, $text){
 global $bi_CommentSideBarLen, $pagename, $bi_UnstyleFn;
-	$m = min(strpos($text, "\n"), (!empty($options) ?$options :$bi_CommentSideBarLen));
-	return (empty($bi_UnstyleFn)
-		?substr($text, 0, empty($m) ?$bi_CommentSideBarLen :$m)
-		:$bi_UnstyleFn($pagename, substr($text, 0, empty($m) ?$bi_CommentSideBarLen :$m))
-	);
+# SteP fixes: allow for unstyling; honor $options when empty($m); break $text on a word boundary
+	if($bi_UnstyleFn>'')	$text = $bi_UnstyleFn($pagename, $text);
+	$l = (empty($options) ?$bi_CommentSideBarLen :$options);
+	$m = strpos($text, "\n");
+	$m = ( empty($m) ?$l :min($m, $l) );
+	preg_match('/^.{0,' .$m .'}\b/', $text, $match);
+	return trim($match[0]);
 }
+
 function blogitSkinMU($fn, $opt, $txt){
 global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern;
 	$args = ParseArgs($opt);  #$args['p'], args[]['s']
