@@ -176,7 +176,8 @@ $Conditions['bi_lt'] = 'bi_LT($condparm)';
 # - Markup Expressions
 # if [0] is null or {$... then returns [1]; if [0] != null then returns ([2] or [0] if [2] is null)
 $MarkupExpr['bi_ifnull'] = '( bi_IsNull($args[0])!="" ?( bi_IsNull($args[2])=="" ?$args[0] :$args[2]) :$args[1])';
-$MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull($args[0]),ENT_QUOTES)';
+# Calls to bi_encode should NOT be quoted: {(bi_encode {*$Title})} NOT {(bi_encode '{*$Title}')}. $args will contain each 'word' as an array element
+$MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull(implode(\' \', $args)), ENT_QUOTES)';
 # bi_param "group" "group_val"   Returns: group="group_val" if group_val != ""; else returns ""   0:param name; 1:value
 $MarkupExpr['bi_param'] = '( bi_IsNull($args[1])=="" ?"" :"$args[0]=\"$args[1]\"")';
 $MarkupExpr['bi_base'] = 'bi_BasePage($args[0])';
@@ -340,7 +341,7 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 			?$args['pre_text'] .(PageExists(MakePageName($pagename, "$bi_AuthorGroup/$txt")) ?"[[$bi_AuthorGroup/$txt]]" :$txt) .$args['post_text']
 			:'');
 		case 'edit': return (bi_Auth('blog-edit '.$args['page']) ?$args['pre_text'] .'[['.$args['page'].'?action=blogitedit | '.$txt.']]'.$args['post-text'] :'');
-		case 'tags': return ($txt>'' ?$args['pre_text'].bi_SaveTags('', $txt, $bi_TagSeparator).$args['post_text'] :'');
+		case 'tags': return ($txt>'' ?$args['pre_text'].bi_SaveTags('', html_entity_decode($txt, ENT_QUOTES), $bi_TagSeparator).$args['post_text'] :'');
 		case 'commentcount': return ($args['status']!='none' && $bi_CommentsEnabled
 			?$args['pre_text'].'[['.$args['group'].'.'.$args['name'].'#commentblock | '.
 				'(:includesection "#comments-count-pagelist entrygroup=\''.$args['group'].'\' entryname=\''.$args['name'].'\' commentstatus=true":)'.
@@ -484,7 +485,6 @@ global $PageTextVarPatterns;
 # Stores combined list in tag-field in PmWiki format [[!...]][[!...]].
 function bi_SaveTags($body, $user_tags, $sep) {
 global $pagename;
-	bi_setMakePageNamePatterns();
 	# Read tags from body, strip [[!...]]
 	if ($body)  $bodyTags = (preg_match_all('/\[\[\!(.*?)\]\]/e', $body, $match) ?$match[1] :array());  #array of tags contained in [[!...]] markup.
 
