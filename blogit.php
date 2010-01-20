@@ -55,6 +55,7 @@ SDVA($bi_Paths,array('pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/
 SDV($BlogIt['debug'],false); bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
 SDV($bi_AdminPage, $SiteGroup .'.BlogIt-Admin');
 SDV($bi_NewEntryPage, $SiteGroup .'.BlogIt-NewEntry');
+SDV($bi_BlogListPage, $SiteGroup .'.BlogList');
 SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
 SDVA($bi_PageType, array('blog'));  #Comment is not in PageType list, since we don't want bloggers to be able to select 'comment' types.
 SDV($FPLTemplatePageFmt, array(
@@ -120,6 +121,7 @@ $AuthFunction = 'bi_BlogItAuth';
 $PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_-\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';
 
 $pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
+if ($pagename == $bi_BlogListPage)	$FmtPV['$bi_BlogId']='"'.htmlentities(stripmagic($_GET['blogid'])).'"';
 $bi_EntryType = PageTextVar($pagename,'entrytype');  #PageVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 bi_debugLog('entryType: '.$bi_EntryType);
 list($Group, $Name) = explode('.', $pagename);
