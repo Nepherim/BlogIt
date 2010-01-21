@@ -28,7 +28,7 @@ SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit
 # ----------------------------------------
 # - Advanced user settings
 SDV($bi_AuthPage, $bi_DefaultGroup .'.' .$DefaultName);  #edit/admin users need edit access to this page if not using AuthUser
-SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');
+SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');  #use to show all pages in a specific category when browsing a Tag group
 SDV($bi_CommentSideBarLen, 60);
 SDV($bi_TagSeparator, ', ');
 SDV($bi_TitleSeparator, '-');
