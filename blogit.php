@@ -18,7 +18,7 @@ SDV($CategoryGroup, 'Tags');  #[1]
 SDV($bi_AuthorGroup, 'Profiles');
 SDV($bi_CommentGroup, 'Comments');
 SDV($bi_CommentsEnabled, 'true');
-SDV($bi_DefaultCommentStatus, 'true');
+SDV($bi_DefaultCommentStatus, (IsEnabled($EnablePostCaptchaRequired) ?'true' :'false') );  #auto-approve comments only if captcha is enabled
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_EntriesPerPage, 15);
 SDV($bi_DisplayFuture, 'false');
@@ -292,7 +292,7 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirect
 	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']==$bi_CommentForm){
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
-		$_POST['ptv_commentapproved'] = $bi_DefaultCommentStatus;
+		$_POST['ptv_commentapproved'] = (bi_Auth('comment-approve,blogit-admin '.$pagename) ?'true' :$bi_DefaultCommentStatus);
 		$_POST['ptv_commentdate'] = $Now;
 	}
 	$bi_OldHandleActions['pmform']($src, $auth);
