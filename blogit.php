@@ -27,7 +27,7 @@ SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit
 
 # ----------------------------------------
 # - Advanced user settings
-SDV($bi_AuthPage, $bi_DefaultGroup .'.' .$DefaultName);  #Need edit/admin users need edit access to this page if not using AuthUser
+SDV($bi_AuthPage, $bi_DefaultGroup .'.' .$DefaultName);  #edit/admin users need edit access to this page if not using AuthUser
 SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');
 SDV($bi_CommentSideBarLen, 60);
 SDV($bi_TagSeparator, ', ');
@@ -42,10 +42,13 @@ SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',														# strip single-quotes
 	"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,	# convert everything else to hyphen
-	"/(^\\-+)|(\\-+\$)/" => '',            					# trim hyphens front and back
-	"/\\-{2,}/" => $bi_TitleSeparator,							# trim duplicate hyphens
+	"/(^\\" .$bi_TitleSeparator ."+)|(\\" .$bi_TitleSeparator ."+\$)/" => '',            					# trim hyphens front and back
+	"/\\" .$bi_TitleSeparator ."{2,}/" => $bi_TitleSeparator,							# trim duplicate hyphens
 	($Charset=='UTF-8' ?"/^([\\xc0-\\xdf].)/e" :'//') => ($Charset=='UTF-8' ?"utf8toupper('$1')" :''),  # uppercase first letter
 	"/^([a-z])/e" => "strtoupper('$1')"
+));
+SDVA($bi_FixPageTitlePatterns, array(
+	'/[.\\/#]/' => ''	#remove dots, forward and backslashes in page titles as MakePageName returns '' when these characters are present
 ));
 SDVA($bi_Paths,array('pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/scripts/guiedit.php", 'convert'=>"$FarmD/cookbook/blogit/blogit_upgrade.php"));
 
@@ -257,7 +260,7 @@ global $_GET,$GroupHeaderFmt;
 function bi_HandleProcessForm ($src, $auth='read'){
 global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirectives,$PmFormPostPatterns,$ROSPatterns,$CategoryGroup,
 	$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$bi_CommentForm,$Now,$bi_OldHandleActions,
-	$EnablePost,$AutoCreate,$bi_DefaultCommentStatus;
+	$EnablePost,$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns;
 
 	$bi_ResetPmFormField = array();
 	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']){
@@ -269,21 +272,21 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirect
 		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '[[#blogit_entrybody]]$1[[#blogit_entrybodyend]]';  #entrybody MUST be the last variable.
 		$ROSPatterns['/\(:pmmarkup:(.*?)(\(:title .*?:\)):\)/s'] = '[[#blogit_pmmarkup]]$1$2[[#blogit_pmmarkupend]]';  #This field contains (:TITLE:), so need to find .*?:)
 
-		# Determine page name from title, replacing ' ' with '-' for seo.
-		bi_setMakePageNamePatterns();
-
 		# url will be inherited from title, and will include a group from the url or the default group. If title is blank it is derived from url.
 		if (!strpos($_POST['ptv_entryurl'], '.'))  $pg = $_POST['ptv_entryurl'];
 		else  list($gr, $pg) = explode('.',$_POST['ptv_entryurl']);
+		$title = preg_replace( array_keys( $bi_FixPageTitlePatterns ), array_values( $bi_FixPageTitlePatterns ), $_POST['ptv_entrytitle'] );
 
 		# If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
 		# NB: If page subsequently fails to post (due to incorrect p/w or captcha) then entrydate is already in unix time format.
 		if (bi_IsDate($_POST['ptv_entrydate'])){ if (!preg_match('!\d{5,}!',$_POST['ptv_entrydate']))  $_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']); }
 		else  $bi_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
 
+		# Determine page name from title, replacing ' ' with '-' for seo.
+		bi_setMakePageNamePatterns();
 		$_POST['ptv_entrytype'] = 'blog';  #Prevent spoofing.
-		$_POST['ptv_entrytitle'] = (empty($_POST['ptv_entrytitle']) ?$pg :$_POST['ptv_entrytitle']);
-		$_POST['ptv_entryurl'] = MakePageName($pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .( empty($pg) ?$_POST['ptv_entrytitle'] :$pg) );
+		$_POST['ptv_entrytitle'] = (empty($title) ?$pg :$_POST['ptv_entrytitle']);  #use either the url or the original title (not the clean title)
+		$_POST['ptv_entryurl'] = MakePageName($pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .( empty($pg) ?$title :$pg) );
 		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']);
 
 	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']==$bi_CommentForm){
