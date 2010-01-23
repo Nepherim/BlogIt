@@ -231,7 +231,7 @@ function bi_HandleUnapproveComment($src, $auth='comment-approve'){
 	bi_HandleApproveComment($src,$auth,false);
 }
 function bi_HandleApproveComment($src, $auth='comment-approve', $approve=true){
-global $_REQUEST,$_POST,$Now,$ChangeSummary;
+global $_POST,$Now,$ChangeSummary;
 	if (bi_Auth($auth)){
 		if ($src)  $old = RetrieveAuthPage($src,'read',0, READPAGE_CURRENT);
 		if($old){
@@ -390,7 +390,7 @@ function bi_IsDate($d, $f='%d-%m-%Y %H:%M'){
 	if (preg_match('!\d{5,}!',$d))  $d=strftime(XL('%d-%m-%Y %H:%M'),$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
 	$re_day='%d|%e'; $re_month='%m'; $re_year='%g|%G|%y|%Y'; $re_sep='[\/\-\.]';
 	$re = array(
-		'/'.$re_sep.'/' => '[\/\-\.]',
+		'/'.$re_sep.'/' => $re_sep,
 		'/'.$re_day.'/' => '(0?[1-9]|[12][0-9]|3[01])',
 		'/'.$re_month.'/' => '(0?[1-9]|1[012])',
 		'/'.$re_year.'/' => '(19\d\d|20\d\d)',
