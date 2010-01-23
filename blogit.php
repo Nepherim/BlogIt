@@ -233,7 +233,7 @@ function bi_HandleUnapproveComment($src, $auth='comment-approve'){
 function bi_HandleApproveComment($src, $auth='comment-approve', $approve=true){
 global $_REQUEST,$_POST,$Now,$ChangeSummary;
 	if (bi_Auth($auth)){
-		if ($src) $old = RetrieveAuthPage($src,'read',0, READPAGE_CURRENT);
+		if ($src)  $old = RetrieveAuthPage($src,'read',0, READPAGE_CURRENT);
 		if($old){
 			$new = $old;
 			$new['csum'] = $new['csum:' .$Now] = $ChangeSummary = ($approve?'A':'Una').'pproved comment';
@@ -385,20 +385,26 @@ global $pagename;
 	if ($mp==$pagename)  return false;
 	return PageExists($mp);
 }
-function bi_IsDate($d){
-	if (empty($d)) return true; #false causes two date invalid messages.
-	$re_sep='[\/\-\.]';
-	$re_time='( (([0-1]?\d)|(2[0-3])):[0-5]\d)?';
-	$re_d='(0?[1-9]|[12][0-9]|3[01])'; $re_m='(0?[1-9]|1[012])'; $re_y='(19\d\d|20\d\d)';
-	if (preg_match('!\d{5,}!',$d)) $d=strftime(XL('%d-%m-%Y %H:%M'),$d);  #Convert Unix timestamp to EntryFormat
-	if (preg_match('!^' .$re_d .$re_sep .$re_m .$re_sep .$re_y. $re_time. '$!',$d,$m))  #dd-mm-yyyy
-		$ret = checkdate($m[2], $m[1], $m[3]);
-	elseif (preg_match('!^' .$re_y .$re_sep .$re_m .$re_sep .$re_d. $re_time. '$!',$d,$m))  #yyyy-mm-dd
-		$ret = checkdate($m[2], $m[3], $m[1]);
-	elseif (preg_match('!^' .$re_m .$re_sep .$re_d .$re_sep .$re_y. $re_time. '$!',$d,$m))  #mm-dd-yyyy
-		$ret = checkdate($m[1], $m[2], $m[3]);
-	else $ret = false;
-	return $ret;
+function bi_IsDate($d, $f='%d-%m-%Y( %H:%M)?'){
+	if (empty($d)) return true;  #false causes two date invalid messages.
+	if (preg_match('!\d{5,}!',$d)) $d=strftime(XL($f),$d);  #Convert Unix timestamp to EntryFormat
+	$re_day='%d|%e'; $re_month='%m'; $re_year='%g|%G|%y|%Y'; $re_sep='[\/\-\.]';
+	$re = array(
+		'/'.$re_sep.'/' => '[\/\-\.]',
+		'/'.$re_day.'/' => '(0?[1-9]|[12][0-9]|3[01])',
+		'/'.$re_month.'/' => '(0?[1-9]|1[012])',
+		'/'.$re_year.'/' => '(19\d\d|20\d\d)',
+		'/%H|%I|%l/' => '([0-1]?\d|2[0-3])',
+		'/%M/' => '([0-5]\d)'
+	);
+	$re_date = preg_replace(array_keys($re), array_values($re), $f);  #convert $f into a regular expression
+	if (preg_match('!^'.$re_date.'$!',$d,$x)  #does %d match the regular expression version of $f? if it does d/m/y are in $x
+		#determine expected date order based on $f and checkdate
+		&& ((preg_match('!^('.$re_day.')'.$re_sep.'('.$re_month.')'.$re_sep.'('.$re_year.')!',$f) && checkdate($x[2], $x[1], $x[3]))
+			|| (preg_match('!^('.$re_month.')'.$re_sep.'('.$re_day.')'.$re_sep.'('.$re_year.')!',$f) && checkdate($x[1], $x[2], $x[3]))
+			|| (preg_match('!^('.$re_year.')'.$re_sep.'('.$re_month.')'.$re_sep.'('.$re_day.')!',$f) && checkdate($x[3], $x[1], $x[2]))
+	))  return true;
+	return false;
 }
 function bi_IsEmail($e){
 	return (bool)preg_match(
@@ -511,7 +517,7 @@ global $MakePageNamePatterns, $bi_MakePageNamePatterns;
 }
 function AsSpacedHyphens($text) {
 global $bi_OldAsSpaced_Function,$bi_EntryType,$Group,$CategoryGroup,$action;
-	if ($Group==$CategoryGroup || isset($bi_EntryType) || $action='blogitupgrade')  return (strtr($bi_OldAsSpaced_Function($text),'-',' '));
+	if ($Group==$CategoryGroup || isset($bi_EntryType) || $action=='blogitupgrade')  return (strtr($bi_OldAsSpaced_Function($text),'-',' '));
 	else  return ($bi_OldAsSpaced_Function($text));
 }
 function bi_FuturePost($now){
