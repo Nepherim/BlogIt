@@ -338,7 +338,7 @@ global $bi_CommentSideBarLen, $pagename, $bi_UnstyleFn;
 function blogitSkinMU($fn, $opt, $txt){
 global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern;
 	$args = ParseArgs($opt);  #$args['p'], args[]['s']
-	$dateFmt = array('long'=>'%B %d, %Y, at %I:%M %p', 'short'=>'%B %d, %Y', 'entry'=>'%d-%m-%Y %H:%M');
+	$dateFmt = array('long'=>'%B %d, %Y, at %I:%M %p', 'short'=>'%B %d, %Y', 'entry'=>'%d-%m-%Y( %H:%M)?');
 	switch ($fn) {
 		case 'date': return ME_ftime(XL($dateFmt[$args['fmt']]), '@'.$txt);
 		case 'intro': return '(:div999991 class="'.$args['class'].'":)' .blogitMU_intro('', $txt) .'%blogit-more%'. blogitMU_more($args['page'], $txt) ."%%\n(:div99991end:)";
@@ -385,9 +385,9 @@ global $pagename;
 	if ($mp==$pagename)  return false;
 	return PageExists($mp);
 }
-function bi_IsDate($d, $f='%d-%m-%Y( %H:%M)?'){
-	if (empty($d)) return true;  #false causes two date invalid messages.
-	if (preg_match('!\d{5,}!',$d)) $d=strftime(XL($f),$d);  #Convert Unix timestamp to EntryFormat
+function bi_IsDate($d, $f='%d-%m-%Y %H:%M'){
+	if (empty($d))  return true;  #false causes two date invalid messages.
+	if (preg_match('!\d{5,}!',$d))  $d=strftime(XL('%d-%m-%Y %H:%M'),$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
 	$re_day='%d|%e'; $re_month='%m'; $re_year='%g|%G|%y|%Y'; $re_sep='[\/\-\.]';
 	$re = array(
 		'/'.$re_sep.'/' => '[\/\-\.]',
