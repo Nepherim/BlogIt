@@ -38,6 +38,7 @@ SDV($bi_Cookie, $CookiePrefix.'blogit-');
 SDV($bi_UnstyleFn, '');
 SDVA($bi_StatusType, array('draft', 'publish', 'sticky'));
 SDVA($bi_CommentType, array('open', 'readonly', 'none'));
+SDVA($bi_CommentApprovalType, array('true', 'false'));
 SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',														# strip single-quotes
@@ -97,8 +98,9 @@ include_once($bi_Paths['pmform']);
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
 array_unshift ($PmFormTemplatesFmt,	(isset($Skin) ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
 $PmForm[$bi_BlogForm] = 'form=#blog-form-control fmt=#blog-post-control';
-$PmForm[$bi_CommentForm] = 'saveto="' .$bi_CommentGroup .'.{$Group}-{$Name}-' .date('Ymd\THms')
-	.'" form=#comment-form-control fmt=#comment-post-control';
+#if page is an existing comment (ie, has a comment page name) then use it, otherwise create it
+$PmForm[$bi_CommentForm] = 'saveto="' .(preg_match($bi_CommentPattern,$pagename) ?$pagename :$bi_CommentGroup .'.{$Group}-{$Name}-' .date('Ymd\THms')) .'" '.
+	'form=#comment-form-control fmt=#comment-post-control';
 
 # ----------------------------------------
 # - Handle Actions
@@ -109,6 +111,7 @@ $HandleActions['browse']='bi_HandleBrowse';
 SDV($HandleActions['blogitadmin'], 'bi_HandleAdmin'); SDV($HandleAuth['blogitadmin'], 'blogit-admin');
 SDV($HandleActions['blogitapprove'], 'bi_HandleApproveComment'); SDV($HandleAuth['blogitapprove'], 'comment-approve');
 SDV($HandleActions['blogitunapprove'], 'bi_HandleUnapproveComment'); SDV($HandleAuth['blogitunapprove'], 'comment-approve');
+SDV($HandleActions['blogitcommentedit'], 'bi_HandleEditComment'); SDV($HandleAuth['blogitcommentedit'], 'comment-edit');
 SDV($HandleActions['blogitcommentdelete'], 'bi_HandleDeleteComment'); SDV($HandleAuth['blogitcommentdelete'], 'comment-edit');
 SDV($HandleActions['blogitupgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['blogitupgrade'], 'admin');
 # Cannot be done as part of handler due to scoping issues when include done in function
@@ -122,17 +125,16 @@ $AuthFunction = 'bi_BlogItAuth';
 
 # Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_-\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';
-
 $pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
-if ($pagename == $bi_BlogListPage)	$FmtPV['$bi_BlogId']='"'.htmlentities(stripmagic($_GET['blogid'])).'"';
 $bi_EntryType = PageTextVar($pagename,'entrytype');  #PageVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 bi_debugLog('entryType: '.$bi_EntryType);
 list($Group, $Name) = explode('.', $pagename);
+if ($pagename == $bi_BlogListPage)	$FmtPV['$bi_BlogId']='"'.htmlentities(stripmagic($_GET['blogid'])).'"';
 if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage||$pagename==$bi_NewEntryPage) && bi_Auth('*') ){  #TODO: put blogit pages in array
 	$EnablePostCaptchaRequired = 0;
 	# Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
 	$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
-	if ( ( ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm) || ($action=='edit') ) && @$_POST['cancel']){  #Cancel button clicked
+	if (@$_POST['cancel'] && ( ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm) || ($action=='edit') )){  #Cancel button clicked
 		$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-2']; #need to go back 2, since when in this code we're already moved forward
 		bi_Redirect();
 		exit;
@@ -191,7 +193,7 @@ $MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_NewEntryPage .'" ?"' .$bi_De
 
 # ----------------------------------------
 # - Set GroupHeaderFmt and Footer
-if (@$bi_EntryType == 'blog'){
+if (@$bi_EntryType == 'blog'){  #handled by browse handler, after headers set
 	$bi_EntryStatus = PageTextVar($pagename,'entrystatus');
 	if ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
 		$GroupHeaderFmt .= '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
@@ -203,7 +205,7 @@ if (@$bi_EntryType == 'blog'){
 	}
 } elseif  ($Group == $CategoryGroup)  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction($Name).':)';
 if ($Group == $CategoryGroup)  $GroupFooterFmt .= $bi_GroupFooterFmt;
-if ($action=='print'){
+if ($action == 'print'){
 	$GroupPrintHeaderFmt .= $GroupHeaderFmt;
 	$GroupPrintFooterFmt .= $GroupFooterFmt;  #Needed if trying to print tag list.
 	bi_AddMarkup();
@@ -217,7 +219,7 @@ if ($action=='print'){
 function bi_HandleBrowse($pagename, $auth = 'read'){
 global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OldHandleActions,$Group,$bi_CommentGroup;
 	if ($Group == $bi_CommentGroup){  #After editing/deleting a comment page
-		bi_Redirect(); return;
+		bi_Redirect($pagename); return;
 	} elseif (isset($bi_ResetPmFormField))
 		foreach ($bi_ResetPmFormField  as $k => $v) {
 			$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
@@ -226,6 +228,12 @@ global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OldHandleActions
 	bi_AddMarkup();
 	$HandleActions['browse']=$bi_OldHandleActions['browse'];
 	HandleDispatch($pagename, 'browse');
+}
+function bi_HandleEditComment($src, $auth='comment-edit'){
+global $HandleActions,$bi_OldHandleActions,$bi_EntryType,$GroupHeaderFmt;
+	if ( @$bi_EntryType == 'comment' && bi_Auth($auth) )  $GroupHeaderFmt .= '(:includesection "#comment-edit":)';
+	$HandleActions['browse']=$bi_OldHandleActions['browse'];
+	HandleDispatch($src, 'browse');
 }
 function bi_HandleUnapproveComment($src, $auth='comment-approve'){
 	bi_HandleApproveComment($src,$auth,false);
@@ -289,7 +297,8 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirect
 		$_POST['ptv_entryurl'] = MakePageName($pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .( empty($pg) ?$title :$pg) );
 		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']);
 
-	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']==$bi_CommentForm){
+	#only set defaults if we're not editing the comment
+	}elseif ( $bi_CommentsEnabled=='true' && @$_POST['target']==$bi_CommentForm	&& !($action=='blogitcommentedit' && bi_Auth('comment-edit')) ){
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
 		$_POST['ptv_commentapproved'] = (bi_Auth('comment-approve,blogit-admin '.$pagename) ?'true' :$bi_DefaultCommentStatus);
@@ -356,7 +365,7 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 		case 'commentapprove': return (bi_Auth('comment-approve '.bi_BasePage($txt))
 			?$args['pre_text'].'[['.$txt.'?action=blogit'.($args['status']=='true'?'un':'').'approve | $['.($args['status']=='true'?'un':'').'approve]]]'.$args['post_text']
 			:'');
-		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=edit | $[edit]]]'.$args['post_text'] :'');
+		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=blogitcommentedit | $[edit]]]'.$args['post_text'] :'');
 		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=blogitcommentdelete | $[delete]]]'.$args['post_text'] :'');
 		case 'commenttext': return ( strtr($txt, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />', "\x0B" => '<br />')) );
 		case 'commentid': {
@@ -390,7 +399,6 @@ function bi_IsDate($d, $f='%d-%m-%Y %H:%M'){
 	if (preg_match('!\d{5,}!',$d))  $d=strftime(XL('%d-%m-%Y %H:%M'),$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
 	$re_day='%d|%e'; $re_month='%m'; $re_year='%g|%G|%y|%Y'; $re_sep='[\/\-\.]';
 	$re = array(
-		'/'.$re_sep.'/' => $re_sep,
 		'/'.$re_day.'/' => '(0?[1-9]|[12][0-9]|3[01])',
 		'/'.$re_month.'/' => '(0?[1-9]|1[012])',
 		'/'.$re_year.'/' => '(19\d\d|20\d\d)',
