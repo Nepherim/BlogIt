@@ -27,7 +27,7 @@ SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit
 
 # ----------------------------------------
 # - Advanced user settings
-SDV($bi_AuthPage, $bi_DefaultGroup .'.' .$DefaultName);  #edit/admin users need edit access to this page if not using AuthUser
+SDVA($bi_Pages, array('auth' => $bi_DefaultGroup .'.' .$DefaultName));  #edit/admin users need edit access to this page if not using AuthUser
 SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');  #use to show all pages in a specific category when browsing a Tag group
 SDV($bi_CommentSideBarLen, 60);
 SDV($bi_TagSeparator, ', ');
@@ -57,9 +57,7 @@ SDVA($bi_Paths,array('pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/
 # - Internal Use Only
 # ----------------------------------------
 SDV($BlogIt['debug'],false); bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
-SDV($bi_AdminPage, $SiteGroup .'.BlogIt-Admin');
-SDV($bi_NewEntryPage, $SiteGroup .'.BlogIt-NewEntry');
-SDV($bi_BlogListPage, $SiteGroup .'.BlogList');
+SDVA($bi_Pages, array('admin'=>$SiteGroup .'.BlogIt-Admin', 'new_entry'=>$SiteGroup .'.BlogIt-NewEntry', 'blog_list'=>$SiteGroup .'.BlogList'));
 SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
 SDVA($bi_PageType, array('blog'));  #Comment is not in PageType list, since we don't want bloggers to be able to select 'comment' types.
 SDV($FPLTemplatePageFmt, array(
@@ -75,12 +73,12 @@ SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''
 		'pmwiki' => '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki)\.!',
 		'self' => FmtPageName('!^$FullName$!', $pagename)
 )));
-SDVA($bi_Forms, array('blogit-entry','blogit-comments'));
 
 # ----------------------------------------
 # - Usable on Wiki Pages
 bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','CategoryGroup','Now','bi_CommentGroup',
-	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_StatAction','bi_AuthPage'));
+	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_StatAction'));
+bi_setFmtPVA(array('$bi_Pages'=>$bi_Pages));
 
 # ----------------------------------------
 # - PmWiki Config
@@ -96,10 +94,11 @@ $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkTex
 include_once($bi_Paths['pmform']);
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
 array_unshift ($PmFormTemplatesFmt,	(isset($Skin) ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
-$PmForm['blogit-entry'] = 'form=#blog-form-control fmt=#blog-post-control';
+$bi_Forms=array('blogit-entry','blogit-comments');
+SDV($PmForm['blogit-entry'], 'form=#blog-form-control fmt=#blog-post-control');
 #if page is an existing comment (ie, has a comment page name) then use it, otherwise create it
-$PmForm['blogit-comments'] = 'saveto="' .(preg_match($bi_CommentPattern,$pagename) ?$pagename :$bi_CommentGroup .'.{$Group}-{$Name}-' .date('Ymd\THms')) .'" '.
-	'form=#comment-form-control fmt=#comment-post-control';
+SDV($PmForm['blogit-comments'], 'saveto="' .(preg_match($bi_CommentPattern,$pagename) ?$pagename :$bi_CommentGroup .'.{$Group}-{$Name}-' .date('Ymd\THms')) .'" '.
+	'form=#comment-form-control fmt=#comment-post-control');
 
 # ----------------------------------------
 # - Handle Actions
@@ -128,22 +127,21 @@ $pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to 
 $bi_EntryType = PageTextVar($pagename,'entrytype');  #PageVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 bi_debugLog('entryType: '.$bi_EntryType);
 list($Group, $Name) = explode('.', $pagename);
-if ($pagename == $bi_BlogListPage)	$FmtPV['$bi_BlogId']='"'.htmlentities(stripmagic($_GET['blogid'])).'"';
-if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage||$pagename==$bi_NewEntryPage) && bi_Auth('*') ){  #TODO: put blogit pages in array
+if ($pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"'.htmlentities(stripmagic($_GET['blogid'])).'"';
+if ( (isset($bi_EntryType)||in_array($pagename,$bi_Pages)) && bi_Auth('*') ){
 	$EnablePostCaptchaRequired = 0;
+
 	# Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
 	$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
-	if (@$_POST['cancel'] && ( ($action=='pmform' && in_array($_REQUEST['target'],$bi_Forms)) || $action=='edit'||$action=='blogitcommentedit' )){  #Cancel button clicked
-		$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-2']; #need to go back 2, since when in this code we're already moved forward
-		bi_Redirect();
-		exit;
-	}
 	$bi_Params = bi_Implode($_GET);
-	$bi_CurrUrl = $pagename .(!empty($bi_Params) ?'?'.$bi_Params :'');
-	$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-1'];
-	if ($bi_CurrUrl!=$bi_PrevUrl){  #don't replace cookies if user is reloading the current page
-		setcookie($bi_Cookie.'back-2', $bi_PrevUrl, 0, '/');
-		setcookie($bi_Cookie.'back-1', $bi_CurrUrl, 0, '/'); #set to current url
+	$bi_History[0] = $pagename .(!empty($bi_Params) ?'?'.$bi_Params :'');  #current
+	$bi_History[1] = (($action=='pmform' || @$_GET['pmform']>'') ?@$_COOKIE[$bi_Cookie.'back-2'] :@$_COOKIE[$bi_Cookie.'back-1']);
+	if (@$_POST['cancel'] && ($action=='pmform' && in_array($_REQUEST['target'],$bi_Forms))){  #Cancel button clicked
+		bi_Redirect(); exit;
+	}
+	if ($bi_History[0]!=$bi_History[1]){  #don't replace cookies if user is reloading the current page
+		setcookie($bi_Cookie.'back-2', $bi_History[1], 0, '/');
+		setcookie($bi_Cookie.'back-1', $bi_History[0], 0, '/'); #set to current url
 	}
 }
 
@@ -165,7 +163,7 @@ Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
 if (IsEnabled($EnableGUIButtons)){
-	if ($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry') || $pagename == $bi_NewEntryPage)
+	if ($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry') || $pagename == $bi_Pages['new_entry'])
 		include_once($bi_Paths['guiedit']);  #PmWiki only includes this automatically if action=edit.
 }else Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
 
@@ -188,7 +186,7 @@ $MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull(implode(\' \', $args)), ENT_Q
 $MarkupExpr['bi_param'] = '( bi_IsNull($args[1])=="" ?"" :"$args[0]=\"$args[1]\"")';
 $MarkupExpr['bi_base'] = 'bi_BasePage($args[0])';
 $MarkupExpr['bi_url'] = 'bi_URL($args)';
-$MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_NewEntryPage .'" ?"' .$bi_DefaultGroup .'." :$args[0])';
+$MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_Pages['new_entry'] .'" ?"' .$bi_DefaultGroup .'." :$args[0])';
 
 # ----------------------------------------
 # - Set GroupHeaderFmt and Footer
@@ -218,7 +216,7 @@ if ($action == 'print'){
 function bi_HandleBrowse($pagename, $auth = 'read'){
 global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OldHandleActions,$Group,$bi_CommentGroup;
 	if ($Group == $bi_CommentGroup){  #After editing/deleting a comment page
-		bi_Redirect($pagename); return;
+		bi_Redirect(); return;
 	} elseif (isset($bi_ResetPmFormField))
 		foreach ($bi_ResetPmFormField  as $k => $v) {
 			$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
@@ -457,14 +455,14 @@ global $pagename, $action, $bi_AuthFunction, $bi_CommentsEnabled, $bi_CommentGro
 }
 # Called as part of markup condition. Determine whether the current user is authorized for an action
 function bi_Auth($condparm){  #condparm: comma separated list of actions, and optional space separated pagename -- "blog-new,blog-edit Blog.This-entry"
-global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_AuthPage, $bi_AuthFunction, $bi_AdminPage, $bi_NewEntryPage;
+global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_Pages, $bi_AuthFunction;
 	@list($action, $pn) = explode(' ', $condparm, 2);
 	$action=explode(',', trim($action,'\'"'));
 	if (!IsEnabled($EnableAuthUser))
 		$pn = ( in_array('*',$action)	|| in_array('sidebar',$action)
-			||($pagename==$bi_AdminPage && in_array('blogit-admin',$action))
-			||($pagename==$bi_NewEntryPage && in_array('blog-new',$action)) )
-			?$bi_AuthPage
+			||($pagename==$bi_Pages['admin'] && in_array('blogit-admin',$action))
+			||($pagename==$bi_Pages['new_entry'] && in_array('blog-new',$action)) )
+			?$bi_Pages['auth']
 			:(isset($pn)) ?$pn :$pagename;
 
 	foreach ($action as $a){
@@ -482,8 +480,8 @@ global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_AuthPage, $bi_AuthFu
 # ----------------------------------------
 # Direct back to the refering page or $src
 function bi_Redirect($src=''){
-global $bi_PrevUrl, $pagename;
-	$r = FmtPageName('$PageUrl', (!empty($src)||empty($bi_PrevUrl) ?bi_BasePage(($src>'' ?$src :$pagename)) :$bi_PrevUrl));
+global $bi_History, $pagename;
+	$r = FmtPageName('$PageUrl', (!empty($src)||empty($bi_History[1]) ?bi_BasePage(($src>'' ?$src :$pagename)) :$bi_History[1]));
 	header("Location: $r");
 	header("Content-type: text/html");
 	echo "<html><head>
@@ -543,6 +541,12 @@ global $bi_TagSeparator;
 # ----------------------------------------
 function bi_setFmtPV($a){
 	foreach ($a as $k)  $GLOBALS['FmtPV']['$'.$k]='$GLOBALS["'.$k.'"]';
+}
+# Sets $FmtPV variables named $key_VALUE. $a is an array with the key as the variable name, and values as indecies.
+function bi_setFmtPVA ($a){
+	foreach ($a as $var=>$vals)
+		foreach ($vals as $k=>$v)
+			$GLOBALS['FmtPV'][$var .'_' .strtoupper($k)] = "'" .$v ."'";
 }
 function bi_addPageStore ($n='wikilib.d'){
 global $WikiLibDirs;
