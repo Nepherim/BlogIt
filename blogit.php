@@ -75,12 +75,11 @@ SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''
 		'pmwiki' => '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki)\.!',
 		'self' => FmtPageName('!^$FullName$!', $pagename)
 )));
-$bi_BlogForm = 'blogit-entry';
-$bi_CommentForm = 'blogit-comments';
+SDVA($bi_Forms, array('blogit-entry','blogit-comments'));
 
 # ----------------------------------------
 # - Usable on Wiki Pages
-bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','CategoryGroup','Now','bi_BlogForm','bi_CommentForm','bi_CommentGroup',
+bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','CategoryGroup','Now','bi_CommentGroup',
 	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_NewEntryPage','bi_AdminPage','bi_StatAction','bi_AuthPage'));
 
 # ----------------------------------------
@@ -97,9 +96,9 @@ $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkTex
 include_once($bi_Paths['pmform']);
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
 array_unshift ($PmFormTemplatesFmt,	(isset($Skin) ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
-$PmForm[$bi_BlogForm] = 'form=#blog-form-control fmt=#blog-post-control';
+$PmForm['blogit-entry'] = 'form=#blog-form-control fmt=#blog-post-control';
 #if page is an existing comment (ie, has a comment page name) then use it, otherwise create it
-$PmForm[$bi_CommentForm] = 'saveto="' .(preg_match($bi_CommentPattern,$pagename) ?$pagename :$bi_CommentGroup .'.{$Group}-{$Name}-' .date('Ymd\THms')) .'" '.
+$PmForm['blogit-comments'] = 'saveto="' .(preg_match($bi_CommentPattern,$pagename) ?$pagename :$bi_CommentGroup .'.{$Group}-{$Name}-' .date('Ymd\THms')) .'" '.
 	'form=#comment-form-control fmt=#comment-post-control';
 
 # ----------------------------------------
@@ -134,7 +133,7 @@ if ( (isset($bi_EntryType)||$pagename==$bi_AdminPage||$pagename==$bi_NewEntryPag
 	$EnablePostCaptchaRequired = 0;
 	# Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
 	$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
-	if (@$_POST['cancel'] && ( ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm) || ($action=='edit') )){  #Cancel button clicked
+	if (@$_POST['cancel'] && ( ($action=='pmform' && in_array($_REQUEST['target'],$bi_Forms)) || $action=='edit'||$action=='blogitcommentedit' )){  #Cancel button clicked
 		$bi_PrevUrl = @$_COOKIE[$bi_Cookie.'back-2']; #need to go back 2, since when in this code we're already moved forward
 		bi_Redirect();
 		exit;
@@ -166,7 +165,7 @@ Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
 if (IsEnabled($EnableGUIButtons)){
-	if ($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm) || $pagename == $bi_NewEntryPage)
+	if ($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry') || $pagename == $bi_NewEntryPage)
 		include_once($bi_Paths['guiedit']);  #PmWiki only includes this automatically if action=edit.
 }else Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
 
@@ -195,7 +194,7 @@ $MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_NewEntryPage .'" ?"' .$bi_De
 # - Set GroupHeaderFmt and Footer
 if (@$bi_EntryType == 'blog'){  #handled by browse handler, after headers set
 	$bi_EntryStatus = PageTextVar($pagename,'entrystatus');
-	if ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']==$bi_BlogForm)) && bi_Auth('blog-edit')) )
+	if ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry')) && bi_Auth('blog-edit')) )
 		$GroupHeaderFmt .= '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	else{
 		$bi_AuthEditAdmin = bi_Auth('blog-edit,blog-new,blogit-admin');
@@ -266,12 +265,12 @@ global $_GET,$GroupHeaderFmt;
 	HandleDispatch($src, 'browse');
 }
 function bi_HandleProcessForm ($src, $auth='read'){
-global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirectives,$PmFormPostPatterns,$ROSPatterns,$CategoryGroup,
-	$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$bi_CommentForm,$Now,$bi_OldHandleActions,
+global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$PmFormPostPatterns,$ROSPatterns,$CategoryGroup,
+	$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$Now,$bi_OldHandleActions,
 	$EnablePost,$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern;
 
 	$bi_ResetPmFormField = array();
-	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']){
+	if (@$_POST['target']=='blogit-entry' && @$_POST['save']){
 		#Allow future posts to create tag -- otherwise may never happen, since user may never edit the post again.
 		if ( $_POST['ptv_entrystatus']!='draft' )  $AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
 		if ($bi_EnablePostDirectives)  $PmFormPostPatterns = array();  # Null out the PostPatterns so that directive markup doesn't get replaced.
@@ -298,7 +297,7 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirect
 		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']);
 
 	#only set defaults if we're not editing the comment
-	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']==$bi_CommentForm){
+	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']=='blogit-comments'){
 		$ce=preg_match($bi_CommentPattern,$pagename) && bi_Auth('comment-edit');  #editing an existing comment?
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
