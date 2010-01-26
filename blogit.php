@@ -268,7 +268,7 @@ global $_GET,$GroupHeaderFmt;
 function bi_HandleProcessForm ($src, $auth='read'){
 global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirectives,$PmFormPostPatterns,$ROSPatterns,$CategoryGroup,
 	$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$bi_CommentForm,$Now,$bi_OldHandleActions,
-	$EnablePost,$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns;
+	$EnablePost,$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern;
 
 	$bi_ResetPmFormField = array();
 	if (@$_POST['target']==$bi_BlogForm && @$_POST['save']){
@@ -298,11 +298,12 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_BlogForm,$bi_EnablePostDirect
 		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']);
 
 	#only set defaults if we're not editing the comment
-	}elseif ( $bi_CommentsEnabled=='true' && @$_POST['target']==$bi_CommentForm	&& !($action=='blogitcommentedit' && bi_Auth('comment-edit')) ){
+	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']==$bi_CommentForm){
+		$ce=preg_match($bi_CommentPattern,$pagename) && bi_Auth('comment-edit');  #editing an existing comment?
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
-		$_POST['ptv_commentapproved'] = (bi_Auth('comment-approve,blogit-admin '.$pagename) ?'true' :$bi_DefaultCommentStatus);
-		$_POST['ptv_commentdate'] = $Now;
+		$_POST['ptv_commentapproved'] = ($ce ?$_POST['ptv_commentapproved'] :(bi_Auth('comment-approve,blogit-admin '.$pagename) ?'true' :$bi_DefaultCommentStatus));
+		$_POST['ptv_commentdate'] = ($ce ?$_POST['ptv_commentdate'] :$Now);
 	}
 	$bi_OldHandleActions['pmform']($src, $auth);
 }
