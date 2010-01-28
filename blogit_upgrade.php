@@ -13,7 +13,7 @@ $PageTextVarPatterns['(::var:...::)'] = '/(\(:: *(\w[-\w]*) *:(?!\))\s?)(.*?)(::
 #default: default value, if no old_value present.
 #format: final structure of field -- $1 replaced with repeated_format.
 $bi_ConvertRules = array(
-	'2010-18-1'=>array(
+	'2009-10-19'=>array(
 		'old'=>array(
 			'pmmarkup'=> array(), 'blogid'=> array(), 'entrytype'=> array(), 'entrydate'=> array(), 'entryauthor'=> array(), 'entrytitle'=> array(),
 			'entrystatus'=> array(), 'entrycomments'=> array(), 'entrytags'=> array(), 'entrybody'=> array()
@@ -46,9 +46,11 @@ $bi_ConvertRules = array(
 	);
 
 function bi_HandleUpgrade($src, $auth='admin'){
-global $_GET,$RecipeInfo;
+global $_GET,$RecipeInfo,$bi_ConvertRules;
+	$first = array_keys($bi_ConvertRules);
 	$mode = (@$_GET['mode'] ?$_GET['mode'] :'upgrade');
-	$version = (@$_GET['version'] ?$_GET['version'] :$RecipeInfo['BlogIt']['Version']);
+	$version = (@$_GET['version'] ?$_GET['version']
+		:(array_key_exists($RecipeInfo['BlogIt']['Version'],$bi_ConvertRules) ?$RecipeInfo['BlogIt']['Version'] :$first[0]));
 	$pl = ListPages('/^('. (isset($_GET['pattern']) ?str_replace(',','|',$_GET['pattern']) :$src) .')/');
 	if ($mode=='upgrade')  bi_Convert($src, $auth, $version, $pl, $mode);
 	elseif ($mode=='convert'||$mode=='revert')  bi_Convert($src, $auth, $mode, $pl, $mode);

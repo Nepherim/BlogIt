@@ -113,7 +113,7 @@ SDV($HandleActions['blogitcommentedit'], 'bi_HandleEditComment'); SDV($HandleAut
 SDV($HandleActions['blogitcommentdelete'], 'bi_HandleDeleteComment'); SDV($HandleAuth['blogitcommentdelete'], 'comment-edit');
 SDV($HandleActions['blogitupgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['blogitupgrade'], 'admin');
 # Cannot be done as part of handler due to scoping issues when include done in function
-if ($action=='blogitupgrade')  include_once($bi_Paths['convert']);
+if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths['convert']);
 
 # ----------------------------------------
 # - Authentication
