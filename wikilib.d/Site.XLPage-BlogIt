@@ -10,18 +10,3 @@ rev=56
 targets=
 text=### Cookbook/PmForms (also used by Cookbook/BlogIt)%0a  'Post successful' => '',%0a  'Invalid parameter' => '',%0a  'Required condition failed' => '',%0a  'Unknown target' => '',%0a  'Edit permission required' => '',%0a  'Unable to save page' => '',%0a  'Invalid \'where\' option' => '',%0a  'An error has occurred' => '',  %0a%0a%0a### Cookbook/BlogIt recipe: Site.BlogIt-SideBar%0a  'Site Admin' => '',%0a  'Recently Written' => '',%0a  'Recent Comments' => '',%0a  'Categories' => '',%0a  'login' => '',%0a  '...' => '',%0a%0a### Cookbook/BlogIt recipe: Site.BlogIt-CoreTemplate%0a%0a  ## #control-panel%0a  'Unapproved Comments:' => '',%0a  'New Entry' => '',%0a  'Drafts' => '',%0a  'Published' => '',%0a  'Stickies' => '',%0a  'Statistics' => '',%0a  'logout' => '',%0a  'blog-grid' => '',%0a  'unapproved-comments' => '',%0a  %0a  ## #common-blog-head%0a  'By' => '',%0a  'on' => '',%0a  'Filed under:' => '',%0a  '(edit)' => '',%0a%0a  ## #blog-list-view%0a  'edit' => '',%0a  'Tags' => '',%0a  'Actions' => '',%0a  'Title' => '',%0a%0a  ## #blog-summary-list%0a  'more...' => '',%0a%0a  ## #blog-form%0a  'Comments:' => '',%0a  'comment(s)' => '',%0a%0a  ## #blog-form%0a  'Blog Title:' => '',%0a  'Type:' => '',%0a  'BlogID:' => '',%0a  'Tags:' => '',%0a  'Status:' => '',%0a  'Pagename (Group.Name):' => '',%0a  'Save' => '',%0a  'Cancel' => '',%0a  'Author:' => '',%0a  'Date:' => '',%0a%0a  ## #comment-view%0a  'approve' => '',%0a  'unapprove' => '',%0a  'delete' => '',%0a  'Comments' => '',%0a  'Comment Approved?' => '',%0a  'true' => '',%0a  'false' => '',%0a%0a  ## #comment-form%0a  'All comments are reviewed before being displayed.' => '',%0a  'Leave a comment' => '',%0a  '(required):' => '',%0a  '(required, will not be published):' => '',%0a  'Website:' => '',%0a  'Enter value:' => '',%0a  'Post' => '',%0a  'Name' => '',%0a  'E-mail' => '',%0a%0a  ## #no-results-found%0a  'No more pages found.' => '',%0a  'Return to first page.' => '',%0a%0a  ## #blogit-page-navigation%0a  'newer posts' => '',%0a  'older posts' => '',%0a%0a  ## #blog-post-control%0a  'Title or pagename is required.' => '',%0a  'Title is required.' => '',%0a  'Title or pagename already exists, or is invalid/blank.' => '',%0a  'Invalid date.' => '',%0a%0a  ## ##comment-post-control%0a  'Name is required.' => '',%0a  'Email is required.' => '',%0a  'Email address is invalid.' => '',%0a  %0a### local/config.php%0a  'break'=>'',%0a  'Read more...' => '',%0a%0a### dates%0a  '%25B %25d, %25Y, at %25I:%25M %25p' => '',  #long date%0a  '%25B %25d, %25Y' => '',  #short date%0a  '%25d-%25m-%25Y %25H:%25M' => '',  #date entry%0a%0a### status types%0a  'draft' => '',%0a  'sticky' => '',%0a  'publish' => '',%0a%0a### comment types%0a  'open' => '',%0a  'readonly' => '',%0a  'none' => ''
 time=1264516351
-author:1264516351=daveg
-diff:1264516351:1264479014:=69c69%0a%3c   'Comment Approved?' => '',%0a---%0a>   'Comment Status:' => '',%0a
-host:1264516351=127.0.0.1
-author:1264479014=daveg
-diff:1264479014:1264478703:=69c69%0a%3c   'Comment Status:' => '',%0a---%0a>   'Comment Status' => '',%0a
-host:1264479014=127.0.0.1
-author:1264478703=daveg
-diff:1264478703:1264285495:=69,71d68%0a%3c   'Comment Status' => '',%0a%3c   'true' => '',%0a%3c   'false' => '',%0a
-host:1264478703=127.0.0.1
-author:1264285495=daveg
-diff:1264285495:1264284844:=107c107%0a%3c   '%25d-%25m-%25Y %25H:%25M' => '',  #date entry%0a---%0a>   '%25d-%25m-%25Y( %25H:%25M)?' => '',  #date entry%0a
-host:1264285495=127.0.0.1
-author:1264284844=daveg
-diff:1264284844:1261152317:=107c107%0a%3c   '%25d-%25m-%25Y( %25H:%25M)?' => '',  #date entry%0a---%0a>   '%25d-%25m-%25Y %25H:%25M' => '',  #date entry%0a
-host:1264284844=127.0.0.1

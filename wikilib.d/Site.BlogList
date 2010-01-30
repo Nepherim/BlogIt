@@ -7,15 +7,6 @@ ctime=1231905189
 host=127.0.0.1
 name=Site.BlogList
 rev=18
-targets=Blog.Test-periods-in-title,Blog.Quoted-tags,Blog.Odder-n-ender,Blog.Odds-n-Ends,Blog.Test-readonly-comments-1,Blog.Enlighten-PmWiki-Skin-Conversion,Blog.3-Future-dated-STICKY,Blog.Test-auto-populate-tag-pages-with-PTV-1,Blog.T4555v4wvv4,Blog.1-Published-future-entry,Blog.2-Draft-future-entry,Blog.Heres-another-future,Blog.Last-test-in-the-future,Blog.Display-in-the-future,Blog.Another-FUTURE-POST,Blog.Test-future-date-with-close-expiration,Blog.Test-future-dated-but-DRAFT,Blog.Some-blog-title,Blog.Qqq1,Blog.Qqqqqqqqww,Blog.Qqqqqqqq,Blog.Werwe,Blog.Erwerw,Blog.Dsdfsdfsd,Blog.Tag-test-with-space-1,Blog.Test-no-category,Blog.No-category-page-created-3,Blog.No-category-page-created-9,Blog.No-category-page-created8,Blog.No-category-page-created-6,Blog.No-category-page-created-5,Blog.No-category-page-created-4,Blog.BlogIt,Blog.A-is-a-title,Blog.Set-IFRAME-height-based-on-size-of-remotely-loaded-content,Blog.Google-Wave,Blog.Featred-numero-2,Blog.Second-Featured,Blog.4321,Blog.12341,Blog.How-to-install-AdSweep-for-Google-Chrome,Blog.Testwqwqwqwqwq,Blog.Test-1f-no-hyphens,Blog.Test-1e-no-hyphens,Blog.Test-1d-no-hyphens,Blog.Test-1c-with-no-hyphens,Blog.Test-1b-with-no-hyphens,Blog.New-test-with-no-hyphens,Blog.Test-again-with-no-hyphens,Blog.Test-new-blog-with-no-hyphens,Blog.Skin-Number-2,Blog.Check-for-a-valid-date-in-PHP,Blog.NewTitle,Blog.Blogwwntry-3,Blog.Blogeentry-3,Blog.Unix-time-dooms-us-all-and-the-world-will-end,Blog.Test-Pmwiki-markups,Blog.Kkkkkkk,Blog.Jquery-browser-chess,Blog.Lightweight-php-picasa-api,Blog.This-message-has-been-rejected,Blog.Puretext,Blog.Matching-brackets-puzzler,Blog.Lclock,Blog.Allowing-uploads-of-all-file-types-in-drupal,Blog.Using-subversion-on-a-pre-existing-directory,Blog.BlogUsing-Subversion-on-a-pre-existing-directory,Blog.Firefox-3-beta-3-working-for-me,Blog.Running-a-verizon-actiontec-behind-smoothwall,Blog.Jqtoc,Blog.Lyceum-blog-list-widget,Blog.Installing-lyceum-with-clean-urls
+targets=
 text=(:includesection "#blog-yearly-archive-pagelist blogid={(bi_ifnull "{$bi_BlogId}" blog1)} status=$[publish],$[sticky]":)
 time=1264284021
-author:1264284021=daveg
-diff:1264284021:1263961291:=1c1%0a%3c (:includesection "#blog-yearly-archive-pagelist blogid={(bi_ifnull "{$bi_BlogId}" blog1)} status=$[publish],$[sticky]":)%0a\ No newline at end of file%0a---%0a> (:includesection "#blog-yearly-archive-pagelist blogid={(bi_ifnull "{$bi_BlogId}" blog1)} status=$[publish]":)%0a\ No newline at end of file%0a
-host:1264284021=127.0.0.1
-author:1263961291=daveg
-diff:1263961291:1263961054:=1c1,2%0a%3c (:includesection "#blog-yearly-archive-pagelist blogid={(bi_ifnull "{$bi_BlogId}" blog1)} status=$[publish]":)%0a\ No newline at end of file%0a---%0a> {$bi_BlogId}%0a> (:includesection "#blog-yearly-archive-pagelist blogid=blog1 status=$[publish]":)%0a\ No newline at end of file%0a
-host:1263961291=127.0.0.1
-author:1263961054=daveg
-diff:1263961054:1260293300:=1d0%0a%3c {$bi_BlogId}%0a
-host:1263961054=127.0.0.1
