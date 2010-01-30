@@ -22,7 +22,7 @@ SDV($bi_DefaultCommentStatus, (IsEnabled($EnablePostCaptchaRequired) ?'true' :'f
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_EntriesPerPage, 15);
 SDV($bi_DisplayFuture, 'false');
-SDVA($bi_BlogList, array('blog1'));  #Ensure 'blog1' key remains; you can add other blogs.
+SDVA($bi_BlogList, array('blog1'));  #Ensure 'blog1' key remains; you can add keys for other blogs.
 SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
 
 # ----------------------------------------
@@ -41,11 +41,11 @@ SDVA($bi_CommentType, array('open', 'readonly', 'none'));
 SDVA($bi_CommentApprovalType, array('true', 'false'));
 SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
-	"/'/" => '',														# strip single-quotes
-	"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,	# convert everything else to hyphen
-	"/(^\\" .$bi_TitleSeparator ."+)|(\\" .$bi_TitleSeparator ."+\$)/" => '',            					# trim hyphens front and back
-	"/\\" .$bi_TitleSeparator ."{2,}/" => $bi_TitleSeparator,							# trim duplicate hyphens
-	($Charset=='UTF-8' ?"/^([\\xc0-\\xdf].)/e" :'//') => ($Charset=='UTF-8' ?"utf8toupper('$1')" :''),  # uppercase first letter
+	"/'/" => '',  #strip single-quotes
+	"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,  #convert everything else to hyphen
+	"/(^\\" .$bi_TitleSeparator ."+)|(\\" .$bi_TitleSeparator ."+\$)/" => '',  #trim hyphens front and back
+	"/\\" .$bi_TitleSeparator ."{2,}/" => $bi_TitleSeparator,  #trim duplicate hyphens
+	($Charset=='UTF-8' ?"/^([\\xc0-\\xdf].)/e" :'//') => ($Charset=='UTF-8' ?"utf8toupper('$1')" :''),  #uppercase first letter
 	"/^([a-z])/e" => "strtoupper('$1')"
 ));
 SDVA($bi_FixPageTitlePatterns, array(
