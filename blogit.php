@@ -266,7 +266,7 @@ global $_GET,$GroupHeaderFmt;
 function bi_HandleProcessForm ($src, $auth='read'){
 global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$PmFormPostPatterns,$ROSPatterns,$CategoryGroup,
 	$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$Now,$bi_OldHandleActions,
-	$EnablePost,$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern;
+	$EnablePost,$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired;
 
 	$bi_ResetPmFormField = array();
 	if (@$_POST['target']=='blogit-entry' && @$_POST['save']){
@@ -294,6 +294,7 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$PmFormP
 		$_POST['ptv_entrytitle'] = (empty($title) ?$pg :$_POST['ptv_entrytitle']);  #use either the url or the original title (not the clean title)
 		$_POST['ptv_entryurl'] = MakePageName($pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .( empty($pg) ?$title :$pg) );
 		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']);
+		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_entryauthor'];
 
 	#only set defaults if we're not editing the comment
 	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']=='blogit-comments'){
@@ -302,6 +303,7 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$PmFormP
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
 		$_POST['ptv_commentapproved'] = ($ce ?$_POST['ptv_commentapproved'] :(bi_Auth('comment-approve,blogit-admin '.$pagename) ?'true' :$bi_DefaultCommentStatus));
 		$_POST['ptv_commentdate'] = ($ce ?$_POST['ptv_commentdate'] :$Now);
+		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_commentauthor'];
 	}
 	$bi_OldHandleActions['pmform']($src, $auth);
 }
