@@ -112,14 +112,14 @@ SDV($HandleActions['blogitunapprove'], 'bi_HandleUnapproveComment'); SDV($Handle
 SDV($HandleActions['blogitcommentedit'], 'bi_HandleEditComment'); SDV($HandleAuth['blogitcommentedit'], 'comment-edit');
 SDV($HandleActions['blogitcommentdelete'], 'bi_HandleDeleteComment'); SDV($HandleAuth['blogitcommentdelete'], 'comment-edit');
 SDV($HandleActions['blogitupgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['blogitupgrade'], 'admin');
-# Cannot be done as part of handler due to scoping issues when include done in function
-if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths['convert']);
 
 # ----------------------------------------
 # - Authentication
 SDV($AuthFunction,'PmWikiAuth');
 $bi_AuthFunction = $AuthFunction;
 $AuthFunction = 'bi_BlogItAuth';
+# Cannot be done as part of handler due to scoping issues when include done in function
+if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths['convert']);
 
 # Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_-\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';
