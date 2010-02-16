@@ -5,7 +5,7 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2010-30-1';
+$RecipeInfo['BlogIt']['Version'] = '2010-16-2';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
 
 # ----------------------------------------
@@ -27,7 +27,7 @@ SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit
 
 # ----------------------------------------
 # - Advanced user settings
-SDVA($bi_Pages, array('auth' => $bi_DefaultGroup .'.' .$DefaultName));  #edit/admin users need edit access to this page if not using AuthUser
+SDVA($bi_Pages, array('auth' => $bi_DefaultGroup .'.' .$DefaultName));  #edit/admin users need edit access to this page if not using AuthUser (page does not even need to exist)
 SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');  #use to show all pages in a specific category when browsing a Tag group
 SDV($bi_CommentSideBarLen, 60);
 SDV($bi_TagSeparator, ', ');
@@ -162,6 +162,7 @@ Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
 	"blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
+$SaveAttrPatterns['/\\(:includesection\\s.*?:\\)/i'] = ' ';  #prevents include sections becoming part of page targets list
 if (IsEnabled($EnableGUIButtons)){
 	if ($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry') || $pagename == $bi_Pages['new_entry'])
 		include_once($bi_Paths['guiedit']);  #PmWiki only includes this automatically if action=edit.
@@ -324,7 +325,7 @@ function blogitMU_intro($options, $text){
 	return $found;
 }
 function blogitMU_list($name, $text){
-	list($var, $label) = split('/', $text,2);
+	list($var, $label) = explode('/', $text,2);
 	$i = count($GLOBALS[$var]);
 	foreach ($GLOBALS[$var] as $k)
 		$t .= '(:input '. ($i==1 ?'hidden' :'select') .' name=' .$name .' value="' .$k .'" label="' .XL($k) .'" id="' .$var .'":)';
@@ -347,7 +348,7 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 	$args = ParseArgs($opt);  #$args['p'], args[]['s']
 	$dateFmt = array('long'=>'%B %d, %Y, at %I:%M %p', 'short'=>'%B %d, %Y', 'entry'=>'%d-%m-%Y( %H:%M)?');
 	switch ($fn) {
-		case 'date': return ME_ftime(XL($dateFmt[$args['fmt']]), '@'.$txt);
+		case 'date': return ME_ftime(XL(array_key_exists($args['fmt'],$dateFmt) ?$dateFmt[$args['fmt']] :$args['fmt']), '@'.$txt);
 		case 'intro': return '(:div999991 class="'.$args['class'].'":)' .blogitMU_intro('', $txt) .'%blogit-more%'. blogitMU_more($args['page'], $txt) ."%%\n(:div99991end:)";
 		case 'author': return ($txt>''
 			?$args['pre_text'] .(PageExists(MakePageName($pagename, "$bi_AuthorGroup/$txt")) ?"[[$bi_AuthorGroup/$txt]]" :$txt) .$args['post_text']
@@ -450,8 +451,7 @@ global $pagename, $action, $bi_AuthFunction, $bi_CommentsEnabled, $bi_CommentGro
 		$level = 'read';
 		$authprompt = false;
 	}
-	$page=$bi_AuthFunction($pn, $level, $authprompt, $since);
-	return $page;
+	return $bi_AuthFunction($pn, $level, $authprompt, $since);
 }
 # Called as part of markup condition. Determine whether the current user is authorized for an action
 function bi_Auth($condparm){  #condparm: comma separated list of actions, and optional space separated pagename -- "blog-new,blog-edit Blog.This-entry"
@@ -464,7 +464,6 @@ global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_Pages, $bi_AuthFunct
 			||($pagename==$bi_Pages['new_entry'] && in_array('blog-new',$action)) )
 			?$bi_Pages['auth']
 			:(isset($pn)) ?$pn :$pagename;
-
 	foreach ($action as $a){
 		foreach ($bi_Auth as $role => $action_list){
 			if ( $a=='*' || in_array($a, $action_list) ){  #Is the action assigned to a role?
