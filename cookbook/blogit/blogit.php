@@ -99,11 +99,12 @@ SDV($HTMLHeaderFmt['jquery-validate.js'], '<script type="text/javascript" src="'
 $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
 	var BlogIt={};
 	BlogIt.xl=[];
-	BlogIt.xl["confirm delete"]="'. XL('Are you sure you want to delete?').'";
+	BlogIt.xl["Are you sure you want to delete?"]="'. XL('Are you sure you want to delete?').'";
 	BlogIt.xl["Yes"]="'. XL('Yes').'";
 	BlogIt.xl["No"]="'. XL('No').'";
 	BlogIt.xl["approve"]="'. XL('approve').'";
 	BlogIt.xl["unapprove"]="'. XL('unapprove').'";
+	BlogIt.xl["Unapproved Comments:"]="'. XL('Unapproved Comments:').'";
 </script>';
 $HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
 
@@ -128,7 +129,8 @@ SDV($HandleActions['blogitadmin'], 'bi_HandleAdmin'); SDV($HandleAuth['blogitadm
 SDV($HandleActions['blogitapprove'], 'bi_HandleApproveComment'); SDV($HandleAuth['blogitapprove'], 'comment-approve');
 SDV($HandleActions['blogitunapprove'], 'bi_HandleUnapproveComment'); SDV($HandleAuth['blogitunapprove'], 'comment-approve');
 SDV($HandleActions['blogitcommentedit'], 'bi_HandleEditComment'); SDV($HandleAuth['blogitcommentedit'], 'comment-edit');
-SDV($HandleActions['blogitcommentdelete'], 'bi_HandleDeleteComment'); SDV($HandleAuth['blogitcommentdelete'], 'comment-edit');
+SDV($HandleActions['blogitcommentdelete'], 'bi_HandleDelete'); SDV($HandleAuth['blogitcommentdelete'], 'blog-edit');
+SDV($HandleActions['bi_de'], 'bi_HandleDelete'); SDV($HandleAuth['bi_de'], 'comment-edit');
 SDV($HandleActions['blogitupgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['blogitupgrade'], 'admin');
 
 # ----------------------------------------
@@ -177,7 +179,7 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_
 Markup('blogit', 'fulltext', '/\(:blogit (list|cleantext)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
 Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
-	'(date|intro|author|tags|edit|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commenttext|commentid)'.
+	'(date|intro|author|tags|edit|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commenttext|commentid)'.
 	'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
 	"blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
@@ -327,13 +329,15 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$PmFormP
 	}
 	$bi_OldHandleActions['pmform']($src, $auth);
 }
-function bi_HandleDeleteComment($src, $auth='comment-edit') {  #action=blogitcommentdelete
-global $bi_CommentGroup,$WikiDir,$Group,$LastModFile,$_GET;
-	if ($Group == $bi_CommentGroup && bi_Auth($auth.' '.$src) && RetrieveAuthPage($src,'read',0, READPAGE_CURRENT)){
+function bi_HandleDelete($src, $auth='comment-edit') {  #action=blogitcommentdelete
+global $bi_EntryType,$action,$bi_CommentGroup,$WikiDir,$Group,$LastModFile,$_GET;
+	if ( (($action=='blogitcommentdelete' && $bi_EntryType=='comment') || ($action=='bi_de' && $bi_EntryType=='blog'))
+		&& (bi_Auth($auth.' '.$src) && RetrieveAuthPage($src,'read',0, READPAGE_CURRENT)) ){
 		$WikiDir->delete($src);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
-	}
-	bi_Redirect($_GET['bi_mode'], array('result'=>'success'));
+		bi_Redirect($_GET['bi_mode'], array('result'=>'success'));
+	} else
+		bi_Redirect($_GET['bi_mode'], array('result'=>'fail'));
 }
 
 # ----------------------------------------
@@ -368,7 +372,7 @@ global $bi_CommentSideBarLen, $pagename, $bi_UnstyleFn;
 function blogitSkinMU($fn, $opt, $txt){
 global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern;
 	$args = ParseArgs($opt);  #$args['p'], args[]['s']
-	$dateFmt = array('long'=>'%B %d, %Y, at %I:%M %p', 'short'=>'%B %d, %Y', 'entry'=>'%d-%m-%Y( %H:%M)?');
+	$dateFmt = array('long'=>'%B %d, %Y, at %I:%M %p', 'short'=>'%B %d, %Y', 'entry'=>'%d-%m-%Y (%H:%M)');
 	switch ($fn) {
 		case 'date': return ME_ftime(XL(array_key_exists($args['fmt'],$dateFmt) ?$dateFmt[$args['fmt']] :$args['fmt']), '@'.$txt);
 		case 'intro': return '(:div999991 class="'.$args['class'].'":)' .blogitMU_intro('', $txt) .'%blogit-more%'. blogitMU_more($args['page'], $txt) ."%%\n(:div99991end:)";
@@ -376,6 +380,7 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 			?$args['pre_text'] .(PageExists(MakePageName($pagename, "$bi_AuthorGroup/$txt")) ?"[[$bi_AuthorGroup/$txt]]" :$txt) .$args['post_text']
 			:'');
 		case 'edit': return (bi_Auth('blog-edit '.$args['page']) ?$args['pre_text'] .'[['.$args['page'].'?action=blogitedit | '.$txt.']]'.$args['post-text'] :'');
+		case 'delete': return (bi_Auth('blog-edit '.$args['page']) ?$args['pre_text'] .'[['.$args['page'].'?action=bi_de | '.$txt.']]'.$args['post-text'] :'');
 		case 'tags': return ($txt>'' ?$args['pre_text'].bi_SaveTags('', html_entity_decode($txt, ENT_QUOTES), $bi_TagSeparator).$args['post_text'] :'');
 		case 'commentcount': return ($args['status']!='none' && $bi_CommentsEnabled
 			?$args['pre_text'].'[['.$args['group'].'.'.$args['name'].'#commentblock | '.
