@@ -1,8 +1,18 @@
 jQuery(function($) {
+	var target = $('.wikimessage');
+	if (target.length){
+		$('html,body').animate({scrollTop: target.offset().top-50}, 700);
+	}
+
 	$("#commentblock form").validate({
 		rules: {
 		  ptv_commentauthor: "required",
 		  ptv_email: {required: true, email: true}
+		}
+	});
+	$("#wikiedit form[action*=BlogIt-NewEntry]").validate({
+		rules: {
+		  ptv_entrytitle: "required"
 		}
 	});
 
@@ -10,22 +20,12 @@ jQuery(function($) {
 		e.preventDefault();
 		BlogIt.fn.ajax(e.target,BlogIt.fn.commentStatus);
 	});
-	$("a[href*=blogitcommentdelete]").click(function(e){
-		e.preventDefault();
-		$("<div/>", {
-		  id: "dialog",
-		  text: "Are you sure you want to delete this comment?",
-		}).appendTo("body");
-		$("#dialog").dialog({
-			resizable: false,
-			modal: true,
-			overlay: {
-				backgroundColor: 'red',
-				opacity: 0.5
-			},
-			autoOpen: false
-		});
-		BlogIt.fn.showDialog(e,BlogIt.fn.commentRemove);
+
+	$("a[href*=blogitcommentdelete]").click( function(e){
+		BlogIt.fn.dialogDelete(e,BlogIt.fn.commentRemove)
+	});
+	$("a[href*=action=bi_de]").click( function(e){
+		BlogIt.fn.dialogDelete(e,BlogIt.fn.blogRemove)
 	});
 
 });
@@ -41,6 +41,23 @@ BlogIt.fn = function(){
 	return {
 		xl: function(t){
 			return (BlogIt.xl[t] || t);
+		},
+		dialogDelete: function(e,fn){
+			e.preventDefault();
+			$("<div/>", {
+			  id: "dialog",
+			  text: BlogIt.fn.xl("Are you sure you want to delete?"),
+			}).appendTo("body");
+			$("#dialog").dialog({
+				resizable: false,
+				modal: true,
+				overlay: {
+					backgroundColor: 'red',
+					opacity: 0.5
+				},
+				autoOpen: false
+			});
+			BlogIt.fn.showDialog(e,fn);
 		},
 		showDialog: function(e,fn){
 			var btn={};
@@ -60,10 +77,11 @@ BlogIt.fn = function(){
 				success: function(){ fn(o); }
 			});
 		},
+		blogRemove: function(o){
+			$($(o).parents('tr')[0]).fadeOut(500, function(){ $(this).remove(); });
+		},
 		commentRemove: function(o){
-			$(o).parents('li').fadeOut(500, function(){
-				$(o).remove();
-			});
+			$($(o).parents('li')[0]).fadeOut(500, function(){ $(this).remove(); });
 		},
 		commentStatus: function(o){
 			var bg = $(o).parents('li').css("backgroundColor");
