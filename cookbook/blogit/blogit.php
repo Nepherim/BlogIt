@@ -90,6 +90,24 @@ $AsSpacedFunction = 'AsSpacedHyphens';  #[1]
 $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>"; #[1]
 
 # ----------------------------------------
+# - Javascript
+SDV($HTMLHeaderFmt['jquery-ui.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui/ui-lightness/jquery-ui.custom.css" type="text/css" />');
+SDV($HTMLHeaderFmt['blogit.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />');
+SDV($HTMLHeaderFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>');
+SDV($HTMLHeaderFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.min.js"></script>');
+SDV($HTMLHeaderFmt['jquery-validate.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validate.pack.js"></script>');
+$HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
+	var BlogIt={};
+	BlogIt.xl=[];
+	BlogIt.xl["confirm delete"]="'. XL('Are you sure you want to delete?').'";
+	BlogIt.xl["Yes"]="'. XL('Yes').'";
+	BlogIt.xl["No"]="'. XL('No').'";
+	BlogIt.xl["approve"]="'. XL('approve').'";
+	BlogIt.xl["unapprove"]="'. XL('unapprove').'";
+</script>';
+$HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
+
+# ----------------------------------------
 # - PmForms Setup
 include_once($bi_Paths['pmform']);
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
@@ -146,24 +164,6 @@ if ( (isset($bi_EntryType)||in_array($pagename,$bi_Pages)) && bi_Auth('*') ){
 		setcookie($bi_Cookie.'back-1', $bi_History[0], 0, '/'); #set to current url
 	}
 }
-
-# ----------------------------------------
-# - Javascript
-SDV($HTMLHeaderFmt['jquery-ui.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui/ui-lightness/jquery-ui.custom.css" type="text/css" />');
-SDV($HTMLHeaderFmt['blogit.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />');
-SDV($HTMLHeaderFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>');
-SDV($HTMLHeaderFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.min.js"></script>');
-SDV($HTMLHeaderFmt['jquery-validate.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validate.pack.js"></script>');
-$HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
-	var BlogIt={};
-	BlogIt.xl=[];
-	BlogIt.xl["confirm delete"]="'. XL('Are you sure you want to delete?').'";
-	BlogIt.xl["Yes"]="'. XL('Yes').'";
-	BlogIt.xl["No"]="'. XL('No').'";
-	BlogIt.xl["approve"]="'. XL('approve').'";
-	BlogIt.xl["unapprove"]="'. XL('unapprove').'";
-</script>';
-$HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
 
 # ----------------------------------------
 # - Pagination
