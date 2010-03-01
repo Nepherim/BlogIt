@@ -121,10 +121,12 @@ $AuthFunction = 'bi_BlogItAuth';
 # Cannot be done as part of handler due to scoping issues when include done in function
 if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths['convert']);
 
+# ----------------------------------------
+# - Cookies
 # Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_-\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';
 $pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
-$bi_EntryType = PageTextVar($pagename,'entrytype');  #PageVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
+$bi_EntryType = PageTextVar($pagename,'entrytype');  #PageTextVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 bi_debugLog('entryType: '.$bi_EntryType);
 list($Group, $Name) = explode('.', $pagename);
 if ($pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"'.htmlentities(stripmagic($_GET['blogid'])).'"';
@@ -144,6 +146,24 @@ if ( (isset($bi_EntryType)||in_array($pagename,$bi_Pages)) && bi_Auth('*') ){
 		setcookie($bi_Cookie.'back-1', $bi_History[0], 0, '/'); #set to current url
 	}
 }
+
+# ----------------------------------------
+# - Javascript
+SDV($HTMLHeaderFmt['jquery-ui.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui/ui-lightness/jquery-ui.custom.css" type="text/css" />');
+SDV($HTMLHeaderFmt['blogit.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />');
+SDV($HTMLHeaderFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>');
+SDV($HTMLHeaderFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.min.js"></script>');
+SDV($HTMLHeaderFmt['jquery-validate.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validate.pack.js"></script>');
+$HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
+	var BlogIt={};
+	BlogIt.xl=[];
+	BlogIt.xl["confirm delete"]="'. XL('Are you sure you want to delete?').'";
+	BlogIt.xl["Yes"]="'. XL('Yes').'";
+	BlogIt.xl["No"]="'. XL('No').'";
+	BlogIt.xl["approve"]="'. XL('approve').'";
+	BlogIt.xl["unapprove"]="'. XL('unapprove').'";
+</script>';
+$HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
 
 # ----------------------------------------
 # - Pagination
@@ -237,7 +257,7 @@ function bi_HandleUnapproveComment($src, $auth='comment-approve'){
 	bi_HandleApproveComment($src,$auth,false);
 }
 function bi_HandleApproveComment($src, $auth='comment-approve', $approve=true){
-global $_POST,$Now,$ChangeSummary;
+global $_POST,$Now,$ChangeSummary,$_GET;
 	if (bi_Auth($auth)){
 		if ($src)  $old = RetrieveAuthPage($src,'read',0, READPAGE_CURRENT);
 		if($old){
@@ -250,7 +270,7 @@ global $_POST,$Now,$ChangeSummary;
 			PostPage($src,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
 		}
 	}
-	bi_Redirect();
+	bi_Redirect($_GET['bi_mode'], array('result'=>'success'));
 }
 # Allow URL access to sections within $bi_TemplateList, including passed parameters.
 function bi_HandleAdmin($src, $auth='blogit-admin'){
@@ -308,12 +328,12 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$PmFormP
 	$bi_OldHandleActions['pmform']($src, $auth);
 }
 function bi_HandleDeleteComment($src, $auth='comment-edit') {  #action=blogitcommentdelete
-global $bi_CommentGroup,$WikiDir,$Group,$LastModFile;
+global $bi_CommentGroup,$WikiDir,$Group,$LastModFile,$_GET;
 	if ($Group == $bi_CommentGroup && bi_Auth($auth.' '.$src) && RetrieveAuthPage($src,'read',0, READPAGE_CURRENT)){
 		$WikiDir->delete($src);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
 	}
-	bi_Redirect();
+	bi_Redirect($_GET['bi_mode'], array('result'=>'success'));
 }
 
 # ----------------------------------------
@@ -480,8 +500,9 @@ global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_Pages, $bi_AuthFunct
 # - Internal Functions
 # ----------------------------------------
 # Direct back to the refering page or $src
-function bi_Redirect($src=''){
+function bi_Redirect($src='', $result){
 global $bi_History, $pagename;
+	if ($src=='ajax')  { echo (json_encode($result)); exit; }
 	$r = FmtPageName('$PageUrl', (!empty($src)||empty($bi_History[1]) ?bi_BasePage(($src>'' ?$src :$pagename)) :$bi_History[1]));
 	header("Location: $r");
 	header("Content-type: text/html");
