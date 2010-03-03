@@ -57,7 +57,8 @@ SDVA($bi_Paths,array('pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/
 # - Internal Use Only
 # ----------------------------------------
 SDV($BlogIt['debug'],false); bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
-SDVA($bi_Pages, array('admin'=>$SiteGroup .'.BlogIt-Admin', 'new_entry'=>$SiteGroup .'.BlogIt-NewEntry', 'blog_list'=>$SiteGroup .'.BlogList'));
+SDVA($bi_Pages, array('admin'=>$SiteGroup.'.BlogIt-Admin', 'new_entry'=>$SiteGroup.'.BlogIt-NewEntry', 'blog_list'=>$SiteGroup.'.BlogList',
+	'blocklist'=>$SiteAdminGroup.'.Blocklist'));
 SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
 SDVA($bi_PageType, array('blog'));  #Comment is not in PageType list, since we don't want bloggers to be able to select 'comment' types.
 SDV($FPLTemplatePageFmt, array(
@@ -131,6 +132,7 @@ SDV($HandleActions['blogitunapprove'], 'bi_HandleUnapproveComment'); SDV($Handle
 SDV($HandleActions['blogitcommentedit'], 'bi_HandleEditComment'); SDV($HandleAuth['blogitcommentedit'], 'comment-edit');
 SDV($HandleActions['blogitcommentdelete'], 'bi_HandleDelete'); SDV($HandleAuth['blogitcommentdelete'], 'blog-edit');
 SDV($HandleActions['bi_de'], 'bi_HandleDelete'); SDV($HandleAuth['bi_de'], 'comment-edit');
+SDV($HandleActions['bi_bip'], 'bi_BlockIP'); SDV($HandleAuth['bi_bip'], 'comment-approve');
 SDV($HandleActions['blogitupgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['blogitupgrade'], 'admin');
 
 # ----------------------------------------
@@ -179,7 +181,7 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_
 Markup('blogit', 'fulltext', '/\(:blogit (list|cleantext)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
 Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
-	'(date|intro|author|tags|edit|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commenttext|commentid)'.
+	'(date|intro|author|tags|edit|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentblock|commenttext|commentid)'.
 	'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
 	"blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
@@ -330,7 +332,7 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$PmFormP
 	$bi_OldHandleActions['pmform']($src, $auth);
 }
 function bi_HandleDelete($src, $auth='comment-edit') {  #action=blogitcommentdelete
-global $bi_EntryType,$action,$bi_CommentGroup,$WikiDir,$Group,$LastModFile,$_GET;
+global $bi_EntryType,$action,$WikiDir,$LastModFile,$_GET;
 	if ( (($action=='blogitcommentdelete' && $bi_EntryType=='comment') || ($action=='bi_de' && $bi_EntryType=='blog'))
 		&& (bi_Auth($auth.' '.$src) && RetrieveAuthPage($src,'read',0, READPAGE_CURRENT)) ){
 		$WikiDir->delete($src);
@@ -338,6 +340,35 @@ global $bi_EntryType,$action,$bi_CommentGroup,$WikiDir,$Group,$LastModFile,$_GET
 		bi_Redirect($_GET['bi_mode'], array('result'=>'success'));
 	} else
 		bi_Redirect($_GET['bi_mode'], array('result'=>'fail'));
+}
+function bi_BlockIP($src, $auth='comment-approve') {  #action=bi_bip
+global $bi_EntryType,$action,$_GET,$_POST,$bi_Pages;
+	if ($bi_EntryType=='comment' && bi_Auth($auth.' '.$src)){
+		if ($_GET['bi_ip']>''){
+			Lock(2);
+			$bl = FmtPageName($bi_Pages['blocklist'],$src);
+			$old = RetrieveAuthPage($bl, 'read');
+			if ($old){
+				if (!preg_match('/\nblock:' .preg_replace(array('/\./','/\*/'),array('\\.','\\*'),$_GET['bi_ip']) .'\n/', $old['text'])) {
+					bi_debugLog('Not Found');
+					$new = $old;
+					if (substr($new['text'],-1,1) != "\n") $new['text'] .= "\n";
+					$new['text'] .= 'block:'.$_GET['bi_ip'] ."\n";
+					$_POST['post'] = 'y';
+					PostPage($bl,$old,$new);
+					bi_Redirect( $_GET['bi_mode'], array('result'=>'success', 'ip'=>$_GET['bi_ip']) );
+				}else  bi_debugLog('IP '.$_GET['bi_ip'].' already being blocked');
+			}else  bi_debugLog('Cannot edit '.$bl);
+
+		}else{
+			bi_debugLog('No IP received');
+			$ip='';
+			$page = RetrieveAuthPage($src,'read',0, READPAGE_CURRENT);
+			if ($page)  $ip = @$page['host'];
+			bi_debugLog('IP: '.$ip);
+			bi_Redirect( $_GET['bi_mode'], array('result'=>($ip>'' ?'success' :'fail'), 'ip'=>$ip, 'msg'=>($ip>'' ?'' :'Unable to determine IP.')) );
+		}
+	}
 }
 
 # ----------------------------------------
@@ -393,6 +424,7 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 			:'');
 		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=blogitcommentedit | $[edit]]]'.$args['post_text'] :'');
 		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=blogitcommentdelete | $[delete]]]'.$args['post_text'] :'');
+		case 'commentblock': return (bi_Auth('comment-approve '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_bip | $[block]]]'.$args['post_text'] :'');
 		case 'commenttext': return ( strtr($txt, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />', "\x0B" => '<br />')) );
 		case 'commentid': {
 			$x = preg_match($bi_CommentPattern, $txt, $m );
