@@ -93,10 +93,11 @@ $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkTex
 # ----------------------------------------
 # - Javascript
 SDV($HTMLHeaderFmt['jquery-ui.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui/ui-lightness/jquery-ui.custom.css" type="text/css" />');
+SDV($HTMLHeaderFmt['jquery-validity.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.validity.css" type="text/css" />');
 SDV($HTMLHeaderFmt['blogit.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />');
 SDV($HTMLHeaderFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>');
 SDV($HTMLHeaderFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.min.js"></script>');
-SDV($HTMLHeaderFmt['jquery-validate.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validate.pack.js"></script>');
+SDV($HTMLHeaderFmt['jquery-validity.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.pack.js"></script>');
 $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
 	var BlogIt={};
 	BlogIt.xl=[];
