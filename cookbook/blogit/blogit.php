@@ -36,7 +36,7 @@ SDV($bi_EnablePostDirectives, true);  #Set to true to allow posting of directive
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDV($bi_Cookie, $CookiePrefix.'blogit-');
 SDV($bi_UnstyleFn, '');
-SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));
+SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));  #Needed if skin is set in group config, which is processed after main config
 SDVA($bi_StatusType, array('draft', 'publish', 'sticky'));
 SDVA($bi_CommentType, array('open', 'readonly', 'none'));
 SDVA($bi_CommentApprovalType, array('true', 'false'));
@@ -335,6 +335,7 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$PmFormP
 	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']=='blogit-comments'){
 		$ce=preg_match($bi_CommentPattern,$pagename) && bi_Auth('comment-edit');  #editing an existing comment?
 		$_POST['ptv_entrytype'] = 'comment';
+		$_POST['ptv_commenttext'] = rtrim($_POST['ptv_commenttext'],"\n\r\x0B")."\n";  #ensures markup is closed correctly (eg, links at end of comment)
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
 		$_POST['ptv_commentapproved'] = ($ce ?$_POST['ptv_commentapproved'] :(bi_Auth('comment-approve,blogit-admin '.$pagename) ?'true' :$bi_DefaultCommentStatus));
 		$_POST['ptv_commentdate'] = ($ce ?$_POST['ptv_commentdate'] :$Now);
