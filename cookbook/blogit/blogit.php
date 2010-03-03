@@ -36,6 +36,7 @@ SDV($bi_EnablePostDirectives, true);  #Set to true to allow posting of directive
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDV($bi_Cookie, $CookiePrefix.'blogit-');
 SDV($bi_UnstyleFn, '');
+SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));
 SDVA($bi_StatusType, array('draft', 'publish', 'sticky'));
 SDVA($bi_CommentType, array('open', 'readonly', 'none'));
 SDVA($bi_CommentApprovalType, array('true', 'false'));
@@ -59,10 +60,10 @@ SDVA($bi_Paths,array('pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/
 SDV($BlogIt['debug'],false); bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
 SDVA($bi_Pages, array('admin'=>$SiteGroup.'.BlogIt-Admin', 'new_entry'=>$SiteGroup.'.BlogIt-NewEntry', 'blog_list'=>$SiteGroup.'.BlogList',
 	'blocklist'=>$SiteAdminGroup.'.Blocklist'));
-SDV($bi_TemplateList, (isset($Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
+SDV($bi_TemplateList, (isset($bi_Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$bi_Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
 SDVA($bi_PageType, array('blog'));  #Comment is not in PageType list, since we don't want bloggers to be able to select 'comment' types.
 SDV($FPLTemplatePageFmt, array(
-	'{$FullName}', (isset($Skin)?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate',
+	'{$FullName}', ($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$bi_Skin :''), '{$SiteGroup}.BlogIt-CoreTemplate',
 	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'));
 SDV($bi_CommentPattern, '/^' .$bi_CommentGroup .'[\/\.](.*?)-(.*?)-(\d{8}T\d{6}){1}\z/');
 SDVA($SearchPatterns['blogit-comments'], array('comments' => $bi_CommentPattern));
@@ -98,15 +99,21 @@ SDV($HTMLHeaderFmt['blogit.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'
 SDV($HTMLHeaderFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>');
 SDV($HTMLHeaderFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.min.js"></script>');
 SDV($HTMLHeaderFmt['jquery-validity.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.pack.js"></script>');
+SDV($HTMLHeaderFmt['jquery-showmessage.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showMessage.min.js"></script>');
 $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
 	var BlogIt={};
-	BlogIt.xl=[];
+	BlogIt.xl={};
 	BlogIt.xl["Are you sure you want to delete?"]="'. XL('Are you sure you want to delete?').'";
 	BlogIt.xl["Yes"]="'. XL('Yes').'";
 	BlogIt.xl["No"]="'. XL('No').'";
 	BlogIt.xl["approve"]="'. XL('approve').'";
 	BlogIt.xl["unapprove"]="'. XL('unapprove').'";
 	BlogIt.xl["Unapproved Comments:"]="'. XL('Unapproved Comments:').'";
+	BlogIt.xl["Commenter IP: "]="'. XL('Commenter IP: ').'";
+	BlogIt.xl["Enter the IP to block:"]="'. XL('Enter the IP to block:').'";
+	BlogIt.xl["Submit"]="'. XL('Submit').'";
+	BlogIt.xl["Cancel"]="'. XL('Cancel').'";
+	BlogIt.xl["Either enter a Blog Title or a Pagename"]="'. XL('Either enter a Blog Title or a Pagename').'";
 </script>';
 $HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
 
@@ -114,7 +121,7 @@ $HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .
 # - PmForms Setup
 include_once($bi_Paths['pmform']);
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
-array_unshift ($PmFormTemplatesFmt,	(isset($Skin) ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
+array_unshift ($PmFormTemplatesFmt,	($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$bi_Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
 $bi_Forms=array('blogit-entry','blogit-comments');
 SDV($PmForm['blogit-entry'], 'form=#blog-form-control fmt=#blog-post-control');
 #if page is an existing comment (ie, has a comment page name) then use it, otherwise create it
@@ -263,19 +270,22 @@ function bi_HandleUnapproveComment($src, $auth='comment-approve'){
 }
 function bi_HandleApproveComment($src, $auth='comment-approve', $approve=true){
 global $_POST,$Now,$ChangeSummary,$_GET;
+	$m = XL(($approve?'a':'una').'pprove comment');
+	$result = array('msg'=>XL('Unable to ').$m, 'result'=>'error');
 	if (bi_Auth($auth)){
 		if ($src)  $old = RetrieveAuthPage($src,'read',0, READPAGE_CURRENT);
 		if($old){
 			$new = $old;
-			$new['csum'] = $new['csum:' .$Now] = $ChangeSummary = ($approve?'A':'Una').'pproved comment';
+			$new['csum'] = $new['csum:' .$Now] = $ChangeSummary = $m;
 			$_POST['diffclass']='minor';
 			$new['text'] = preg_replace(
 				'/\(:commentapproved:'.($approve?'false':'true').':\)/', '(:commentapproved:'.($approve?'true':'false').':)',
 				$new['text']);
 			PostPage($src,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
+			$result = array('msg'=>ucfirst($m).' successful.', 'result'=>'success');
 		}
 	}
-	bi_Redirect($_GET['bi_mode'], array('result'=>'success'));
+	bi_Redirect($_GET['bi_mode'], $result);
 }
 # Allow URL access to sections within $bi_TemplateList, including passed parameters.
 function bi_HandleAdmin($src, $auth='blogit-admin'){
@@ -334,16 +344,18 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$PmFormP
 }
 function bi_HandleDelete($src, $auth='comment-edit') {  #action=blogitcommentdelete
 global $bi_EntryType,$action,$WikiDir,$LastModFile,$_GET;
+	$result = array('msg'=>XL('Unable to perform delete operation.'), 'result'=>'error');
 	if ( (($action=='blogitcommentdelete' && $bi_EntryType=='comment') || ($action=='bi_de' && $bi_EntryType=='blog'))
 		&& (bi_Auth($auth.' '.$src) && RetrieveAuthPage($src,'read',0, READPAGE_CURRENT)) ){
 		$WikiDir->delete($src);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
-		bi_Redirect($_GET['bi_mode'], array('result'=>'success'));
-	} else
-		bi_Redirect($_GET['bi_mode'], array('result'=>'fail'));
+		$result = array('msg'=>XL('Delete successful.'), 'result'=>'success');
+	}
+	bi_Redirect($_GET['bi_mode'], $result);
 }
 function bi_BlockIP($src, $auth='comment-approve') {  #action=bi_bip
 global $bi_EntryType,$action,$_GET,$_POST,$bi_Pages;
+	$result = array('msg'=>XL('Unable to block IP address.'), 'result'=>'error');
 	if ($bi_EntryType=='comment' && bi_Auth($auth.' '.$src)){
 		if ($_GET['bi_ip']>''){
 			Lock(2);
@@ -351,25 +363,23 @@ global $bi_EntryType,$action,$_GET,$_POST,$bi_Pages;
 			$old = RetrieveAuthPage($bl, 'read');
 			if ($old){
 				if (!preg_match('/\nblock:' .preg_replace(array('/\./','/\*/'),array('\\.','\\*'),$_GET['bi_ip']) .'\n/', $old['text'])) {
-					bi_debugLog('Not Found');
 					$new = $old;
 					if (substr($new['text'],-1,1) != "\n") $new['text'] .= "\n";
 					$new['text'] .= 'block:'.$_GET['bi_ip'] ."\n";
 					$_POST['post'] = 'y';
 					PostPage($bl,$old,$new);
-					bi_Redirect( $_GET['bi_mode'], array('result'=>'success', 'ip'=>$_GET['bi_ip']) );
-				}else  bi_debugLog('IP '.$_GET['bi_ip'].' already being blocked');
-			}else  bi_debugLog('Cannot edit '.$bl);
+					$result = array('msg'=>XL('Blocked IP address: ').$_GET['bi_ip'], 'result'=>'success', 'ip'=>$_GET['bi_ip']);
+				}else  $result = array('result'=>'error', 'msg'=>($ip>'' ?'' :XL('IP address is already being blocked: '.$_GET['bi_ip'])));
+			}else  $result = array('result'=>'error', 'msg'=>'Cannot edit '.$bl);
 
-		}else{
-			bi_debugLog('No IP received');
+		}else{  #No IP passed in, so determine who created page
 			$ip='';
 			$page = RetrieveAuthPage($src,'read',0, READPAGE_CURRENT);
 			if ($page)  $ip = @$page['host'];
-			bi_debugLog('IP: '.$ip);
-			bi_Redirect( $_GET['bi_mode'], array('result'=>($ip>'' ?'success' :'fail'), 'ip'=>$ip, 'msg'=>($ip>'' ?'' :'Unable to determine IP.')) );
+			$result = array('result'=>($ip>'' ?'success' :'error'), 'ip'=>$ip, 'msg'=>($ip>'' ?'' :XL('Unable to determine IP address.')));
 		}
 	}
+	bi_Redirect($_GET['bi_mode'], $result);
 }
 
 # ----------------------------------------
