@@ -1,3 +1,6 @@
+#dialog{
+	display: none;
+	}
 label.error{
 	padding-left:5px;
 	}
