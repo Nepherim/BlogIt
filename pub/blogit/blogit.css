@@ -8,3 +8,24 @@ label.error{
 	color: red;
 	font-weight: bold;
 	}
+
+#showMessage{
+	font-family: Arial, Helvetica, clean, sans-serif;
+	font-size: large;
+	font-weight: bold;
+	text-align:center;
+	font-size:18px;
+	border-bottom:1px solid #bbb;
+}
+#showMessage.notification{
+	background-color: rgb(247, 247, 247);
+	color: red;
+}
+#showMessage.success{
+	background-color: #BBFFB6;
+	color: #060;
+}
+#showMessage.error{
+	background-color: #fdd;
+	color: #f00;
+}
