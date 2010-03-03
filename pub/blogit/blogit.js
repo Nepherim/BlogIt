@@ -5,16 +5,15 @@ jQuery(function($) {
 		$('html,body').animate({scrollTop: target.offset().top-50}, 700);
 	}
 
-	$("#commentblock form").validate({
-		rules: {
-		  ptv_commentauthor: "required",
-		  ptv_email: {required: true, email: true}
-		}
+	$("form").validity(function() {
+		$("#comment-author").require();
+		$("#comment-email").require().match("email");
+		$("#comment-website").match("url");
 	});
-	$("#wikiedit form[action*=BlogIt-NewEntry]").validate({
-		rules: {
-		  ptv_entrytitle: "required"
-		}
+//$.validity.setup({ outputMode:"modal" });
+	$("#wikiedit form input[value='blogit-entry'][name='target']").parent('form').validity(function() {
+		$("#entrydate").match("date");
+		$("#entrytitle,#entryurl").assert(($("#entryurl").val() || $("#entrytitle").val()), "Either enter a Blog Title or a Pagename");
 	});
 
 	$("a[href*=blogitapprove],a[href*=blogitunapprove]").click(function(e){
