@@ -273,8 +273,8 @@ global $_POST,$Now,$ChangeSummary,$_GET;
 	$m = XL(($approve?'a':'una').'pprove comment');
 	$result = array('msg'=>XL('Unable to ').$m, 'result'=>'error');
 	if (bi_Auth($auth)){
-		if ($src)  $old = RetrieveAuthPage($src,'read',0, READPAGE_CURRENT);
-		if($old){
+		if ($src)  $old = RetrieveAuthPage($src,'read',false);
+		if ($old){
 			$new = $old;
 			$new['csum'] = $new['csum:' .$Now] = $ChangeSummary = $m;
 			$_POST['diffclass']='minor';
@@ -347,7 +347,7 @@ function bi_HandleDelete($src, $auth='comment-edit') {  #action=blogitcommentdel
 global $bi_EntryType,$action,$WikiDir,$LastModFile,$_GET;
 	$result = array('msg'=>XL('Unable to perform delete operation.'), 'result'=>'error');
 	if ( (($action=='blogitcommentdelete' && $bi_EntryType=='comment') || ($action=='bi_de' && $bi_EntryType=='blog'))
-		&& (bi_Auth($auth.' '.$src) && RetrieveAuthPage($src,'read',0, READPAGE_CURRENT)) ){
+		&& (bi_Auth($auth.' '.$src) && RetrieveAuthPage($src,'read',false, READPAGE_CURRENT)) ){
 		$WikiDir->delete($src);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
 		$result = array('msg'=>XL('Delete successful.'), 'result'=>'success');
@@ -360,23 +360,22 @@ global $bi_EntryType,$action,$_GET,$_POST,$bi_Pages;
 	if ($bi_EntryType=='comment' && bi_Auth($auth.' '.$src)){
 		if ($_GET['bi_ip']>''){
 			Lock(2);
-			$bl = FmtPageName($bi_Pages['blocklist'],$src);
-			$old = RetrieveAuthPage($bl, 'read');
+			$old = RetrieveAuthPage($bi_Pages['blocklist'], 'read', false);
 			if ($old){
 				if (!preg_match('/\nblock:' .preg_replace(array('/\./','/\*/'),array('\\.','\\*'),$_GET['bi_ip']) .'\n/', $old['text'])) {
 					$new = $old;
 					if (substr($new['text'],-1,1) != "\n") $new['text'] .= "\n";
 					$new['text'] .= 'block:'.$_GET['bi_ip'] ."\n";
-					$_POST['post'] = 'y';
-					PostPage($bl,$old,$new);
+					PostPage($bi_Pages['blocklist'],$old,$new);
 					$result = array('msg'=>XL('Blocked IP address: ').$_GET['bi_ip'], 'result'=>'success', 'ip'=>$_GET['bi_ip']);
-				}else  $result = array('result'=>'error', 'msg'=>($ip>'' ?'' :XL('IP address is already being blocked: '.$_GET['bi_ip'])));
-			}else  $result = array('result'=>'error', 'msg'=>'Cannot edit '.$bl);
+				}else  $result = array('result'=>'error', 'msg'=>XL('IP address is already being blocked: '.$_GET['bi_ip']));
+			}else  $result = array('result'=>'error', 'msg'=>'Cannot edit '.$bi_Pages['blocklist']);
 
 		}else{  #No IP passed in, so determine who created page
-			$ip='';
-			$page = RetrieveAuthPage($src,'read',0, READPAGE_CURRENT);
-			if ($page)  $ip = @$page['host'];
+			$page = RetrieveAuthPage($src,'read',false);
+			if ($page)
+				foreach($page as $k=>$v)  #find the last diff in the list, which is the create point
+					if (preg_match("/^diff:(\d+):(\d+):?([^:]*)/",$k,$match))  $ip = @$page['host:' .$match[1]];
 			$result = array('result'=>($ip>'' ?'success' :'error'), 'ip'=>$ip, 'msg'=>($ip>'' ?'' :XL('Unable to determine IP address.')));
 		}
 	}
@@ -549,7 +548,7 @@ global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_Pages, $bi_AuthFunct
 # - Internal Functions
 # ----------------------------------------
 # Direct back to the refering page or $src
-function bi_Redirect($src='', $result){
+function bi_Redirect($src='', $result=''){
 global $bi_History, $pagename;
 	if ($src=='ajax')  { echo (json_encode($result)); exit; }
 	$r = FmtPageName('$PageUrl', (!empty($src)||empty($bi_History[1]) ?bi_BasePage(($src>'' ?$src :$pagename)) :$bi_History[1]));
