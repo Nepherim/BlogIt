@@ -1,3 +1,4 @@
+jQuery.noConflict();
 jQuery(function($) {
 	$("<div/>").attr({id:"dialog"}).appendTo("body");
 	if ($('.wikimessage').length){
@@ -23,7 +24,7 @@ jQuery(function($) {
 	$("a[href*=action\\=bi_bip]").click( function(e){ BlogIt.fn.commentBlock(e); });
 });
 
-BlogIt.fn = function(){
+BlogIt.fn = function($){
 	//private declarations
 	var unapprove;
 	function updateCount(e,m){
@@ -119,5 +120,5 @@ BlogIt.fn = function(){
 			BlogIt.fn.showMsg(data);
 		}
 	}
-}();
+}(jQuery);
 
