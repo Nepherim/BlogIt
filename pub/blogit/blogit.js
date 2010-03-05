@@ -1,5 +1,5 @@
 jQuery.noConflict();
-jQuery(function($) {
+jQuery(document).ready(function($){
 	$("<div/>").attr({id:"dialog"}).appendTo("body");
 	if ($('.wikimessage').length){
 		$('html,body').animate({scrollTop: $('.wikimessage').offset().top-175}, 500);
