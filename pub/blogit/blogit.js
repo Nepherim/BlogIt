@@ -1,7 +1,7 @@
 jQuery(function($) {
 	$("<div/>").attr({id:"dialog"}).appendTo("body");
 	if ($('.wikimessage').length){
-		$('html,body').animate({scrollTop: $('.wikimessage').offset().top-75}, 500);
+		$('html,body').animate({scrollTop: $('.wikimessage').offset().top-175}, 500);
 	}
 
 	$("form").validity(function() {
@@ -11,7 +11,7 @@ jQuery(function($) {
 	});
 //$.validity.setup({ outputMode:"modal" });
 	$("#wikiedit form input[value='blogit-entry'][name='target']").parent('form').validity(function() {
-		$("#entrydate").match("date");
+//		$("#entrydate").match("date");
 		$("#entrytitle,#entryurl").assert(($("#entryurl").val() || $("#entrytitle").val()), BlogIt.fn.xl('Either enter a Blog Title or a Pagename'));
 	});
 
