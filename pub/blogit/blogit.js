@@ -5,9 +5,10 @@ jQuery(document).ready(function($){
 		$('html,body').animate({scrollTop: $('.wikimessage').offset().top-175}, 500);
 	}
 
-	$("form").validity(function() {
+//	$.validity.patterns.bi_emailList = /^[-_a-z0-9\'+*$^&%=~!?{}]++(?:\.[-_a-z0-9\'+*$^&%=~!?{}]+)*+@(?:(?![-.])[-a-z0-9.]+(?<![-.])\.[a-z]{2,6}|\d{1,3}(?:\.\d{1,3}){3})(?::\d++)?$/i;
+	$("#wikitext form").validity(function() {
 		$("#comment-author").require();
-		$("#comment-email").require().match("email");
+		$("#comment-email").require().match("bi_emailList");
 		$("#comment-website").match("url");
 	});
 //$.validity.setup({ outputMode:"modal" });
