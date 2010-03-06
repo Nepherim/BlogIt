@@ -363,7 +363,7 @@ global $bi_EntryType,$action,$_GET,$_POST,$bi_Pages;
 	if ($bi_EntryType=='comment' && bi_Auth($auth.' '.$src)){
 		if ($_GET['bi_ip']>''){
 			Lock(2);
-			$old = RetrieveAuthPage($bi_Pages['blocklist'], 'read', false);
+			$old = RetrieveAuthPage($bi_Pages['blocklist'], 'edit', false);
 			if ($old){
 				if (!preg_match('/\nblock:' .preg_replace(array('/\./','/\*/'),array('\\.','\\*'),$_GET['bi_ip']) .'\n/', $old['text'])) {
 					$new = $old;
