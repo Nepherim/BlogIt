@@ -101,7 +101,7 @@ SDV($HTMLHeaderFmt['blogit.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'
 SDV($HTMLHeaderFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.js"></script>');
 SDV($HTMLHeaderFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.js"></script>');
 SDV($HTMLHeaderFmt['jquery-validity.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.js"></script>');
-SDV($HTMLHeaderFmt['jquery-showmessage.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showMessage.js"></script>');
+SDV($HTMLHeaderFmt['jquery-showmessage.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.js"></script>');
 $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
 	var BlogIt={}; BlogIt.fmt={}; BlogIt.xl={};
 	BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE().'$/;
