@@ -66,6 +66,8 @@ SDV($FPLTemplatePageFmt, array(
 	'{$FullName}', ($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$bi_Skin :''), '{$SiteGroup}.BlogIt-CoreTemplate',
 	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'));
 SDV($bi_CommentPattern, '/^' .$bi_CommentGroup .'[\/\.](.*?)-(.*?)-(\d{8}T\d{6}){1}\z/');
+SDVA($bi_DateFmtRE,array('/%d|%e/'=>'(0?[1-9]|[12][0-9]|3[01])', '/%m/'=>'(0?[1-9]|1[012])', '/%g|%G|%y|%Y/'=>'(19\d\d|20\d\d)',
+	'/%H|%I|%l/'=>'([0-1]?\d|2[0-3])', '/%M/'=>'([0-5]\d)'));
 SDVA($SearchPatterns['blogit-comments'], array('comments' => $bi_CommentPattern));
 SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''
 	?array('blogit' => '/^(' .$bi_BlogGroups .')\./')
@@ -101,8 +103,8 @@ SDV($HTMLHeaderFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$Pub
 SDV($HTMLHeaderFmt['jquery-validity.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.pack.js"></script>');
 SDV($HTMLHeaderFmt['jquery-showmessage.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showMessage.min.js"></script>');
 $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
-	var BlogIt={};
-	BlogIt.xl={};
+	var BlogIt={}; BlogIt.fmt={}; BlogIt.xl={};
+	BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE().'$/;
 	BlogIt.xl["Are you sure you want to delete?"]="'. XL('Are you sure you want to delete?').'";
 	BlogIt.xl["Yes"]="'. XL('Yes').'";
 	BlogIt.xl["No"]="'. XL('No').'";
@@ -205,7 +207,6 @@ if (IsEnabled($EnableGUIButtons)){
 # - Conditions
 $Conditions['bi_ispage'] = 'bi_IsPage($condparm)';
 $Conditions['bi_isdate'] = 'bi_IsDate($condparm)';
-$Conditions['bi_isemail'] = 'bi_IsEmail($condparm)';
 $Conditions['bi_auth'] = 'bi_Auth($condparm)';
 $Conditions['bi_isnull'] = 'bi_IsNull($condparm)==""';
 $Conditions['bi_lt'] = 'bi_LT($condparm)';
@@ -466,30 +467,13 @@ global $pagename;
 	if ($mp==$pagename)  return false;
 	return PageExists($mp);
 }
-function bi_IsDate($d, $f='%d-%m-%Y %H:%M'){
+function bi_IsDate($d, $f='%d-%m-%Y %H:%M'){  #accepts a date, and a date format (not a regular expression)
 	if (empty($d))  return true;  #false causes two date invalid messages.
-	if (preg_match('!\d{5,}!',$d))  $d=strftime(XL('%d-%m-%Y %H:%M'),$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
-	$re_day='%d|%e'; $re_month='%m'; $re_year='%g|%G|%y|%Y'; $re_sep='[\/\-\.]';
-	$re = array(
-		'/'.$re_day.'/' => '(0?[1-9]|[12][0-9]|3[01])',
-		'/'.$re_month.'/' => '(0?[1-9]|1[012])',
-		'/'.$re_year.'/' => '(19\d\d|20\d\d)',
-		'/%H|%I|%l/' => '([0-1]?\d|2[0-3])',
-		'/%M/' => '([0-5]\d)'
-	);
-	$re_date = preg_replace(array_keys($re), array_values($re), $f);  #convert $f into a regular expression
-	if (preg_match('!^'.$re_date.'$!',$d,$x)  #does %d match the regular expression version of $f? if it does d/m/y are in $x
-		#determine expected date order based on $f and checkdate
-		&& ((preg_match('!^('.$re_day.')'.$re_sep.'('.$re_month.')'.$re_sep.'('.$re_year.')!',$f) && checkdate($x[2], $x[1], $x[3]))
-			|| (preg_match('!^('.$re_month.')'.$re_sep.'('.$re_day.')'.$re_sep.'('.$re_year.')!',$f) && checkdate($x[1], $x[2], $x[3]))
-			|| (preg_match('!^('.$re_year.')'.$re_sep.'('.$re_month.')'.$re_sep.'('.$re_day.')!',$f) && checkdate($x[3], $x[1], $x[2]))
-	))  return true;
+	if (preg_match('!\d{5,}!',$d))  $d=strftime(XL($f),$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
+	if (preg_match('!^'.bi_DateFmtRE($f).'$!',$d,$x)  #does %d match the regular expression version of $f? if it does m/d/y are in $x
+		&& (checkdate($x[2], $x[1], $x[3]) || checkdate($x[1], $x[2], $x[3]) || checkdate($x[3], $x[1], $x[2]))
+	)  return true;
 	return false;
-}
-function bi_IsEmail($e){
-	return (bool)preg_match(
-		"/^[-_a-z0-9\'+*$^&%=~!?{}]++(?:\.[-_a-z0-9\'+*$^&%=~!?{}]+)*+@(?:(?![-.])[-a-z0-9.]+(?<![-.])\.[a-z]{2,6}|\d{1,3}(?:\.\d{1,3}){3})(?::\d++)?$/iD"
-		,$e);
 }
 function bi_IsNull($e){
 	return (!empty($e) && substr($e,0,3)!='{*$' && substr($e,0,2)!='{$' && substr($e,0,3)!='{=$' ?$e :'');
@@ -607,6 +591,10 @@ global $pagename,$bi_DisplayFuture;
 function bi_GetPmMarkup($body, $tags, $title){
 global $bi_TagSeparator;
 	return bi_SaveTags($body, $tags, $bi_TagSeparator) .'(:title ' .$title .':)';
+}
+function bi_DateFmtRE($f='%d-%m-%Y %H:%M'){
+global $bi_DateFmtRE;
+	return preg_replace(array_keys($bi_DateFmtRE), array_values($bi_DateFmtRE), XL($f));
 }
 
 # ----------------------------------------
