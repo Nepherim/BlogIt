@@ -302,7 +302,7 @@ global $_GET,$GroupHeaderFmt;
 }
 function bi_HandleProcessForm ($src, $auth='read'){
 global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$ROSPatterns,$CategoryGroup,
-	$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$Now,$bi_OldHandleActions,
+	$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$Now,$bi_OldHandleActions,$Now,
 	$EnablePost,$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired;
 
 	$bi_ResetPmFormField = array();
@@ -324,6 +324,7 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$ROSPatt
 
 		# If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
 		# NB: If page subsequently fails to post (due to incorrect p/w or captcha) then entrydate is already in unix time format.
+		$_POST['ptv_entrydate'] = (empty($_POST['ptv_entrydate']) ?$Now :$_POST['ptv_entrydate']);
 		if (bi_IsDate($_POST['ptv_entrydate'])){ if (!preg_match('!\d{5,}!',$_POST['ptv_entrydate']))  $_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']); }
 		else  $bi_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
 
