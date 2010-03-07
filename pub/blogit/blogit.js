@@ -1,20 +1,26 @@
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	$("<div/>").attr({id:"dialog"}).appendTo("body");
-	BlogIt.fn.showMsg({msg:$('#wikiedit.blogit-blog-form .wikimessage').html(), result:'error'});
-	BlogIt.fn.showMsg({msg:$('#wikitext .blogit-comment-form .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
-
 	if ($('.wikimessage').length){
 		$('html,body').animate({scrollTop: $('.wikimessage').offset().top-175}, 500);
 	}
+	BlogIt.fn.showMsg({msg:$('#wikiedit.blogit-blog-form .wikimessage').html(), result:'error'});
+	BlogIt.fn.showMsg({msg:$('#wikitext .blogit-comment-form .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
 
-	$("#wikitext form").validity(function() {
+	$('#blogit-cancel').click(function() {
+		//Assume we loaded with valid data. Would prefer a validity.remove_all_validations fn.
+		if ($("#wikitext .blogit-comment-form").parent('form').length) $("#wikitext .blogit-comment-form").parent('form')[0].reset();
+		if ($("#wikiedit.blogit-blog-form form").length) $("#wikiedit.blogit-blog-form form")[0].reset();
+		$('#wikiedit.blogit-blog-form form').submit();
+	});
+
+	$("#wikitext .blogit-comment-form").parent('form').validity(function() {
 		$("#comment-author").require();
 		$("#comment-email").require().match("email");
 		$("#comment-website").match("url");
 	});
 	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
-	$("#wikiedit.blogit-blog-form form input[value='blogit-entry'][name='target']").parent('form').validity(function() {
+	$("#wikiedit.blogit-blog-form form").validity(function() {
 		$("#entrydate").match("entryDate");
 		$("#entrytitle,#entryurl").assert(($("#entryurl").val() || $("#entrytitle").val()), BlogIt.fn.xl('Either enter a Blog Title or a Pagename'));
 	});
