@@ -5,21 +5,21 @@ jQuery(document).ready(function($){
 		$('html,body').animate({scrollTop: $('.wikimessage').offset().top-175}, 500);
 	}
 
-//	$.validity.patterns.bi_emailList = /^[-_a-z0-9\'+*$^&%=~!?{}]++(?:\.[-_a-z0-9\'+*$^&%=~!?{}]+)*+@(?:(?![-.])[-a-z0-9.]+(?<![-.])\.[a-z]{2,6}|\d{1,3}(?:\.\d{1,3}){3})(?::\d++)?$/i;
 	$("#wikitext form").validity(function() {
 		$("#comment-author").require();
-		$("#comment-email").require().match("bi_emailList");
+		$("#comment-email").require().match("email");
 		$("#comment-website").match("url");
 	});
 //$.validity.setup({ outputMode:"modal" });
+	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
 	$("#wikiedit form input[value='blogit-entry'][name='target']").parent('form').validity(function() {
-//		$("#entrydate").match("date");
+		$("#entrydate").match("entryDate");
 		$("#entrytitle,#entryurl").assert(($("#entryurl").val() || $("#entrytitle").val()), BlogIt.fn.xl('Either enter a Blog Title or a Pagename'));
 	});
 
 	$("a[href*=blogitapprove],a[href*=blogitunapprove]").click(function(e){
 		e.preventDefault();
-		BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.commentStatus(e.target, data); } }, e);
+		BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.commentStatus(e.target, data); }}, e);
 	});
 	$("a[href*=action\\=blogitcommentdelete],a[href*=action\\=bi_de]").click( function(e){ BlogIt.fn.deleteDialog(e); });
 	$("a[href*=action\\=bi_bip]").click( function(e){ BlogIt.fn.commentBlock(e); });
