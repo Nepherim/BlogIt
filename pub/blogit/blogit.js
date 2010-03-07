@@ -1,6 +1,9 @@
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	$("<div/>").attr({id:"dialog"}).appendTo("body");
+	BlogIt.fn.showMsg({msg:$('#wikiedit.blogit-blog-form .wikimessage').html(), result:'error'});
+	BlogIt.fn.showMsg({msg:$('#wikitext .blogit-comment-form .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
+
 	if ($('.wikimessage').length){
 		$('html,body').animate({scrollTop: $('.wikimessage').offset().top-175}, 500);
 	}
@@ -10,7 +13,6 @@ jQuery(document).ready(function($){
 		$("#comment-email").require().match("email");
 		$("#comment-website").match("url");
 	});
-//$.validity.setup({ outputMode:"modal" });
 	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
 	$("#wikiedit.blogit-blog-form form input[value='blogit-entry'][name='target']").parent('form').validity(function() {
 		$("#entrydate").match("entryDate");
@@ -75,7 +77,7 @@ BlogIt.fn = function($){
 			BlogIt.fn.showMsg(data);
 		},
 		showMsg: function(data){
-			$.showMessage({
+			if (data.msg)  $.showMessage({
 				'thisMessage':[data.msg],
 				'className': data.result,
 				'opacity': 95,
