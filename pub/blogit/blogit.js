@@ -12,7 +12,7 @@ jQuery(document).ready(function($){
 	});
 //$.validity.setup({ outputMode:"modal" });
 	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
-	$("#wikiedit form input[value='blogit-entry'][name='target']").parent('form').validity(function() {
+	$("#wikiedit.blogit-blog-form form input[value='blogit-entry'][name='target']").parent('form').validity(function() {
 		$("#entrydate").match("entryDate");
 		$("#entrytitle,#entryurl").assert(($("#entryurl").val() || $("#entrytitle").val()), BlogIt.fn.xl('Either enter a Blog Title or a Pagename'));
 	});
