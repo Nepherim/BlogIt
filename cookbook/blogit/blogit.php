@@ -68,8 +68,8 @@ SDV($FPLTemplatePageFmt, array(
 SDV($bi_CommentPattern, '/^' .$bi_CommentGroup .'[\/\.](.*?)-(.*?)-(\d{8}T\d{6}){1}\z/');
 SDVA($bi_DateFmtRE,array('/%d|%e/'=>'(0?[1-9]|[12][0-9]|3[01])', '/%m/'=>'(0?[1-9]|1[012])', '/%g|%G|%y|%Y/'=>'(19\d\d|20\d\d)',
 	'/%H|%I|%l/'=>'([0-1]?\d|2[0-3])', '/%M/'=>'([0-5]\d)'));
-SDVA($SearchPatterns['blogit-comments'], array('comments' => $bi_CommentPattern));
-SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''
+SDVA($SearchPatterns['blogit-comments'], array('comments' => $bi_CommentPattern));  #Used in pagelists
+SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''  #either regexes to include ('/'), regexes to exclude ('!'):
 	?array('blogit' => '/^(' .$bi_BlogGroups .')\./')
 	:array(
 		'recent' => '!\.(All)?Recent(Changes|Uploads|' .$bi_CommentGroup .')$!',
@@ -226,10 +226,10 @@ $MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_Pages['new_entry'] .'" ?"' .
 # ----------------------------------------
 # - Set GroupHeaderFmt and Footer
 if (@$bi_EntryType == 'blog'){  #handled by browse handler, after headers set
-	$bi_EntryStatus = PageTextVar($pagename,'entrystatus');
 	if ( (($action=='blogitedit' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry')) && bi_Auth('blog-edit')) )
 		$GroupHeaderFmt .= '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	else{
+		$bi_EntryStatus = PageTextVar($pagename,'entrystatus');
 		$bi_AuthEditAdmin = bi_Auth('blog-edit,blog-new,blogit-admin');
 		if ( ($bi_EntryStatus!='draft' && (!bi_FuturePost($Now) || $bi_AuthEditAdmin) )
 		|| ($bi_EntryStatus=='draft' && $bi_AuthEditAdmin) )

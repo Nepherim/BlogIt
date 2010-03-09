@@ -62,8 +62,9 @@ global $_GET,$RecipeInfo,$bi_ConvertRules;
 #mode=upgrade|convert|revert
 #blogid=string
 function bi_Convert($src, $auth='admin', $dataset, $pagelist, $mode) {
-global $bi_ConvertRules,$bi_BlogGroups,$bi_TagSeparator,$_GET,$AsSpacedFunction;
+global $bi_ConvertRules,$bi_BlogGroups,$bi_TagSeparator,$_GET,$AsSpacedFunction,$SearchPatterns;
 	$datarules = $bi_ConvertRules[$dataset];
+	$pagelist=MatchPageNames($pagelist,$SearchPatterns['default']);
 
 	foreach ($pagelist as $i => $pn) {
 		list($group, $name) = explode('.', $pn);  #$name used to derive title.
