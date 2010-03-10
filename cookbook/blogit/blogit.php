@@ -116,6 +116,7 @@ $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
 	BlogIt.xl["Submit"]="'. XL('Submit').'";
 	BlogIt.xl["Cancel"]="'. XL('Cancel').'";
 	BlogIt.xl["Either enter a Blog Title or a Pagename"]="'. XL('Either enter a Blog Title or a Pagename').'";
+	BlogIt.xl["You have unsaved changes."]="'. XL('You have unsaved changes.').'";
 </script>';
 $HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
 
