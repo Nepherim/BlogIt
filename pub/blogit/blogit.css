@@ -3,6 +3,7 @@
 	}
 label.error{
 	padding-left:12px;
+	display: inline;
 	}
 .error{
 	color: red;

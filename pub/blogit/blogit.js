@@ -1,20 +1,20 @@
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	$("<div/>").attr({id:"dialog"}).appendTo("body");
-	if ($('.wikimessage').length){
-		$('html,body').animate({scrollTop: $('.wikimessage').offset().top-175}, 500);
-	}
+	if ($('.wikimessage').length){ $('html,body').animate({scrollTop: $('.wikimessage').offset().top-175}, 1); }
 	BlogIt.fn.showMsg({msg:$('#wikiedit.blogit-blog-form .wikimessage').html(), result:'error'});
 	BlogIt.fn.showMsg({msg:$('#wikitext .blogit-comment-form .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
 
 	$('#blogit-cancel').click(function() {
 		//Assume we loaded with valid data. Would prefer a validity.remove_all_validations fn.
-		if ($("#wikitext .blogit-comment-form").parent('form').length) $("#wikitext .blogit-comment-form").parent('form')[0].reset();
-		if ($("#wikiedit.blogit-blog-form form").length) $("#wikiedit.blogit-blog-form form")[0].reset();
+		var $form = $("#wikitext .blogit-comment-form").parent('form');
+		if ($commentForm.length) $form[0].reset();
+		$form = $("#wikiedit.blogit-blog-form form");
+		if ($("#wikiedit.blogit-blog-form form").length) $form[0].reset();
 		$('#wikiedit.blogit-blog-form form').submit();
 	});
 
-	$("#wikitext .blogit-comment-form").parent('form').validity(function() {
+	$("#wikitext .blogit-comment-form").parents('form').validity(function() {
 		$("#comment-author").require();
 		$("#comment-email").require().match("email");
 		$("#comment-website").match("url");
