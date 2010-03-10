@@ -109,7 +109,7 @@ BlogIt.fn = function($){
 			$o.css({backgroundColor:'#BBFFB6'}).fadeTo(1000, 0.2, function () {
 				$(this).fadeTo(1000,1).css("background-color", bg);
 			});
-			var _unapprove = $(o).html()==BlogIt.fn.xl("unapprove");
+			_unapprove = $(o).html()==BlogIt.fn.xl("unapprove");
 			if (_unapprove){
 				o.href = o.href.replace("blogitunapprove", "blogitapprove");
 				$(o).html(BlogIt.fn.xl("approve"));
