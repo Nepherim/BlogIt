@@ -31,32 +31,26 @@ jQuery(document).ready(function($){
 	});
 	$("a[href*=action\\=blogitcommentdelete],a[href*=action\\=bi_de]").click( function(e){ BlogIt.fn.deleteDialog(e); });
 	$("a[href*=action\\=bi_bip]").click( function(e){ BlogIt.fn.commentBlock(e); });
+	$("#wikiedit.blogit-blog-form form :input").one("change", function(){ window.onbeforeunload = function(){ return BlogIt.fn.xl('You have unsaved changes.'); } });
+	$('#blogit-save,#blogit-cancel').click(function(){ window.onbeforeunload = null; });
 });
 
 BlogIt.fn = function($){
 	//private declarations
-	var unapprove;
-	function updateCount(e,m){
-		return e.replace(': '+m, ': '+(unapprove ?(parseInt(m)+1) :(m-1)));
-	}
-	function getEnteredIP(e){
-		return e+'&bi_ip='+$("#blogit_ip").val();
-	}
+	var _unapprove;
+	function updateCount(e,m){ return e.replace(': '+m, ': '+(_unapprove ?(parseInt(m)+1) :(m-1))); }
+	function getEnteredIP(e){ return e+'&bi_ip='+$("#blogit_ip").val(); }
 
 	//public functions
 	return {
-		xl: function(t){
-			return (BlogIt.xl[t] || t);
-		},
+		xl: function(t){ return (BlogIt.xl[t] || t); },
 		ajax: function(ajax, e){
 			ajax["dataType"] = ajax.dataType || "json";
 			ajax["url"] = ( typeof ajax.url == "function" ?ajax.url(e.target.href) :(ajax.url || e.target.href) ) + '&bi_mode=ajax';
 			ajax["context"] = ajax.context || e.target;
 			$.ajax(ajax);
 		},
-		dialogClose: function(){
-			$("#dialog").dialog("close").empty();
-		},
+		dialogClose: function(){ $("#dialog").dialog("close").empty(); },
 		dialogShow: function(txt, yes, no, ajax, e){
 			$("#dialog").html(txt).dialog({
 				resizable: false,
@@ -115,8 +109,8 @@ BlogIt.fn = function($){
 			$o.css({backgroundColor:'#BBFFB6'}).fadeTo(1000, 0.2, function () {
 				$(this).fadeTo(1000,1).css("background-color", bg);
 			});
-			unapprove = $(o).html()==BlogIt.fn.xl("unapprove");
-			if (unapprove){
+			var _unapprove = $(o).html()==BlogIt.fn.xl("unapprove");
+			if (_unapprove){
 				o.href = o.href.replace("blogitunapprove", "blogitapprove");
 				$(o).html(BlogIt.fn.xl("approve"));
 			}else{
