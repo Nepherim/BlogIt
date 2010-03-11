@@ -73,7 +73,7 @@ BlogIt.fn = function($){
 				{success:function(data){ BlogIt.fn.objectRemove(e.target, data); }},e);
 		},
 		objectRemove: function(o, data){
-			$($(o).parents('li,tr')[0]).fadeOut(500, function(){ $(this).remove(); });
+			$($(o).parents('"[id^=ID]"')[0]).fadeOut(500, function(){ $(this).remove(); });
 			BlogIt.fn.showMsg(data);
 		},
 		showMsg: function(data){
