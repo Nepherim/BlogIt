@@ -107,12 +107,14 @@ BlogIt.fn = function($){
 			},e);
 		},
 		commentStatus: function(o, data){
-			var $o = $($(o).parents('li')[0]);
+			//console.log(o);
+			var $o = $($(o).parents('"[id^=ID]"')[0]);
 			var bg = $o.css("backgroundColor");
-			$o.css({backgroundColor:'#BBFFB6'}).fadeTo(1000, 0.2, function () {
-				$(this).fadeTo(1000,1).css("background-color", bg);
+//			$o.children().css({backgroundColor:'#BBFFB6'}).fadeTo(1000, 0.2).delay(3000).fadeTo(1000,1).css("background-color", bg);
+			$o.children().css({backgroundColor:'#BBFFB6'}).delay(500).fadeTo(500, 0.2, function () {
+				$(this).fadeTo(500,1).css("background-color", bg);
 			});
-			_unapprove = $(o).html()==BlogIt.fn.xl("unapprove");
+			_unapprove = ( $(o).html()==BlogIt.fn.xl("unapprove") );
 			if (_unapprove){
 				o.href = o.href.replace("blogitunapprove", "blogitapprove");
 				$(o).html(BlogIt.fn.xl("approve"));
