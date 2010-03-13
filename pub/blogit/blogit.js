@@ -25,12 +25,12 @@ jQuery(document).ready(function($){
 		$("#entrytitle,#entryurl").assert(($("#entryurl").val() || $("#entrytitle").val()), BlogIt.fn.xl('Either enter a Blog Title or a Pagename'));
 	});
 
-	$("a[href*=blogitapprove],a[href*=blogitunapprove]").click(function(e){
+	$("a[href*=action\=blogitapprove],a[href*=action\=blogitunapprove]").click(function(e){
 		e.preventDefault();
 		BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.commentStatus(e.target, data); }}, e);
 	});
-	$("a[href*=action\\=blogitcommentdelete],a[href*=action\\=bi_de]").click( function(e){ BlogIt.fn.deleteDialog(e); });
-	$("a[href*=action\\=bi_bip]").click( function(e){ BlogIt.fn.commentBlock(e); });
+	$("a[href*=action\=blogitcommentdelete],a[href*=action\=bi_de]").click( function(e){ BlogIt.fn.deleteDialog(e); });
+	$("a[href*=action\=bi_bip]").click( function(e){ BlogIt.fn.commentBlock(e); });
 	$("#wikiedit.blogit-blog-form form :input").one("change", function(){ window.onbeforeunload = function(){ return BlogIt.fn.xl('You have unsaved changes.'); } });
 	$('#blogit-save,#blogit-cancel').click(function(){ window.onbeforeunload = null; });
 });
