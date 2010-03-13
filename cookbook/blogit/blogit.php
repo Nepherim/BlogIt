@@ -170,15 +170,11 @@ if ( (isset($bi_EntryType)||in_array($pagename,$bi_Pages)) && bi_Auth('*') ){
 	# Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
 	$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
 	$bi_Params = bi_Implode($_GET);
-	$bi_History[0] = $pagename .(!empty($bi_Params) ?'?'.$bi_Params :'');  #current
+	$bi_History[0] = FmtPageName('$PageUrl', $pagename ) .(!empty($bi_Params) ?'?'.$bi_Params :'');  #current
 	$bi_History[1] = (($action=='pmform' || @$_GET['pmform']>'') ?@$_COOKIE[$bi_Cookie.'back-2'] :@$_COOKIE[$bi_Cookie.'back-1']);
-	if (@$_POST['cancel'] && ($action=='pmform' && in_array($_REQUEST['target'],$bi_Forms))){  #Cancel button clicked
-		bi_Redirect(); exit;
-	}
-	if ($bi_History[0]!=$bi_History[1]){  #don't replace cookies if user is reloading the current page
-		setcookie($bi_Cookie.'back-2', $bi_History[1], 0, '/');
-		setcookie($bi_Cookie.'back-1', $bi_History[0], 0, '/'); #set to current url
-	}
+	if (@$_POST['cancel'] && ($action=='pmform' && in_array($_REQUEST['target'],$bi_Forms)))  #Cancel button clicked
+		bi_Redirect();
+	bi_storeCookie($bi_History[0], $bi_History[1]);
 }
 
 # ----------------------------------------
@@ -251,9 +247,10 @@ if ($action == 'print'){
 # in Main Processing, as markup (tags) isn't processed if markup is defined.
 function bi_HandleBrowse($pagename, $auth = 'read'){
 global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OldHandleActions,$Group,$bi_CommentGroup;
-	if ($Group == $bi_CommentGroup){  #After editing/deleting a comment page
-		bi_Redirect(); return;
-	} elseif (isset($bi_ResetPmFormField))
+	# After editing/deleting a comment page
+	if ($Group == $bi_CommentGroup){ bi_Redirect(); return; }
+
+	if (isset($bi_ResetPmFormField))
 		foreach ($bi_ResetPmFormField  as $k => $v) {
 			$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
 			$FmtPV['$bi_Default_'.$k]='"'.$v.'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
@@ -354,7 +351,7 @@ global $bi_EntryType,$action,$WikiDir,$LastModFile,$_GET;
 	$result = array('msg'=>XL('Unable to perform delete operation.'), 'result'=>'error');
 	if ( (($action=='blogitcommentdelete' && $bi_EntryType=='comment') || ($action=='bi_de' && $bi_EntryType=='blog'))
 		&& (bi_Auth($auth.' '.$src) && RetrieveAuthPage($src,'read',false, READPAGE_CURRENT)) ){
-		$WikiDir->delete($src);
+//		$WikiDir->delete($src);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
 		$result = array('msg'=>XL('Delete successful.'), 'result'=>'success');
 	}
@@ -445,7 +442,7 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 		case 'commenttext': return ( strtr($txt, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />', "\x0B" => '<br />')) );
 		case 'commentid': {
 			$x = preg_match($bi_CommentPattern, $txt, $m );
-			return 'ID'.$m[3];  #1-group; 2-name; 3-commentid
+			return 'ID' .($x ?$m[3] :$txt);  #1-group; 2-name; 3-commentid, OR FullName for blog-list
 		}
 	}
 }
@@ -538,15 +535,24 @@ global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_Pages, $bi_AuthFunct
 # ----------------------------------------
 # Direct back to the refering page or $src
 function bi_Redirect($src='', $result=''){
-global $bi_History, $pagename;
+global $bi_History,$pagename;
 	if ($src=='ajax')  { echo (json_encode($result)); exit; }
-	$r = FmtPageName('$PageUrl', (!empty($src)||empty($bi_History[1]) ?bi_BasePage(($src>'' ?$src :$pagename)) :$bi_History[1]));
+	$r = (!empty($src)||empty($bi_History[1]) ?FmtPageName('$PageUrl', bi_BasePage(($src>'' ?$src :$pagename))) :$bi_History[1]);
+	bi_storeCookie($r);
+
 	header("Location: $r");
 	header("Content-type: text/html");
 	echo "<html><head>
 	<meta http-equiv='Refresh' Content='URL=$r' />
 	<title>Redirect</title></head><body></body></html>";
 	exit;
+}
+function bi_storeCookie($c0, $c1=''){
+global $bi_History,$bi_Cookie,$_GET;
+ 	if ($c0!=$bi_History[1] && @$_GET['bi_mode']!='ajax'){
+		if ($c1>'')  setcookie($bi_Cookie.'back-2', $bi_History[1], 0, '/');
+		setcookie($bi_Cookie.'back-1', $c0, 0, '/');  #don't replace cookies if user is reloading the current page
+	}
 }
 # Used to create a URL parameter string from an array, removing ?n= parameter.
 function bi_Implode($a, $p='&', $s='=', $ignore=array('n'=>'')){
