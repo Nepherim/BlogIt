@@ -94,33 +94,6 @@ $AsSpacedFunction = 'AsSpacedHyphens';  #[1]
 $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>"; #[1]
 
 # ----------------------------------------
-# - Javascript
-SDV($HTMLHeaderFmt['jquery-ui.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui/ui-lightness/jquery-ui.custom.css" type="text/css" />');
-SDV($HTMLHeaderFmt['jquery-validity.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.validity.css" type="text/css" />');
-SDV($HTMLHeaderFmt['blogit.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />');
-SDV($HTMLHeaderFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.js"></script>');
-SDV($HTMLHeaderFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.js"></script>');
-SDV($HTMLHeaderFmt['jquery-validity.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.js"></script>');
-SDV($HTMLHeaderFmt['jquery-showmessage.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.js"></script>');
-$HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
-	var BlogIt={}; BlogIt.fmt={}; BlogIt.xl={};
-	BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE().'$/;
-	BlogIt.xl["Are you sure you want to delete?"]="'. XL('Are you sure you want to delete?').'";
-	BlogIt.xl["Yes"]="'. XL('Yes').'";
-	BlogIt.xl["No"]="'. XL('No').'";
-	BlogIt.xl["approve"]="'. XL('approve').'";
-	BlogIt.xl["unapprove"]="'. XL('unapprove').'";
-	BlogIt.xl["Unapproved Comments:"]="'. XL('Unapproved Comments:').'";
-	BlogIt.xl["Commenter IP: "]="'. XL('Commenter IP: ').'";
-	BlogIt.xl["Enter the IP to block:"]="'. XL('Enter the IP to block:').'";
-	BlogIt.xl["Submit"]="'. XL('Submit').'";
-	BlogIt.xl["Cancel"]="'. XL('Cancel').'";
-	BlogIt.xl["Either enter a Blog Title or a Pagename"]="'. XL('Either enter a Blog Title or a Pagename').'";
-	BlogIt.xl["You have unsaved changes."]="'. XL('You have unsaved changes.').'";
-</script>';
-$HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
-
-# ----------------------------------------
 # - PmForms Setup
 include_once($bi_Paths['pmform']);
 $PmFormPostPatterns['/\r/'] = '';  #fixes a bug in pmforms where multi-line entries/comments are stored across multiple lines in the base page
@@ -156,6 +129,22 @@ $AuthFunction = 'bi_BlogItAuth';
 if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths['convert']);
 
 # ----------------------------------------
+# - Javascript
+SDV($HTMLHeaderFmt['jquery-ui.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui/ui-lightness/jquery-ui.custom.css" type="text/css" />');
+SDV($HTMLHeaderFmt['jquery-validity.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.validity.css" type="text/css" />');
+SDV($HTMLHeaderFmt['blogit.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />');
+SDV($HTMLHeaderFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.js"></script>');
+SDV($HTMLHeaderFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.js"></script>');
+SDV($HTMLHeaderFmt['jquery-validity.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.js"></script>');
+SDV($HTMLHeaderFmt['jquery-showmessage.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.js"></script>');
+$HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
+	var BlogIt={}; BlogIt.fmt={}; BlogIt.xl={};
+	BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE().'$/;'."\n".
+	bi_JXL()."\n".
+'</script>';
+$HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
+
+# ----------------------------------------
 # - Cookies
 # Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_-\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';
@@ -164,17 +153,17 @@ $bi_EntryType = PageTextVar($pagename,'entrytype');  #PageTextVar MUST be after 
 bi_debugLog('entryType: '.$bi_EntryType);
 list($Group, $Name) = explode('.', $pagename);
 if ($pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"'.htmlentities(stripmagic($_GET['blogid'])).'"';
-if ( (isset($bi_EntryType)||in_array($pagename,$bi_Pages)) && bi_Auth('*') ){
+if ( bi_Auth('*') ){
 	$EnablePostCaptchaRequired = 0;
-
-	# Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
-	$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
-	$bi_Params = bi_Implode($_GET);
-	$bi_History[0] = FmtPageName('$PageUrl', $pagename ) .(!empty($bi_Params) ?'?'.$bi_Params :'');  #current
-	$bi_History[1] = (($action=='pmform' || @$_GET['pmform']>'') ?@$_COOKIE[$bi_Cookie.'back-2'] :@$_COOKIE[$bi_Cookie.'back-1']);
-	if (@$_POST['cancel'] && ($action=='pmform' && in_array($_REQUEST['target'],$bi_Forms)))  #Cancel button clicked
-		bi_Redirect();
-	bi_storeCookie($bi_History[0], $bi_History[1]);
+	if (isset($bi_EntryType)||in_array($pagename,$bi_Pages)){
+		# Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
+		$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
+		$bi_Params = bi_Implode($_GET);
+		$bi_History[0] = FmtPageName('$PageUrl', $pagename ) .(!empty($bi_Params) ?'?'.$bi_Params :'');  #current
+		$bi_History[1] = (($action=='pmform' || @$_GET['pmform']>'') ?@$_COOKIE[$bi_Cookie.'back-2'] :@$_COOKIE[$bi_Cookie.'back-1']);
+		if (@$_POST['cancel'] && ($action=='pmform' && in_array($_REQUEST['target'],$bi_Forms)))  bi_Redirect();
+		bi_storeCookie($bi_History[0], $bi_History[1]);
+	}
 }
 
 # ----------------------------------------
@@ -603,6 +592,16 @@ global $bi_TagSeparator;
 function bi_DateFmtRE($f='%d-%m-%Y %H:%M'){
 global $bi_DateFmtRE;
 	return preg_replace(array_keys($bi_DateFmtRE), array_values($bi_DateFmtRE), XL($f));
+}
+function bi_JXL(){  #create javascript array holding all XL translations of text used client-side
+	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:', 'Commenter IP: ',
+			'Enter the IP to block:', 'Submit', 'Cancel', 'Either enter a Blog Title or a Pagename', 'You have unsaved changes.');
+	foreach ($a as $k)  $t .= 'BlogIt.xl["' .$k .'"]="' .XL($k) ."\";\n";
+	$t .= 'jQuery.extend(jQuery.validity.messages, {';
+	$a=array('require'=>'This field is required.', 'date'=>'This field must be formatted as a date.',
+		'email'=>'This field must be formatted as an email.', 'url'=>'This field must be formatted as a URL.');
+	foreach ($a as $k=>$v)  $t .= $k .':"' .XL($v) ."\",\n";
+	return substr($t,0,-2).'});';
 }
 
 # ----------------------------------------
