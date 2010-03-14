@@ -31,8 +31,12 @@ jQuery(document).ready(function($){
 	});
 	$("a[href*=action\=blogitcommentdelete],a[href*=action\=bi_de]").click( function(e){ BlogIt.fn.deleteDialog(e); });
 	$("a[href*=action\=bi_bip]").click( function(e){ BlogIt.fn.commentBlock(e); });
-	$("#wikiedit.blogit-blog-form form :input").one("change", function(){ window.onbeforeunload = function(){ return BlogIt.fn.xl('You have unsaved changes.'); } });
-	$('#blogit-save,#blogit-cancel').click(function(){ window.onbeforeunload = null; });
+	$("#wikiedit.blogit-blog-form form :input:not(:submit)").bind("change", function(){
+		window.onbeforeunload = function(){ return BlogIt.fn.xl('You have unsaved changes.'); }
+	});
+	$('#blogit-save,#blogit-cancel').click(function(){
+		window.onbeforeunload = null;
+	});
 });
 
 BlogIt.fn = function($){
