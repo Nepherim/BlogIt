@@ -340,7 +340,7 @@ global $bi_EntryType,$action,$WikiDir,$LastModFile,$_GET;
 	$result = array('msg'=>XL('Unable to perform delete operation.'), 'result'=>'error');
 	if ( (($action=='blogitcommentdelete' && $bi_EntryType=='comment') || ($action=='bi_de' && $bi_EntryType=='blog'))
 		&& (bi_Auth($auth.' '.$src) && RetrieveAuthPage($src,'read',false, READPAGE_CURRENT)) ){
-//		$WikiDir->delete($src);
+		$WikiDir->delete($src);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
 		$result = array('msg'=>XL('Delete successful.'), 'result'=>'success');
 	}
