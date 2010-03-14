@@ -1,3 +1,4 @@
+// blogit.js 2010-14-3
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	$("<div/>").attr({id:"dialog"}).appendTo("body");
