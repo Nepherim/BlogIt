@@ -92,6 +92,7 @@ $bi_OldAsSpaced_Function = $AsSpacedFunction;
 $AsSpacedFunction = 'AsSpacedHyphens';  #[1]
 # Doesn't pick up categories defined as page variables.
 $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>"; #[1]
+$WikiStyleApply['row'] = 'tr';  #allows TR to be labelled with ID attributes
 
 # ----------------------------------------
 # - PmForms Setup
@@ -431,7 +432,7 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 		case 'commenttext': return ( strtr($txt, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />', "\x0B" => '<br />')) );
 		case 'commentid': {
 			$x = preg_match($bi_CommentPattern, $txt, $m );
-			return 'ID' .($x ?$m[3] :$txt);  #1-group; 2-name; 3-commentid, OR FullName for blog-list
+			return 'bi_ID' .($x ?$m[3] :$txt);  #1-group; 2-name; 3-commentid, OR FullName for blog-list
 		}
 	}
 }
