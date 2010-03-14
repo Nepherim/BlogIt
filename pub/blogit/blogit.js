@@ -77,10 +77,7 @@ BlogIt.fn = function($){
 				{success:function(data){ BlogIt.fn.objectRemove(e.target, data); }},e);
 		},
 		objectRemove: function(o, data){
-			var $o=$(o);
-			var $x=$($o.parents('"[id^=ID]"')[0]).parent('tr');  //because we can't get the ID on the TR element with pmwiki
-			if (!$x.length) $x=$($o.parents('"[id^=ID]"')[0]);
-			$x.fadeOut(500, function(){ $(this).remove(); });
+			$($(o).parents('"[id^=bi_ID]"')[0]).fadeOut(500, function(){ $(this).remove(); });
 			BlogIt.fn.showMsg(data);
 		},
 		showMsg: function(data){
@@ -111,7 +108,7 @@ BlogIt.fn = function($){
 			},e);
 		},
 		commentStatus: function(o, data){
-			var $o = $($(o).parents('"[id^=ID]"')[0]);
+			var $o = $($(o).parents('"[id^=bi_ID]"')[0]);
 			var bg = $o.css("backgroundColor");
 			$o.children().css({backgroundColor:'#BBFFB6'}).delay(500).fadeTo(500, 0.2, function () {
 				$(this).fadeTo(500,1).css("background-color", bg);
