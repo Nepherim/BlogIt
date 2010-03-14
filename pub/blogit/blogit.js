@@ -6,12 +6,12 @@ jQuery(document).ready(function($){
 	BlogIt.fn.showMsg({msg:$('#wikitext .blogit-comment-form .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
 
 	$('#blogit-cancel').click(function() {
-		//Assume we loaded with valid data. Would prefer a validity.remove_all_validations fn.
+		//Restore initial data to prevent validation errors from changed field. Assume we loaded with valid data.
 		var $form = $("#wikitext .blogit-comment-form").parent('form');
-		if ($commentForm.length) $form[0].reset();
+		if ($form.length) $form[0].reset();
 		$form = $("#wikiedit.blogit-blog-form form");
-		if ($("#wikiedit.blogit-blog-form form").length) $form[0].reset();
-		$('#wikiedit.blogit-blog-form form').submit();
+		if ($form.length) $form[0].reset();
+		return true;
 	});
 
 	$("#wikitext .blogit-comment-form").parents('form').validity(function() {
@@ -34,8 +34,8 @@ jQuery(document).ready(function($){
 	$("#wikiedit.blogit-blog-form form :input:not(:submit)").bind("change", function(){
 		window.onbeforeunload = function(){ return BlogIt.fn.xl('You have unsaved changes.'); }
 	});
-	$('#blogit-save,#blogit-cancel').click(function(){
-		window.onbeforeunload = null;
+	$('#wikiedit.blogit-blog-form form :input:submit').click(function(){
+		window.onbeforeunload = null;  //Don't trigger on submit buttons.
 	});
 });
 
