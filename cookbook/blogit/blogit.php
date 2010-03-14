@@ -325,10 +325,10 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$ROSPatt
 
 	#only set defaults if we're not editing the comment
 	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']=='blogit-comments'){
-		$ce=preg_match($bi_CommentPattern,$pagename) && bi_Auth('comment-edit');  #editing an existing comment?
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_commenttext'] = rtrim($_POST['ptv_commenttext'],"\n\r\x0B")."\n";  #ensures markup is closed correctly (eg, links at end of comment)
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
+		$ce=preg_match($bi_CommentPattern,$pagename) && bi_Auth('comment-edit');  #editing an existing comment?
 		$_POST['ptv_commentapproved'] = ($ce ?$_POST['ptv_commentapproved'] :(bi_Auth('comment-approve,blogit-admin '.$pagename) ?'true' :$bi_DefaultCommentStatus));
 		$_POST['ptv_commentdate'] = ($ce ?$_POST['ptv_commentdate'] :$Now);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_commentauthor'];
