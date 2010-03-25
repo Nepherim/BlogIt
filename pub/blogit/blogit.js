@@ -2,6 +2,8 @@
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	$("<div/>").attr({id:"dialog"}).appendTo("body");
+	$('#dialog').dialog({ resizable: true, modal: true, autoOpen: false });  //set defaults
+
 	if ($('.wikimessage').length){ $('html,body').animate({scrollTop: $('.wikimessage').offset().top-175}, 1); }
 	BlogIt.fn.showMsg({msg:$('#wikiedit.blogit-blog-form .wikimessage').html(), result:'error'});
 	BlogIt.fn.showMsg({msg:$('#wikitext .blogit-comment-form .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
@@ -32,6 +34,7 @@ jQuery(document).ready(function($){
 	});
 	$("a[href*=action\=blogitcommentdelete],a[href*=action\=bi_de]").click( function(e){ BlogIt.fn.deleteDialog(e); });
 	$("a[href*=action\=bi_bip]").click( function(e){ BlogIt.fn.commentBlock(e); });
+	$("a[href*=action\=bi_qc]").click( function(e){ BlogIt.fn.quickEditComment(e); });
 	$("#wikiedit.blogit-blog-form form :input:not(:submit)").bind("change", function(){
 		window.onbeforeunload = function(){ return BlogIt.fn.xl('You have unsaved changes.'); }
 	});
@@ -40,6 +43,7 @@ jQuery(document).ready(function($){
 	});
 });
 
+var BlogIt={ fmt:{}, xl:{}, fn:{}, pm:{} };
 BlogIt.fn = function($){
 	//private declarations
 	var _unapprove;
@@ -56,25 +60,21 @@ BlogIt.fn = function($){
 			$.ajax(ajax);
 		},
 		dialogClose: function(){ $("#dialog").dialog("close").empty(); },
-		dialogShow: function(txt, yes, no, ajax, e){
-			$("#dialog").html(txt).dialog({
-				resizable: false,
-				modal: true,
-				autoOpen: false
-			});
-
+		dialogShow: function(txt, yes, no, w, ajax, e){
+			var $d = $("#dialog");
+			$d.html(txt).dialog('option', 'width', w);
 			var btn={};
-			btn[BlogIt.fn.xl(no)] = BlogIt.fn.dialogClose;
-			btn[BlogIt.fn.xl(yes)] = function(){
+			if (no) btn[BlogIt.fn.xl(no)] = BlogIt.fn.dialogClose;
+			if (yes) btn[BlogIt.fn.xl(yes)] = function(){
 				BlogIt.fn.ajax(ajax, e);
 				BlogIt.fn.dialogClose();
 			};
-
-			$("#dialog").dialog('option', 'buttons', btn).dialog("open");
+			if (yes||no) $d.dialog('option', 'buttons', btn);
+			$d.dialog("open");
 		},
 		deleteDialog: function(e){
 			e.preventDefault();
-			BlogIt.fn.dialogShow(BlogIt.fn.xl("Are you sure you want to delete?"),'Yes','No',
+			BlogIt.fn.dialogShow(BlogIt.fn.xl("Are you sure you want to delete?"),'Yes','No','300px',
 				{success:function(data){ BlogIt.fn.objectRemove(e.target, data); }},e);
 		},
 		objectRemove: function(o, data){
@@ -98,11 +98,9 @@ BlogIt.fn = function($){
 					if (data.ip){
 						BlogIt.fn.dialogShow(
 							BlogIt.fn.xl('Commenter IP: ')+data.ip+'<br/>'+BlogIt.fn.xl('Enter the IP to block:')+
-							'<input id="blogit_ip" type="text" value="'+data.ip+'"/>','Submit','Cancel',
-							{ url: function(e){ return getEnteredIP(e); },
-								success: function(data){
-									BlogIt.fn.showMsg(data);
-								}
+							'<input id="blogit_ip" type="text" value="'+data.ip+'"/>','Submit','Cancel','300px',
+							{	url: function(e){ return getEnteredIP(e); },
+								success: function(data){ BlogIt.fn.showMsg(data); }
 							}, e);
 					}
 				}
@@ -126,6 +124,17 @@ BlogIt.fn = function($){
 			var cc_Txt = cc_Obj.html();
 			cc_Obj.html( cc_Txt.replace(new RegExp(BlogIt.fn.xl('Unapproved Comments:')+' (\\d*)'), updateCount) );
 			BlogIt.fn.showMsg(data);
+		},
+		quickEditComment: function(e){
+			e.preventDefault();
+			$.ajax({dataType:'json', url:e.target.href, context:e.target,  //get the comment form from pmwiki; NB: adding +'&bi_mode=ajax' to target.href causes Post to submit to +'&bi_mode=ajax'
+				success: function(data){
+					if (data.out){  //load the comment form into a dialog, which does the normal comment edit process on submit
+						$("#dialog").html(data.out).dialog('option', 'width', '500px').dialog("open");
+//						$('#dialog form').prepend('<input type="hidden" value="ajax" name="bi_mode">');
+					}
+				}
+			});
 		}
 	}
 }(jQuery);
