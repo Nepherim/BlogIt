@@ -88,7 +88,7 @@ bi_setFmtPVA(array('$bi_Pages'=>$bi_Pages));
 # - PmWiki Config
 $HandleAuth['source'] = $HandleAuth['diff'] = 'edit';  #[1] Prevent viewing source and diff, primarily for Comments, as this would reveal email.
 bi_addPageStore();
-$bi_OldAsSpaced_Function = $AsSpacedFunction;
+$bi_OriginalFn['AsSpacedFunction'] = $AsSpacedFunction;
 $AsSpacedFunction = 'AsSpacedHyphens';  #[1]
 # Doesn't pick up categories defined as page variables.
 $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>"; #[1]
@@ -108,7 +108,7 @@ SDV($PmForm['blogit-comments'], 'saveto="' .(preg_match($bi_CommentPattern,$page
 
 # ----------------------------------------
 # - Handle Actions
-$bi_OldHandleActions = $HandleActions;
+$bi_OriginalFn['HandleActions'] = $HandleActions;
 $HandleActions['pmform']='bi_HandleProcessForm';
 $HandleActions['browse']='bi_HandleBrowse';
 #TODO: SDV($HandleActions['approvsites'],'bi_HandleUrlApprove');  #approveurl
@@ -119,12 +119,13 @@ SDV($HandleActions['blogitcommentedit'], 'bi_HandleEditComment'); SDV($HandleAut
 SDV($HandleActions['blogitcommentdelete'], 'bi_HandleDelete'); SDV($HandleAuth['blogitcommentdelete'], 'blog-edit');
 SDV($HandleActions['bi_de'], 'bi_HandleDelete'); SDV($HandleAuth['bi_de'], 'comment-edit');
 SDV($HandleActions['bi_bip'], 'bi_BlockIP'); SDV($HandleAuth['bi_bip'], 'comment-approve');
+SDV($HandleActions['bi_qc'], 'bi_QuickComment'); SDV($HandleAuth['bi_qc'], 'comment-edit');
 SDV($HandleActions['blogitupgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['blogitupgrade'], 'admin');
 
 # ----------------------------------------
 # - Authentication
 SDV($AuthFunction,'PmWikiAuth');
-$bi_AuthFunction = $AuthFunction;
+$bi_OriginalFn['AuthFunction']=$AuthFunction;
 $AuthFunction = 'bi_BlogItAuth';
 # Cannot be done as part of handler due to scoping issues when include done in function
 if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths['convert']);
@@ -138,12 +139,12 @@ SDV($HTMLHeaderFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDir
 SDV($HTMLHeaderFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.js"></script>');
 SDV($HTMLHeaderFmt['jquery-validity.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.js"></script>');
 SDV($HTMLHeaderFmt['jquery-showmessage.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.js"></script>');
+$HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
 $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
-	var BlogIt={}; BlogIt.fmt={}; BlogIt.xl={};
+	BlogIt.pm["pubdirurl"]="'.$PubDirUrl.'/blogit";
 	BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE().'$/;'."\n".
 	bi_JXL()."\n".
 '</script>';
-$HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
 
 # ----------------------------------------
 # - Cookies
@@ -159,11 +160,8 @@ if ( bi_Auth('*') ){
 	if (isset($bi_EntryType)||in_array($pagename,$bi_Pages)){
 		# Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
 		$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
-		$bi_Params = bi_Implode($_GET);
-		$bi_History[0] = FmtPageName('$PageUrl', $pagename ) .(!empty($bi_Params) ?'?'.$bi_Params :'');  #current
-		$bi_History[1] = (($action=='pmform' || @$_GET['pmform']>'') ?@$_COOKIE[$bi_Cookie.'back-2'] :@$_COOKIE[$bi_Cookie.'back-1']);
 		if (@$_POST['cancel'] && ($action=='pmform' && in_array($_REQUEST['target'],$bi_Forms)))  bi_Redirect();
-		bi_storeCookie($bi_History[0], $bi_History[1]);
+		bi_storeCookie();
 	}
 }
 
@@ -179,7 +177,7 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_
 Markup('blogit', 'fulltext', '/\(:blogit (list|cleantext)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
 Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
-	'(date|intro|author|tags|edit|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentblock|commenttext|commentid)'.
+	'(date|intro|author|tags|edit|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentquickedit|commentblock|commenttext|commentid)'.
 	'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
 	"blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
@@ -233,27 +231,30 @@ if ($action == 'print'){
 # ----------------------------------------
 # - HandleActions Functions
 # ----------------------------------------
-# If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling
-# in Main Processing, as markup (tags) isn't processed if markup is defined.
 function bi_HandleBrowse($pagename, $auth = 'read'){
-global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OldHandleActions,$Group,$bi_CommentGroup;
-	# After editing/deleting a comment page
-	if ($Group == $bi_CommentGroup){ bi_Redirect(); return; }
-
+global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OriginalFn,$Group,$bi_CommentGroup;
+	if ($Group == $bi_CommentGroup){ bi_Redirect(); return; }  #After editing/deleting a comment page, and after HandlePmForm() has done a redirect()
 	if (isset($bi_ResetPmFormField))
 		foreach ($bi_ResetPmFormField  as $k => $v) {
 			$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
 			$FmtPV['$bi_Default_'.$k]='"'.$v.'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
 		}
-	bi_AddMarkup();
-	$HandleActions['browse']=$bi_OldHandleActions['browse'];
+	bi_AddMarkup();  #If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling
+	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];
 	HandleDispatch($pagename, 'browse');
 }
 function bi_HandleEditComment($src, $auth='comment-edit'){
-global $HandleActions,$bi_OldHandleActions,$bi_EntryType,$GroupHeaderFmt;
+global $HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt;
 	if ( @$bi_EntryType == 'comment' && bi_Auth($auth) )  $GroupHeaderFmt .= '(:includesection "#comment-edit":)';
-	$HandleActions['browse']=$bi_OldHandleActions['browse'];
+	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];
 	HandleDispatch($src, 'browse');
+}
+function bi_QuickComment($src, $auth='comment-edit'){  #action=bi_qc
+global $bi_EntryType,$pagename;
+	$result = array('result'=>'error');
+	if ( @$bi_EntryType == 'comment' && bi_Auth($auth) )
+		$result = array('out'=>MarkupToHTML($pagename, '(:includesection "#comment-edit":)'), 'result'=>'success');
+	bi_Redirect('ajax', $result);  #quick comment is always an ajax request, so no need for &bi_mode=ajax
 }
 function bi_HandleUnapproveComment($src, $auth='comment-approve'){
 	bi_HandleApproveComment($src,$auth,false);
@@ -290,7 +291,7 @@ global $_GET,$GroupHeaderFmt;
 }
 function bi_HandleProcessForm ($src, $auth='read'){
 global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$ROSPatterns,$CategoryGroup,
-	$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$Now,$bi_OldHandleActions,$Now,
+	$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$Now,
 	$EnablePost,$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired;
 
 	$bi_ResetPmFormField = array();
@@ -334,9 +335,9 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$ROSPatt
 		$_POST['ptv_commentdate'] = ($ce ?$_POST['ptv_commentdate'] :$Now);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_commentauthor'];
 	}
-	$bi_OldHandleActions['pmform']($src, $auth);
+	$bi_OriginalFn['HandleActions']['pmform']($src, $auth);  #usually HandlePmForm()
 }
-function bi_HandleDelete($src, $auth='comment-edit') {  #action=blogitcommentdelete
+function bi_HandleDelete($src, $auth='comment-edit'){  #action=blogitcommentdelete
 global $bi_EntryType,$action,$WikiDir,$LastModFile,$_GET;
 	$result = array('msg'=>XL('Unable to perform delete operation.'), 'result'=>'error');
 	if ( (($action=='blogitcommentdelete' && $bi_EntryType=='comment') || ($action=='bi_de' && $bi_EntryType=='blog'))
@@ -347,8 +348,8 @@ global $bi_EntryType,$action,$WikiDir,$LastModFile,$_GET;
 	}
 	bi_Redirect($_GET['bi_mode'], $result);
 }
-function bi_BlockIP($src, $auth='comment-approve') {  #action=bi_bip
-global $bi_EntryType,$action,$_GET,$_POST,$bi_Pages;
+function bi_BlockIP($src, $auth='comment-approve'){  #action=bi_bip
+global $bi_EntryType,$_GET,$bi_Pages;
 	$result = array('msg'=>XL('Unable to block IP address.'), 'result'=>'error');
 	if ($bi_EntryType=='comment' && bi_Auth($auth.' '.$src)){
 		if ($_GET['bi_ip']>''){
@@ -428,6 +429,7 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 			:'');
 		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=blogitcommentedit | $[edit]]]'.$args['post_text'] :'');
 		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=blogitcommentdelete | $[delete]]]'.$args['post_text'] :'');
+		case 'commentquickedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_qc | $[quick edit]]]'.$args['post_text'] :'');
 		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_bip | $[block]]]'.$args['post_text'] :'');
 		case 'commenttext': return ( strtr($txt, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />', "\x0B" => '<br />')) );
 		case 'commentid': {
@@ -489,7 +491,7 @@ global $_GET;
 # - Authentication Functions
 # ----------------------------------------
 function bi_BlogItAuth($pn, $level, $authprompt=true, $since=0) {
-global $pagename, $action, $bi_AuthFunction, $bi_CommentsEnabled, $bi_CommentGroup, $bi_EntryType;
+global $pagename, $action, $bi_OriginalFn, $bi_CommentsEnabled, $bi_CommentGroup, $bi_EntryType;
 	# Set level to read if a non-authenticated user is posting a comment.
 	if ( (($level=='edit') || ($level=='publish'))
 		&& $action=='pmform' && $bi_EntryType == 'blog'
@@ -497,11 +499,11 @@ global $pagename, $action, $bi_AuthFunction, $bi_CommentsEnabled, $bi_CommentGro
 		$level = 'read';
 		$authprompt = false;
 	}
-	return $bi_AuthFunction($pn, $level, $authprompt, $since);
+	return $bi_OriginalFn['AuthFunction']($pn, $level, $authprompt, $since);
 }
 # Called as part of markup condition. Determine whether the current user is authorized for an action
 function bi_Auth($condparm){  #condparm: comma separated list of actions, and optional space separated pagename -- "blog-new,blog-edit Blog.This-entry"
-global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_Pages, $bi_AuthFunction;
+global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_Pages, $bi_OriginalFn;
 	@list($action, $pn) = explode(' ', $condparm, 2);
 	$action=explode(',', trim($action,'\'"'));
 	if (!IsEnabled($EnableAuthUser))
@@ -514,7 +516,7 @@ global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_Pages, $bi_AuthFunct
 		foreach ($bi_Auth as $role => $action_list){
 			if ( $a=='*' || in_array($a, $action_list) ){  #Is the action assigned to a role?
 				if ( (IsEnabled($EnableAuthUser) && $AuthList['@'.$role] > 0)  #the user is assigned to this role
-					|| (!IsEnabled($EnableAuthUser) && $bi_AuthFunction($pn, $role, false, READPAGE_CURRENT)) )  #the user has these role privs on this page
+					|| (!IsEnabled($EnableAuthUser) && $bi_OriginalFn['AuthFunction']($pn, $role, false, READPAGE_CURRENT)) )  #the user has these role privs on this page
 					return true;
 	}}}
 	return false;
@@ -525,9 +527,11 @@ global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_Pages, $bi_AuthFunct
 # ----------------------------------------
 # Direct back to the refering page or $src
 function bi_Redirect($src='', $result=''){
-global $bi_History,$pagename;
-	if ($src=='ajax')  { echo (json_encode($result)); exit; }
-	$r = (!empty($src)||empty($bi_History[1]) ?FmtPageName('$PageUrl', bi_BasePage(($src>'' ?$src :$pagename))) :$bi_History[1]);
+global $pagename,$_REQUEST;
+	if ($src=='ajax' || $_REQUEST['bi_mode']=='ajax')  { echo(json_encode($result)); exit; }  #don't redirect ajax requests, just send back json object
+	#use $src if provided, or history is empty; use pagename if $src and history are empty; use history if no $src and history exists.
+	$history=bi_GetHistory();
+	$r = ($src>''||empty($history) ?FmtPageName('$PageUrl', bi_BasePage(($src>'' ?$src :$pagename))) :$history);
 	bi_storeCookie($r);
 
 	header("Location: $r");
@@ -537,11 +541,21 @@ global $bi_History,$pagename;
 	<title>Redirect</title></head><body></body></html>";
 	exit;
 }
-function bi_storeCookie($c0, $c1=''){
-global $bi_History,$bi_Cookie,$_GET;
- 	if ($c0!=$bi_History[1] && @$_GET['bi_mode']!='ajax'){
-		if ($c1>'')  setcookie($bi_Cookie.'back-2', $bi_History[1], 0, '/');
-		setcookie($bi_Cookie.'back-1', $c0, 0, '/');  #don't replace cookies if user is reloading the current page
+function bi_GetHistory(){
+global $bi_Cookie,$action,$_GET,$_COOKIE;
+	#pmform redirects the page, so we need to look at back-2
+	return ( ($action=='pmform' || @$_GET['pmform']>'') ?@$_COOKIE[$bi_Cookie.'back-2'] :@$_COOKIE[$bi_Cookie.'back-1']);
+}
+function bi_storeCookie($url=''){
+global $bi_Cookie,$pagename,$_REQUEST,$_GET;
+	if (empty($url)){
+		$bi_Params = bi_Implode($_GET);
+		$url = FmtPageName('$PageUrl', $pagename ) .(!empty($bi_Params) ?'?'.$bi_Params :'');  #current
+		$history = bi_GetHistory();
+	}
+ 	if ($url!=$history && $_REQUEST['bi_mode']!='ajax' && !array_key_exists('pmform',$_REQUEST)){  #don't record if reloading, ajax, or redirected from pmform (pmform=success)
+		if (!empty($history))  setcookie($bi_Cookie.'back-2', $history, 0, '/');
+		setcookie($bi_Cookie.'back-1', $url, 0, '/');  #don't replace cookies if user is reloading the current page
 	}
 }
 # Used to create a URL parameter string from an array, removing ?n= parameter.
@@ -577,9 +591,9 @@ global $MakePageNamePatterns, $bi_MakePageNamePatterns;
 	);
 }
 function AsSpacedHyphens($text) {
-global $bi_OldAsSpaced_Function,$bi_EntryType,$Group,$CategoryGroup,$action;
-	if ($Group==$CategoryGroup || isset($bi_EntryType) || $action=='blogitupgrade')  return (strtr($bi_OldAsSpaced_Function($text),'-',' '));
-	else  return ($bi_OldAsSpaced_Function($text));
+global $bi_OriginalFn,$bi_EntryType,$Group,$CategoryGroup,$action;
+	if ($Group==$CategoryGroup || isset($bi_EntryType) || $action=='blogitupgrade')  return (strtr($bi_OriginalFn['AsSpacedFunction']($text),'-',' '));
+	else  return ($bi_OriginalFn['AsSpacedFunction']($text));
 }
 function bi_FuturePost($now){
 global $pagename,$bi_DisplayFuture;
@@ -596,13 +610,13 @@ global $bi_DateFmtRE;
 }
 function bi_JXL(){  #create javascript array holding all XL translations of text used client-side
 	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:', 'Commenter IP: ',
-			'Enter the IP to block:', 'Submit', 'Cancel', 'Either enter a Blog Title or a Pagename', 'You have unsaved changes.');
-	foreach ($a as $k)  $t .= 'BlogIt.xl["' .$k .'"]="' .XL($k) ."\";\n";
-	$t .= 'jQuery.extend(jQuery.validity.messages, {';
+			'Enter the IP to block:', 'Submit', 'Cancel', 'Either enter a Blog Title or a Pagename', 'You have unsaved changes.','Website:');
+	foreach ($a as $k)  $t .= ($k!=XL($k) ?'BlogIt.xl["' .$k .'"]="' .XL($k) ."\";\n" :'');
+
 	$a=array('require'=>'This field is required.', 'date'=>'This field must be formatted as a date.',
 		'email'=>'This field must be formatted as an email.', 'url'=>'This field must be formatted as a URL.');
-	foreach ($a as $k=>$v)  $t .= $k .':"' .XL($v) ."\",\n";
-	return substr($t,0,-2).'});';
+	foreach ($a as $k=>$v)  $t1 .= ($v!=XL($v) ?$k .':"' .XL($v) ."\",\n" :'');
+	return ($t1>'' ?$t .'jQuery.extend(jQuery.validity.messages, {' .substr($t1,0,-2).'});' :$t);
 }
 
 # ----------------------------------------
