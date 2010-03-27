@@ -103,7 +103,8 @@ array_unshift ($PmFormTemplatesFmt,	($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-Sk
 $bi_Forms=array('blogit-entry','blogit-comments');
 SDV($PmForm['blogit-entry'], 'form=#blog-form-control fmt=#blog-post-control');
 #if page is an existing comment (ie, has a comment page name) then use it, otherwise create it
-SDV($PmForm['blogit-comments'], 'saveto="' .(preg_match($bi_CommentPattern,$pagename) ?$pagename :$bi_CommentGroup .'.{$Group}-{$Name}-' .date('Ymd\THms')) .'" '.
+SDV($PmForm['blogit-comments'],
+	'saveto="' .(preg_match($bi_CommentPattern,$pagename) ?$pagename :$bi_CommentGroup .'.{$Group}-{$Name}-' .date('Ymd\THms')) .'" '.
 	'form=#comment-form-control fmt=#comment-post-control');
 
 # ----------------------------------------
@@ -118,8 +119,9 @@ SDV($HandleActions['blogitunapprove'], 'bi_HandleUnapproveComment'); SDV($Handle
 SDV($HandleActions['blogitcommentedit'], 'bi_HandleEditComment'); SDV($HandleAuth['blogitcommentedit'], 'comment-edit');
 SDV($HandleActions['blogitcommentdelete'], 'bi_HandleDelete'); SDV($HandleAuth['blogitcommentdelete'], 'blog-edit');
 SDV($HandleActions['bi_de'], 'bi_HandleDelete'); SDV($HandleAuth['bi_de'], 'comment-edit');
-SDV($HandleActions['bi_bip'], 'bi_BlockIP'); SDV($HandleAuth['bi_bip'], 'comment-approve');
-SDV($HandleActions['bi_qc'], 'bi_QuickComment'); SDV($HandleAuth['bi_qc'], 'comment-edit');
+SDV($HandleActions['bi_bip'], 'bi_HandleBlockIP'); SDV($HandleAuth['bi_bip'], 'comment-approve');
+SDV($HandleActions['bi_qc'], 'bi_HandleQuickComment'); SDV($HandleAuth['bi_qc'], 'comment-edit');
+SDV($HandleActions['bi_rc'], 'bi_HandleReplyComment'); SDV($HandleAuth['bi_rc'], 'comment-edit');
 SDV($HandleActions['blogitupgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['blogitupgrade'], 'admin');
 
 # ----------------------------------------
@@ -177,7 +179,7 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_
 Markup('blogit', 'fulltext', '/\(:blogit (list|cleantext)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
 Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
-	'(date|intro|author|tags|edit|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentquickedit|commentblock|commenttext|commentid)'.
+	'(date|intro|author|tags|edit|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentquickedit|commentreply|commentblock|commenttext|commentid)'.
 	'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
 	"blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
@@ -249,10 +251,17 @@ global $HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt;
 	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];
 	HandleDispatch($src, 'browse');
 }
-function bi_QuickComment($src, $auth='comment-edit'){  #action=bi_qc
+function bi_HandleQuickComment($src, $auth='comment-edit'){  #action=bi_qc
 global $bi_EntryType,$pagename;
 	$result = array('result'=>'error');
 	if ( @$bi_EntryType == 'comment' && bi_Auth($auth) )
+		$result = array('out'=>MarkupToHTML($pagename, '(:includesection "#comment-edit":)'), 'result'=>'success');
+	bi_Redirect('ajax', $result);  #quick comment is always an ajax request, so no need for &bi_mode=ajax
+}
+function bi_HandleReplyComment($src, $auth='comment-edit'){  #action=bi_rc
+global $bi_EntryType,$pagename;
+	$result = array('result'=>'error');
+	if ( bi_Auth($auth) )
 		$result = array('out'=>MarkupToHTML($pagename, '(:includesection "#comment-edit":)'), 'result'=>'success');
 	bi_Redirect('ajax', $result);  #quick comment is always an ajax request, so no need for &bi_mode=ajax
 }
@@ -348,7 +357,7 @@ global $bi_EntryType,$action,$WikiDir,$LastModFile,$_GET;
 	}
 	bi_Redirect($_GET['bi_mode'], $result);
 }
-function bi_BlockIP($src, $auth='comment-approve'){  #action=bi_bip
+function bi_HandleBlockIP($src, $auth='comment-approve'){  #action=bi_bip
 global $bi_EntryType,$_GET,$bi_Pages;
 	$result = array('msg'=>XL('Unable to block IP address.'), 'result'=>'error');
 	if ($bi_EntryType=='comment' && bi_Auth($auth.' '.$src)){
@@ -429,7 +438,8 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 			:'');
 		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=blogitcommentedit | $[edit]]]'.$args['post_text'] :'');
 		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=blogitcommentdelete | $[delete]]]'.$args['post_text'] :'');
-		case 'commentquickedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_qc | $[quick edit]]]'.$args['post_text'] :'');
+		case 'commentquickedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_qc&bi_mode=ajax | $[quick edit]]]'.$args['post_text'] :'');
+		case 'commentreply': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.bi_BasePage($txt).'?action=bi_rc&bi_mode=ajax | $[reply]]]'.$args['post_text'] :'');
 		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_bip | $[block]]]'.$args['post_text'] :'');
 		case 'commenttext': return ( strtr($txt, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />', "\x0B" => '<br />')) );
 		case 'commentid': {
@@ -529,8 +539,8 @@ global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_Pages, $bi_OriginalF
 function bi_Redirect($src='', $result=''){
 global $pagename,$_REQUEST;
 	if ($src=='ajax' || $_REQUEST['bi_mode']=='ajax')  { echo(json_encode($result)); exit; }  #don't redirect ajax requests, just send back json object
-	#use $src if provided, or history is empty; use pagename if $src and history are empty; use history if no $src and history exists.
 	$history=bi_GetHistory();
+	#use $src if provided, or history is empty; use pagename if $src and history are empty; use history if no $src and history exists.
 	$r = ($src>''||empty($history) ?FmtPageName('$PageUrl', bi_BasePage(($src>'' ?$src :$pagename))) :$history);
 	bi_storeCookie($r);
 
@@ -542,18 +552,17 @@ global $pagename,$_REQUEST;
 	exit;
 }
 function bi_GetHistory(){
-global $bi_Cookie,$action,$_GET,$_COOKIE;
-	#pmform redirects the page, so we need to look at back-2
-	return ( ($action=='pmform' || @$_GET['pmform']>'') ?@$_COOKIE[$bi_Cookie.'back-2'] :@$_COOKIE[$bi_Cookie.'back-1']);
+global $bi_Cookie,$_COOKIE;
+	return ( @$_COOKIE[$bi_Cookie.'back-1']);
 }
 function bi_storeCookie($url=''){
-global $bi_Cookie,$pagename,$_REQUEST,$_GET;
+global $bi_Cookie,$pagename,$_REQUEST,$_GET,$action;
 	if (empty($url)){
 		$bi_Params = bi_Implode($_GET);
 		$url = FmtPageName('$PageUrl', $pagename ) .(!empty($bi_Params) ?'?'.$bi_Params :'');  #current
-		$history = bi_GetHistory();
 	}
- 	if ($url!=$history && $_REQUEST['bi_mode']!='ajax' && !array_key_exists('pmform',$_REQUEST)){  #don't record if reloading, ajax, or redirected from pmform (pmform=success)
+	$history = bi_GetHistory();
+ 	if ( $url!=$history && $_REQUEST['bi_mode']!='ajax' && $action!='pmform'){  #don't record if reloading, ajax, or redirected from pmform
 		if (!empty($history))  setcookie($bi_Cookie.'back-2', $history, 0, '/');
 		setcookie($bi_Cookie.'back-1', $url, 0, '/');  #don't replace cookies if user is reloading the current page
 	}
