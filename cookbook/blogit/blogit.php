@@ -77,6 +77,7 @@ SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''  #either regexes to include (
 		'pmwiki' => '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki)\.!',
 		'self' => FmtPageName('!^$FullName$!', $pagename)
 )));
+SDV($PmFormRedirect,'bi_Redirect');
 
 # ----------------------------------------
 # - Usable on Wiki Pages
@@ -535,10 +536,30 @@ global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_Pages, $bi_OriginalF
 # ----------------------------------------
 # - Internal Functions
 # ----------------------------------------
+function bi_ClearCache(){
+global $PCache,$pagename;
+	if (is_array($PCache[$pagename])) {
+		foreach(array_keys($PCache[$pagename]) as $key)
+			if (substr($key,0,3)=='=p_' || $key=='=pagetextvars')
+				unset($PCache[$pagename][$key]);
+	}
+}
+function bi_AjaxRedirect($result){
+global $pagename,$Name,$_REQUEST,$action;
+	if ($_REQUEST['target']=='blogit-comments'){
+		bi_ClearCache();  #Otherwise we retrieve the old values.
+		echo(json_encode(array(
+			'out'=>MarkupToHTML($pagename, '(:includesection "#comments-pagelist entrycomments=readonly commentid=' .$Name .' ":)'),
+			'result'=>'success',
+			'msg'=>'Successfully updated comment.'
+		)));
+	}else  echo(json_encode($result));
+	exit;
+}
 # Direct back to the refering page or $src
 function bi_Redirect($src='', $result=''){
 global $pagename,$_REQUEST;
-	if ($src=='ajax' || $_REQUEST['bi_mode']=='ajax')  { echo(json_encode($result)); exit; }  #don't redirect ajax requests, just send back json object
+	if ($src=='ajax' || $_REQUEST['bi_mode']=='ajax')  { bi_AjaxRedirect($result); }  #don't redirect ajax requests, just send back json object
 	$history=bi_GetHistory();
 	#use $src if provided, or history is empty; use pagename if $src and history are empty; use history if no $src and history exists.
 	$r = ($src>''||empty($history) ?FmtPageName('$PageUrl', bi_BasePage(($src>'' ?$src :$pagename))) :$history);
