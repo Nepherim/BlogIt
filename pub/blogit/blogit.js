@@ -34,7 +34,8 @@ jQuery(document).ready(function($){
 	});
 	$("a[href*=action\=blogitcommentdelete],a[href*=action\=bi_de]").click( function(e){ BlogIt.fn.deleteDialog(e); });
 	$("a[href*=action\=bi_bip]").click( function(e){ BlogIt.fn.commentBlock(e); });
-	$("a[href*=action\=bi_qc]").click( function(e){ BlogIt.fn.quickEditComment(e); });
+	$("a[href*=action\=bi_qc]").live('click', function(e){ BlogIt.fn.quickEditComment(e); });
+	$("a[href*=action\=bi_rc]").click( function(e){ BlogIt.fn.replyComment(e); });
 	$("#wikiedit.blogit-blog-form form :input:not(:submit)").bind("change", function(){
 		window.onbeforeunload = function(){ return BlogIt.fn.xl('You have unsaved changes.'); }
 	});
@@ -108,10 +109,7 @@ BlogIt.fn = function($){
 		},
 		commentStatus: function(o, data){
 			var $o = $($(o).parents('"[id^=bi_ID]"')[0]);
-			var bg = $o.css("backgroundColor");
-			$o.children().css({backgroundColor:'#BBFFB6'}).delay(500).fadeTo(500, 0.2, function () {
-				$(this).fadeTo(500,1).css("background-color", bg);
-			});
+			BlogIt.fn.flash($o, data);
 			_unapprove = ( $(o).html()==BlogIt.fn.xl("unapprove") );
 			if (_unapprove){
 				o.href = o.href.replace("blogitunapprove", "blogitapprove");
@@ -123,11 +121,34 @@ BlogIt.fn = function($){
 			var cc_Obj = $('a[href*=action=blogitadmin&s=unapproved-comments]');
 			var cc_Txt = cc_Obj.html();
 			cc_Obj.html( cc_Txt.replace(new RegExp(BlogIt.fn.xl('Unapproved Comments:')+' (\\d*)'), updateCount) );
-			BlogIt.fn.showMsg(data);
 		},
 		quickEditComment: function(e){
 			e.preventDefault();
-			$.ajax({dataType:'json', url:e.target.href, context:e.target,  //get the comment form from pmwiki; NB: adding +'&bi_mode=ajax' to target.href causes Post to submit to +'&bi_mode=ajax'
+			$.ajax({dataType:'json', url:e.target.href,  //get the comment form from pmwiki
+				success: function(data){
+					if (data.out){  //load the comment form into a dialog, which does the normal comment edit process on submit
+						$("#dialog").html(data.out).dialog('option', 'width', '500px').dialog("open");
+						$('#dialog form')
+							.prepend('<input type="hidden" value="ajax" name="bi_mode">')
+							.submit(function(){
+								$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action')+'&bi_mode=ajax',
+									data: $(this).serialize(),
+									success: function(data){
+										$('#dialog').dialog("close");
+										var id = '#'+$($(e.target).parents('"[id^=bi_ID]"')[0]).attr('id');
+										$(id).replaceWith($("[id^=bi_ID]", $(data.out)[0]));
+										BlogIt.fn.flash($(id), data);
+									}
+								});
+								return false;
+							});
+					}
+				}
+			});
+		},
+		replyComment: function(e){
+			e.preventDefault();
+			$.ajax({dataType:'json', url:e.target.href, context:e,  //get the comment form from pmwiki
 				success: function(data){
 					if (data.out){  //load the comment form into a dialog, which does the normal comment edit process on submit
 						$("#dialog").html(data.out).dialog('option', 'width', '500px').dialog("open");
@@ -135,6 +156,14 @@ BlogIt.fn = function($){
 					}
 				}
 			});
+		},
+		flash: function(o, data){
+			var bg = o.css("background-color");
+			o.css({backgroundColor:'#BBFFB6'});
+			o.css({backgroundColor:'#BBFFB6'}).delay(500).fadeTo(500, 0.2, function () {
+				$(this).fadeTo(500,1).css("background-color", bg);
+			});
+			BlogIt.fn.showMsg(data);
 		}
 	}
 }(jQuery);
