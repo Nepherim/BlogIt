@@ -132,7 +132,7 @@ BlogIt.fn = function($){
 				.prepend('<input type="hidden" value="ajax" name="bi_mode">')  //trigger ajax mode
 				.bind("submit",function(){
 					$.validity.start();
-					BlogIt.fn.commentRules();
+					BlogIt.fn.commentRules('#dialog');
 					var result = $.validity.end();
 					// Return whether it's okay to proceed with the Ajax:
 					if (result.valid){
@@ -142,7 +142,7 @@ BlogIt.fn = function($){
 								$('#dialog').dialog("close");
 								var $new_id=$(data.out).find('[id^=bi_ID]');  //find the new object in the returned DOM
 								if ($new_id.length!=1)  $new_id=$(data.out).filter('[id^=bi_ID]');  //needed for equilibrium, and similar skins, storing comments as non-LI
-								if (mode=='reply'||mode=='add')  $('#blogit-comment-list').append($new_id);  //adding a new comment
+								if (mode=='reply'||mode=='add')  $('#blogit-comment-list .blogit-comment-list').append($new_id);  //adding a new comment
 								else  $('#'+$(e.target).closest('"[id^=bi_ID]"').attr('id')).replaceWith($new_id);  //update existing comment
 								BlogIt.fn.flash($new_id, data);
 								if (mode=='add' && data.result!='error')  frm[0].reset();
@@ -152,10 +152,10 @@ BlogIt.fn = function($){
 					return false;  //ensure form doesn't do normal processing on Post
 				});
 		},
-		commentRules: function(){
-			$("#comment-author").require();
-			$("#comment-email").require().match("email");
-			$("#comment-website").match("url");
+		commentRules: function(frm){
+			$((frm?frm+' ':'')+"#comment-author").require();
+			$((frm?frm+' ':'')+"#comment-email").require().match("email");
+			$((frm?frm+' ':'')+"#comment-website").match("url");
 		},
 		flash: function(o, data){
 			var bg = o.css("background-color");
