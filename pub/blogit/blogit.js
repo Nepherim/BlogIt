@@ -14,11 +14,8 @@ jQuery(document).ready(function($){
 		return true;
 	});
 
-	$("#wikitext .blogit-comment-form").closest('form').validity(function() {
-		$("#comment-author").require();
-		$("#comment-email").require().match("email");
-		$("#comment-website").match("url");
-	});
+	$("#wikitext .blogit-comment-form").closest('form').validity(function(){ BlogIt.fn.commentRules(); });
+	BlogIt.fn.commentSubmit($("#wikitext .blogit-comment-form").closest('form'),'add');  //user comments posted via ajax
 	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
 	$("#wikiedit.blogit-blog-form form").validity(function() {
 		$("#entrydate").match("entryDate");
@@ -125,27 +122,40 @@ BlogIt.fn = function($){
 				success: function(data){
 					if (data.out){  //form returned in data.out
 						$("#dialog").html(data.out).dialog('option', 'width', '500px').dialog("open");  //load the comment form into a dialog
-						$('#dialog form')
-							.prepend('<input type="hidden" value="ajax" name="bi_mode">')  //trigger ajax mode
-							.submit(function(){  //when users hits Post, send form data
-								$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action'),  //post with the action defined on the form
-									data: $(this).serialize(),
-									success: function(data){  //after PmForms finishes processing, update page with new content
-										$('#dialog').dialog("close");
-										var id = '#'+$(e.target).closest('"[id^=bi_ID]"').attr('id');  //get ID of original, before potentially removing
-										var $new_id=$(data.out).find('[id^=bi_ID]');  //find the new object in the returned DOM
-//										console.log($('[id^=bi_ID]',data.out).filter('[id^=bi_ID]'));
-										if ($new_id.length!=1)  $new_id=$(data.out).filter('[id^=bi_ID]');  //needed for equilibrium, and similar skins, storing comments as non-LI
-										if (mode=='reply')  $(id).parent().append($new_id);  //adding a new comment
-										else  $(id).replaceWith($new_id);  //update existing comment
-										BlogIt.fn.flash($new_id, data);
-									}
-								});
-								return false;  //ensure form doesn't do normal processing on Post
-							});
+						BlogIt.fn.commentSubmit($('#dialog form'), mode, e);
 					}
 				}
 			});
+		},
+		commentSubmit: function(frm, mode, e){
+			frm
+				.prepend('<input type="hidden" value="ajax" name="bi_mode">')  //trigger ajax mode
+				.bind("submit",function(){
+					$.validity.start();
+					BlogIt.fn.commentRules();
+					var result = $.validity.end();
+					// Return whether it's okay to proceed with the Ajax:
+					if (result.valid){
+						$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action'),  //post with the action defined on the form
+							data: $(this).serialize(),
+							success: function(data){  //after PmForms finishes processing, update page with new content
+								$('#dialog').dialog("close");
+								var $new_id=$(data.out).find('[id^=bi_ID]');  //find the new object in the returned DOM
+								if ($new_id.length!=1)  $new_id=$(data.out).filter('[id^=bi_ID]');  //needed for equilibrium, and similar skins, storing comments as non-LI
+								if (mode=='reply'||mode=='add')  $('#blogit-comment-list').append($new_id);  //adding a new comment
+								else  $('#'+$(e.target).closest('"[id^=bi_ID]"').attr('id')).replaceWith($new_id);  //update existing comment
+								BlogIt.fn.flash($new_id, data);
+								if (mode=='add')  frm[0].reset();
+							}
+						});
+					}
+					return false;  //ensure form doesn't do normal processing on Post
+				});
+		},
+		commentRules: function(){
+			$("#comment-author").require();
+			$("#comment-email").require().match("email");
+			$("#comment-website").match("url");
 		},
 		flash: function(o, data){
 			var bg = o.css("background-color");
