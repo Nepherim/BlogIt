@@ -134,6 +134,8 @@ BlogIt.fn = function($){
 										$('#dialog').dialog("close");
 										var id = '#'+$(e.target).closest('"[id^=bi_ID]"').attr('id');  //get ID of original, before potentially removing
 										var $new_id=$(data.out).find('[id^=bi_ID]');  //find the new object in the returned DOM
+//										console.log($('[id^=bi_ID]',data.out).filter('[id^=bi_ID]'));
+										if ($new_id.length!=1)  $new_id=$(data.out).filter('[id^=bi_ID]');  //needed for equilibrium, and similar skins, storing comments as non-LI
 										if (mode=='reply')  $(id).parent().append($new_id);  //adding a new comment
 										else  $(id).replaceWith($new_id);  //update existing comment
 										BlogIt.fn.flash($new_id, data);
