@@ -8,16 +8,13 @@ jQuery(document).ready(function($){
 	BlogIt.fn.showMsg({msg:$('#wikiedit.blogit-blog-form .wikimessage').html(), result:'error'});
 	BlogIt.fn.showMsg({msg:$('#wikitext .blogit-comment-form .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
 
-	$('#blogit-cancel').click(function() {
-		//Restore initial data to prevent validation errors from changed field. Assume we loaded with valid data.
-		var $form = $("#wikitext .blogit-comment-form").parent('form');
-		if ($form.length) $form[0].reset();
-		$form = $("#wikiedit.blogit-blog-form form");
-		if ($form.length) $form[0].reset();
+	$('#blogit-cancel').click(function() {  //Restore initial data to prevent validation errors from changed field. Assume we loaded with valid data.
+		var $form = ($("#wikiedit").length ?$("#wikiedit.blogit-blog-form form") :$("#wikitext .blogit-comment-form").closest('form'));  //on the read page or edit page
+		$form[0].reset();
 		return true;
 	});
 
-	$("#wikitext .blogit-comment-form").parents('form').validity(function() {
+	$("#wikitext .blogit-comment-form").closest('form').validity(function() {
 		$("#comment-author").require();
 		$("#comment-email").require().match("email");
 		$("#comment-website").match("url");
@@ -28,18 +25,18 @@ jQuery(document).ready(function($){
 		$("#entrytitle,#entryurl").assert(($("#entryurl").val() || $("#entrytitle").val()), BlogIt.fn.xl('Either enter a Blog Title or a Pagename'));
 	});
 
-	$("a[href*=action\=blogitapprove],a[href*=action\=blogitunapprove]").click(function(e){
+	$("a[href*=action\=blogitapprove],a[href*=action\=blogitunapprove]").live('click', function(e){
 		e.preventDefault();
 		BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.commentStatus(e.target, data); }}, e);
 	});
-	$("a[href*=action\=blogitcommentdelete],a[href*=action\=bi_de]").click( function(e){ BlogIt.fn.deleteDialog(e); });
-	$("a[href*=action\=bi_bip]").click( function(e){ BlogIt.fn.commentBlock(e); });
+	$("a[href*=action\=blogitcommentdelete],a[href*=action\=bi_de]").live('click', function(e){ BlogIt.fn.deleteDialog(e); });
+	$("a[href*=action\=bi_bip]").live('click', function(e){ BlogIt.fn.commentBlock(e); });
 	$("a[href*=action\=bi_qc]").live('click', function(e){ BlogIt.fn.quickEditComment(e); });
-	$("a[href*=action\=bi_rc]").click( function(e){ BlogIt.fn.replyComment(e); });
-	$("#wikiedit.blogit-blog-form form :input:not(:submit)").bind("change", function(){
+	$("a[href*=action\=bi_rc]").live('click', function(e){ BlogIt.fn.replyComment(e); });
+	$("#wikiedit.blogit-blog-form form :input:not(:submit)").live('change', function(){  //if any field (not a submit button) changes...
 		window.onbeforeunload = function(){ return BlogIt.fn.xl('You have unsaved changes.'); }
 	});
-	$('#wikiedit.blogit-blog-form form :input:submit').click(function(){
+	$('#wikiedit.blogit-blog-form form :input:submit').live('click', function(){
 		window.onbeforeunload = null;  //Don't trigger on submit buttons.
 	});
 });
@@ -79,7 +76,7 @@ BlogIt.fn = function($){
 				{success:function(data){ BlogIt.fn.objectRemove(e.target, data); }},e);
 		},
 		objectRemove: function(o, data){
-			$($(o).parents('"[id^=bi_ID]"')[0]).fadeOut(500, function(){ $(this).remove(); });
+			$(o).closest('"[id^=bi_ID]"').fadeOut(500, function(){ $(this).remove(); });
 			BlogIt.fn.showMsg(data);
 		},
 		showMsg: function(data){
@@ -108,7 +105,7 @@ BlogIt.fn = function($){
 			},e);
 		},
 		commentStatus: function(o, data){
-			var $o = $($(o).parents('"[id^=bi_ID]"')[0]);
+			var $o = $(o).closest('"[id^=bi_ID]"');
 			BlogIt.fn.flash($o, data);
 			_unapprove = ( $(o).html()==BlogIt.fn.xl("unapprove") );
 			if (_unapprove){
@@ -126,21 +123,21 @@ BlogIt.fn = function($){
 			e.preventDefault();
 			$.ajax({dataType:'json', url:e.target.href,  //get the comment form from pmwiki
 				success: function(data){
-					if (data.out){  //load the comment form into a dialog, which does the normal comment edit process on submit
-						$("#dialog").html(data.out).dialog('option', 'width', '500px').dialog("open");
+					if (data.out){  //form returned in data.out
+						$("#dialog").html(data.out).dialog('option', 'width', '500px').dialog("open");  //load the comment form into a dialog
 						$('#dialog form')
-							.prepend('<input type="hidden" value="ajax" name="bi_mode">')
-							.submit(function(){
-								$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action')+'&bi_mode=ajax',
+							.prepend('<input type="hidden" value="ajax" name="bi_mode">')  //trigger ajax mode
+							.submit(function(){  //when users hits Post, send form data
+								$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action'),
 									data: $(this).serialize(),
-									success: function(data){
+									success: function(data){  //after PmForms finishes processing, update page with new content
 										$('#dialog').dialog("close");
-										var id = '#'+$($(e.target).parents('"[id^=bi_ID]"')[0]).attr('id');
-										$(id).replaceWith($("[id^=bi_ID]", $(data.out)[0]));
+										var id = '#'+$(e.target).closest('"[id^=bi_ID]"').attr('id');  //need to get ID as we remove old DOM element
+										$(id).replaceWith($(data.out).filter(id));  //update page with new content
 										BlogIt.fn.flash($(id), data);
 									}
 								});
-								return false;
+								return false;  //ensure form doesn't do normal processing on Post
 							});
 					}
 				}
