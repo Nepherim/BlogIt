@@ -235,16 +235,16 @@ if ($action == 'print'){
 # - HandleActions Functions
 # ----------------------------------------
 function bi_HandleBrowse($pagename, $auth = 'read'){
-global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OriginalFn,$Group,$bi_CommentGroup;
-	if ($Group == $bi_CommentGroup){	bi_Redirect(); return; }  #After editing/deleting a comment page, and after HandlePmForm() has done a redirect()
+global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OriginalFn,$Group,$bi_CommentGroup,$_REQUEST;
+	if ($Group == $bi_CommentGroup){ bi_Redirect(); return; }  #After editing/deleting a comment page, and after HandlePmForm() has done a redirect()
+	if ($_REQUEST['bi_mode']=='ajax'){ bi_AjaxRedirect(); return; }
 	if (isset($bi_ResetPmFormField))
 		foreach ($bi_ResetPmFormField  as $k => $v) {
 			$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
 			$FmtPV['$bi_Default_'.$k]='"'.$v.'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
 		}
 	bi_AddMarkup();  #If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling
-	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];
-	HandleDispatch($pagename, 'browse');
+	$bi_OriginalFn['HandleActions']['browse']($pagename, $auth);
 }
 # Return the comment form DOM if ajax request, or set the GroupHeader to the comment form
 function bi_HandleCommentEdit($src, $auth='comment-edit'){  #action=bi_ce or action=bi_cr
@@ -296,7 +296,7 @@ global $_GET,$GroupHeaderFmt;
 function bi_HandleProcessForm ($src, $auth='read'){
 global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$ROSPatterns,$CategoryGroup,
 	$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$Now,
-	$EnablePost,$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired;
+	$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired;
 
 	$bi_ResetPmFormField = array();
 	if (@$_POST['target']=='blogit-entry' && @$_POST['save']){
@@ -423,7 +423,7 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 		case 'delete': return (bi_Auth('blog-edit '.$args['page']) ?$args['pre_text'] .'[['.$args['page'].'?action=bi_de | '.$txt.']]'.$args['post-text'] :'');
 		case 'tags': return ($txt>'' ?$args['pre_text'].bi_SaveTags('', html_entity_decode($txt, ENT_QUOTES), $bi_TagSeparator).$args['post_text'] :'');
 		case 'commentcount': return ($args['status']!='none' && $bi_CommentsEnabled
-			?$args['pre_text'].'[['.$args['group'].'.'.$args['name'].'#commentblock | '.
+			?$args['pre_text'].'[['.$args['group'].'.'.$args['name'].'#blogit-comment-list | '.
 				'(:includesection "#comments-count-pagelist entrygroup=\''.$args['group'].'\' entryname=\''.$args['name'].'\' commentstatus=true":)'.
 				$txt.']]'.$args['post_text']
 			:'');
@@ -537,15 +537,17 @@ global $PCache,$pagename;
 				unset($PCache[$pagename][$key]);
 	}
 }
-function bi_AjaxRedirect($result){
-global $bi_Pages,$pagename,$_REQUEST,$bi_CommentPage;
+function bi_AjaxRedirect($result=''){
+global $bi_Pages,$pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt;
 	if ($_REQUEST['target']=='blogit-comments'){
-		bi_ClearCache();  #Otherwise we retrieve the old values.
-		echo(json_encode(array(  #admin list uses a different format for listing comments
-			'out'=>MarkupToHTML($pagename, '(:includesection "' .($bi_Pages['admin'] ?'#unapproved-comments' :'#comments-pagelist') .' entrycomments=readonly commentid=' .$bi_CommentPage .' ":)'),
-			'result'=>'success',
-			'msg'=>($bi_CommentPage==$pagename ?'Successfully updated comment.' :'Successfully added new comment.')
-		)));
+		if ($EnablePost){  #set to 0 is pmform failed (invalid captcha, etc)
+			bi_ClearCache();  #Otherwise we retrieve the old values.
+			echo(json_encode(array(  #admin list uses a different format for listing comments
+				'out'=>MarkupToHTML($pagename, '(:includesection "' .($bi_Pages['admin']==$pagename ?'#unapproved-comments' :'#comments-pagelist') .' entrycomments=readonly commentid=' .$bi_CommentPage .' ":)'),
+				'result'=>'success',
+				'msg'=>($bi_CommentPage==$pagename ?'Successfully updated comment.' :'Successfully added new comment.')
+			)));
+		}else  echo(json_encode(array('result'=>'error','msg'=>FmtPageName(implode($MessagesFmt), $pagename)) ));
 	}else  echo(json_encode($result));
 	exit;
 }
