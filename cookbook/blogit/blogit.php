@@ -246,6 +246,7 @@ global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OriginalFn,$Grou
 	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];
 	HandleDispatch($pagename, 'browse');
 }
+# Return the comment form DOM if ajax request, or set the GroupHeader to the comment form
 function bi_HandleCommentEdit($src, $auth='comment-edit'){  #action=bi_ce or action=bi_cr
 global $action,$_REQUEST,$pagename,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt;
 	if ( ($bi_EntryType == 'comment' || $action=='bi_cr') && bi_Auth($auth) ){
@@ -537,11 +538,11 @@ global $PCache,$pagename;
 	}
 }
 function bi_AjaxRedirect($result){
-global $pagename,$_REQUEST,$bi_CommentPage;
+global $bi_Pages,$pagename,$_REQUEST,$bi_CommentPage;
 	if ($_REQUEST['target']=='blogit-comments'){
 		bi_ClearCache();  #Otherwise we retrieve the old values.
-		echo(json_encode(array(
-			'out'=>MarkupToHTML($pagename, '(:includesection "#comments-pagelist entrycomments=readonly commentid=' .$bi_CommentPage .' ":)'),
+		echo(json_encode(array(  #admin list uses a different format for listing comments
+			'out'=>MarkupToHTML($pagename, '(:includesection "' .($bi_Pages['admin'] ?'#unapproved-comments' :'#comments-pagelist') .' entrycomments=readonly commentid=' .$bi_CommentPage .' ":)'),
 			'result'=>'success',
 			'msg'=>($bi_CommentPage==$pagename ?'Successfully updated comment.' :'Successfully added new comment.')
 		)));
