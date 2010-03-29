@@ -84,6 +84,7 @@ SDV($PmFormRedirect,'bi_Redirect');
 bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','CategoryGroup','Now','bi_CommentGroup',
 	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_StatAction'));
 bi_setFmtPVA(array('$bi_Pages'=>$bi_Pages));
+$FmtPV['$bi_Mode']='$_REQUEST["bi_mode"]';
 
 # ----------------------------------------
 # - PmWiki Config
@@ -94,36 +95,6 @@ $AsSpacedFunction = 'AsSpacedHyphens';  #[1]
 # Doesn't pick up categories defined as page variables.
 $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>"; #[1]
 $WikiStyleApply['row'] = 'tr';  #allows TR to be labelled with ID attributes
-
-# ----------------------------------------
-# - PmForms Setup
-include_once($bi_Paths['pmform']);
-$PmFormPostPatterns['/\r/'] = '';  #fixes a bug in pmforms where multi-line entries/comments are stored across multiple lines in the base page
-$PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
-array_unshift ($PmFormTemplatesFmt,	($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$bi_Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
-$bi_Forms=array('blogit-entry','blogit-comments');
-SDV($PmForm['blogit-entry'], 'form=#blog-form-control fmt=#blog-post-control');
-#if page is an existing comment (ie, has a comment page name) then use it, otherwise create it
-SDV($PmForm['blogit-comments'],
-	'saveto="' .(preg_match($bi_CommentPattern,$pagename) ?$pagename :$bi_CommentGroup .'.{$Group}-{$Name}-' .date('Ymd\THms')) .'" '.
-	'form=#comment-form-control fmt=#comment-post-control');
-
-# ----------------------------------------
-# - Handle Actions
-$bi_OriginalFn['HandleActions'] = $HandleActions;
-$HandleActions['pmform']='bi_HandleProcessForm';
-$HandleActions['browse']='bi_HandleBrowse';
-#TODO: SDV($HandleActions['approvsites'],'bi_HandleUrlApprove');  #approveurl
-SDV($HandleActions['blogitadmin'], 'bi_HandleAdmin'); SDV($HandleAuth['blogitadmin'], 'blogit-admin');
-SDV($HandleActions['blogitapprove'], 'bi_HandleApproveComment'); SDV($HandleAuth['blogitapprove'], 'comment-approve');
-SDV($HandleActions['blogitunapprove'], 'bi_HandleUnapproveComment'); SDV($HandleAuth['blogitunapprove'], 'comment-approve');
-SDV($HandleActions['blogitcommentedit'], 'bi_HandleEditComment'); SDV($HandleAuth['blogitcommentedit'], 'comment-edit');
-SDV($HandleActions['blogitcommentdelete'], 'bi_HandleDelete'); SDV($HandleAuth['blogitcommentdelete'], 'blog-edit');
-SDV($HandleActions['bi_de'], 'bi_HandleDelete'); SDV($HandleAuth['bi_de'], 'comment-edit');
-SDV($HandleActions['bi_bip'], 'bi_HandleBlockIP'); SDV($HandleAuth['bi_bip'], 'comment-approve');
-SDV($HandleActions['bi_qc'], 'bi_HandleQuickComment'); SDV($HandleAuth['bi_qc'], 'comment-edit');
-SDV($HandleActions['bi_rc'], 'bi_HandleReplyComment'); SDV($HandleAuth['bi_rc'], 'comment-edit');
-SDV($HandleActions['blogitupgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['blogitupgrade'], 'admin');
 
 # ----------------------------------------
 # - Authentication
@@ -169,6 +140,35 @@ if ( bi_Auth('*') ){
 }
 
 # ----------------------------------------
+# - PmForms Setup
+include_once($bi_Paths['pmform']);
+$PmFormPostPatterns['/\r/'] = '';  #fixes a bug in pmforms where multi-line entries/comments are stored across multiple lines in the base page
+$PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
+array_unshift ($PmFormTemplatesFmt,	($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$bi_Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
+$bi_Forms=array('blogit-entry','blogit-comments');
+$bi_CommentPage=(preg_match($bi_CommentPattern,$pagename) ?$pagename :$bi_CommentGroup .'.' .$Group .'-' .$Name .'-' .date('Ymd\THms'));
+SDV($PmForm['blogit-entry'], 'form=#blog-form-control fmt=#blog-post-control');
+#if page is an existing comment (ie, has a comment page name) then use it, otherwise create it
+SDV($PmForm['blogit-comments'],
+	'saveto="' . $bi_CommentPage.'" '.
+	'form=#comment-form-control fmt=#comment-post-control');
+
+# ----------------------------------------
+# - Handle Actions
+$bi_OriginalFn['HandleActions'] = $HandleActions;
+$HandleActions['pmform']='bi_HandleProcessForm';
+$HandleActions['browse']='bi_HandleBrowse';
+#TODO: SDV($HandleActions['approvsites'],'bi_HandleUrlApprove');  #approveurl
+SDV($HandleActions['bi_admin'], 'bi_HandleAdmin'); SDV($HandleAuth['bi_admin'], 'blogit-admin');
+SDV($HandleActions['bi_ca'], 'bi_HandleCommentApprove'); SDV($HandleAuth['bi_ca'], 'comment-approve');
+SDV($HandleActions['bi_cua'], 'bi_HandleCommentUnapprove'); SDV($HandleAuth['bi_cua'], 'comment-approve');
+SDV($HandleActions['bi_ce'], 'bi_HandleCommentEdit'); SDV($HandleAuth['bi_ce'], 'comment-edit');
+SDV($HandleActions['bi_cr'], 'bi_HandleCommentEdit'); SDV($HandleAuth['bi_cr'], 'comment-edit');  #comment-reply
+SDV($HandleActions['bi_del'], 'bi_HandleDelete'); SDV($HandleAuth['bi_del'], 'comment-edit');
+SDV($HandleActions['bi_bip'], 'bi_HandleBlockIP'); SDV($HandleAuth['bi_bip'], 'comment-approve');
+SDV($HandleActions['bi_upgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['bi_upgrade'], 'admin');
+
+# ----------------------------------------
 # - Pagination
 $FmtPV['$bi_PageNext'] = (isset($_GET['page']) ?$_GET['page']+1 :2);
 $FmtPV['$bi_PagePrev'] = (isset($_GET['page']) && ($_GET['page']>0) ?$_GET['page']-1 :0);
@@ -180,7 +180,7 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_
 Markup('blogit', 'fulltext', '/\(:blogit (list|cleantext)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
 Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
-	'(date|intro|author|tags|edit|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentquickedit|commentreply|commentblock|commenttext|commentid)'.
+	'(date|intro|author|tags|edit|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentreply|commentblock|commenttext|commentid)'.
 	'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
 	"blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
@@ -236,7 +236,7 @@ if ($action == 'print'){
 # ----------------------------------------
 function bi_HandleBrowse($pagename, $auth = 'read'){
 global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OriginalFn,$Group,$bi_CommentGroup;
-	if ($Group == $bi_CommentGroup){ bi_Redirect(); return; }  #After editing/deleting a comment page, and after HandlePmForm() has done a redirect()
+	if ($Group == $bi_CommentGroup){	bi_Redirect(); return; }  #After editing/deleting a comment page, and after HandlePmForm() has done a redirect()
 	if (isset($bi_ResetPmFormField))
 		foreach ($bi_ResetPmFormField  as $k => $v) {
 			$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
@@ -246,30 +246,23 @@ global $_REQUEST,$bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OriginalFn,$Grou
 	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];
 	HandleDispatch($pagename, 'browse');
 }
-function bi_HandleEditComment($src, $auth='comment-edit'){
-global $HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt;
-	if ( @$bi_EntryType == 'comment' && bi_Auth($auth) )  $GroupHeaderFmt .= '(:includesection "#comment-edit":)';
+function bi_HandleCommentEdit($src, $auth='comment-edit'){  #action=bi_ce or action=bi_cr
+global $action,$_REQUEST,$pagename,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt;
+	if ( ($bi_EntryType == 'comment' || $action=='bi_cr') && bi_Auth($auth) ){
+		if ($_REQUEST['bi_mode']=='ajax'){
+			$result = array('result'=>'error');
+			$result = array('out'=>MarkupToHTML($pagename, '(:includesection "#comment-edit":)'), 'result'=>'success');
+			bi_Redirect('ajax', $result);  #quick comment is always an ajax request, so no need for &bi_mode=ajax
+			return;
+		}else  $GroupHeaderFmt .= '(:includesection "#comment-edit":)';
+	}
 	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];
 	HandleDispatch($src, 'browse');
 }
-function bi_HandleQuickComment($src, $auth='comment-edit'){  #action=bi_qc
-global $bi_EntryType,$pagename;
-	$result = array('result'=>'error');
-	if ( @$bi_EntryType == 'comment' && bi_Auth($auth) )
-		$result = array('out'=>MarkupToHTML($pagename, '(:includesection "#comment-edit":)'), 'result'=>'success');
-	bi_Redirect('ajax', $result);  #quick comment is always an ajax request, so no need for &bi_mode=ajax
+function bi_HandleCommentUnapprove($src, $auth='comment-approve'){  #action=bi_cua
+	bi_HandleCommentApprove($src,$auth,false);
 }
-function bi_HandleReplyComment($src, $auth='comment-edit'){  #action=bi_rc
-global $bi_EntryType,$pagename;
-	$result = array('result'=>'error');
-	if ( bi_Auth($auth) )
-		$result = array('out'=>MarkupToHTML($pagename, '(:includesection "#comment-edit":)'), 'result'=>'success');
-	bi_Redirect('ajax', $result);  #quick comment is always an ajax request, so no need for &bi_mode=ajax
-}
-function bi_HandleUnapproveComment($src, $auth='comment-approve'){
-	bi_HandleApproveComment($src,$auth,false);
-}
-function bi_HandleApproveComment($src, $auth='comment-approve', $approve=true){
+function bi_HandleCommentApprove($src, $auth='comment-approve', $approve=true){  #action=bi_ca
 global $_POST,$Now,$ChangeSummary,$_GET;
 	$m = XL(($approve?'a':'una').'pprove comment');
 	$result = array('msg'=>XL('Unable to ').$m, 'result'=>'error');
@@ -347,11 +340,11 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$ROSPatt
 	}
 	$bi_OriginalFn['HandleActions']['pmform']($src, $auth);  #usually HandlePmForm()
 }
-function bi_HandleDelete($src, $auth='comment-edit'){  #action=blogitcommentdelete
-global $bi_EntryType,$action,$WikiDir,$LastModFile,$_GET;
+function bi_HandleDelete($src, $auth='comment-edit'){  #action=bi_del
+global $bi_EntryType,$WikiDir,$LastModFile,$_GET;
 	$result = array('msg'=>XL('Unable to perform delete operation.'), 'result'=>'error');
-	if ( (($action=='blogitcommentdelete' && $bi_EntryType=='comment') || ($action=='bi_de' && $bi_EntryType=='blog'))
-		&& (bi_Auth($auth.' '.$src) && RetrieveAuthPage($src,'read',false, READPAGE_CURRENT)) ){
+	if ( ($bi_EntryType=='comment' || $bi_EntryType=='blog')
+		&& (bi_Auth( ($bi_EntryType=='comment' ?'comment-edit' :'blog-edit') .' ' .$src) && RetrieveAuthPage($src,'read',false, READPAGE_CURRENT)) ){
 		$WikiDir->delete($src);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
 		$result = array('msg'=>XL('Delete successful.'), 'result'=>'success');
@@ -435,13 +428,12 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 			:'');
 		case 'commentauthor': return ($bi_LinkToCommentSite=='true' && $args['website']>'' ?'[['.$args['website'].' | '.$args['author'].']]' :$args['author']);
 		case 'commentapprove': return (bi_Auth('comment-approve '.bi_BasePage($txt))
-			?$args['pre_text'].'[['.$txt.'?action=blogit'.($args['status']=='true'?'un':'').'approve | $['.($args['status']=='true'?'un':'').'approve]]]'.$args['post_text']
+			?$args['pre_text'].'[['.$txt.'?action=bi_'.($args['status']=='true'?'cua':'ca').'&bi_mode=ajax | $['.($args['status']=='true'?'un':'').'approve]]]'.$args['post_text']
 			:'');
-		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=blogitcommentedit | $[edit]]]'.$args['post_text'] :'');
-		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=blogitcommentdelete | $[delete]]]'.$args['post_text'] :'');
-		case 'commentquickedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_qc&bi_mode=ajax | $[quick edit]]]'.$args['post_text'] :'');
-		case 'commentreply': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.bi_BasePage($txt).'?action=bi_rc&bi_mode=ajax | $[reply]]]'.$args['post_text'] :'');
-		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_bip | $[block]]]'.$args['post_text'] :'');
+		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_ce&bi_mode=ajax | $[edit]]]'.$args['post_text'] :'');
+		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_del&bi_mode=ajax | $[delete]]]'.$args['post_text'] :'');
+		case 'commentreply': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.bi_BasePage($txt).'?action=bi_cr&bi_mode=ajax | $[reply]]]'.$args['post_text'] :'');
+		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_bip&bi_mode=ajax | $[block]]]'.$args['post_text'] :'');
 		case 'commenttext': return ( strtr($txt, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />', "\x0B" => '<br />')) );
 		case 'commentid': {
 			$x = preg_match($bi_CommentPattern, $txt, $m );
@@ -545,13 +537,13 @@ global $PCache,$pagename;
 	}
 }
 function bi_AjaxRedirect($result){
-global $pagename,$Name,$_REQUEST,$action;
+global $pagename,$_REQUEST,$bi_CommentPage;
 	if ($_REQUEST['target']=='blogit-comments'){
 		bi_ClearCache();  #Otherwise we retrieve the old values.
 		echo(json_encode(array(
-			'out'=>MarkupToHTML($pagename, '(:includesection "#comments-pagelist entrycomments=readonly commentid=' .$Name .' ":)'),
+			'out'=>MarkupToHTML($pagename, '(:includesection "#comments-pagelist entrycomments=readonly commentid=' .$bi_CommentPage .' ":)'),
 			'result'=>'success',
-			'msg'=>'Successfully updated comment.'
+			'msg'=>($bi_CommentPage==$pagename ?'Successfully updated comment.' :'Successfully added new comment.')
 		)));
 	}else  echo(json_encode($result));
 	exit;
