@@ -145,7 +145,7 @@ BlogIt.fn = function($){
 								if (mode=='reply'||mode=='add')  $('#blogit-comment-list').append($new_id);  //adding a new comment
 								else  $('#'+$(e.target).closest('"[id^=bi_ID]"').attr('id')).replaceWith($new_id);  //update existing comment
 								BlogIt.fn.flash($new_id, data);
-								if (mode=='add')  frm[0].reset();
+								if (mode=='add' && data.result!='error')  frm[0].reset();
 							}
 						});
 					}
