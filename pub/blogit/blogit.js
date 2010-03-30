@@ -8,24 +8,23 @@ jQuery(document).ready(function($){
 	BlogIt.fn.showMsg({msg:$('#wikiedit.blogit-blog-form .wikimessage').html(), result:'error'});
 	BlogIt.fn.showMsg({msg:$('#wikitext .blogit-comment-form .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
 
-	$('#blogit-cancel').click(function() {  //Restore initial data to prevent validation errors from changed field. Assume we loaded with valid data.
+	$('#dialog #blogit-cancel').live('click', function(e){ BlogIt.fn.dialogClose(); });
+	$('#blogit-cancel').bind('click', function(){  //Restore initial data to prevent validation errors from changed field. Assume we loaded with valid data.
 		var $form = ($("#wikiedit").length ?$("#wikiedit.blogit-blog-form form") :$("#wikitext .blogit-comment-form").closest('form'));  //on the read page or edit page
 		$form[0].reset();
 		return true;
 	});
 
-	$("#wikitext .blogit-comment-form").closest('form').validity(function(){ BlogIt.fn.commentRules(); });
 	BlogIt.fn.commentSubmit($("#wikitext .blogit-comment-form").closest('form'),'add');  //user comments posted via ajax
 	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
-	$("#wikiedit.blogit-blog-form form").validity(function() {
-		$("#entrydate").match("entryDate");
-		$("#entrytitle,#entryurl").assert(($("#entryurl").val() || $("#entrytitle").val()), BlogIt.fn.xl('Either enter a Blog Title or a Pagename'));
-	});
+	$("#wikitext .blogit-comment-form").closest('form').validity(function(){ BlogIt.fn.commentRules(); });
+	$("#wikiedit.blogit-blog-form form").validity(function() { BlogIt.fn.blogRules(); });
 
 	$("a[href*=action\=bi_ca],a[href*=action\=bi_cua]").live('click', function(e){
 		e.preventDefault();
 		BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.commentStatus(e.target, data); }}, e);
 	});
+	$("a[href*=action\=bi_be]").live('click', function(e){ BlogIt.fn.blogEdit(e); });
 	$("a[href*=action\=bi_del]").live('click', function(e){ BlogIt.fn.deleteDialog(e); });
 	$("a[href*=action\=bi_bip]").live('click', function(e){ BlogIt.fn.commentBlock(e); });
 	$("a[href*=action\=bi_ce]").live('click', function(e){ BlogIt.fn.commentEdit(e,'edit'); });
@@ -116,12 +115,49 @@ BlogIt.fn = function($){
 			var cc_Txt = cc_Obj.html();
 			cc_Obj.html( cc_Txt.replace(new RegExp(BlogIt.fn.xl('Unapproved Comments:')+' (\\d*)'), updateCount) );
 		},
+		blogEdit: function(e){
+			e.preventDefault();
+			$.ajax({dataType:'json', url:e.target.href,  //get the comment form from pmwiki
+				success: function(data){
+					if (data.out){  //form returned in data.out
+						$("#dialog").html( $(data.out).filter('#wikiedit') ).dialog('option', 'buttons', {})
+							.dialog('option', 'width', '750px').dialog("open");  //load the edit form into a dialog
+						BlogIt.fn.blogSubmit($('#dialog form'), e);
+					}
+				}
+			});
+		},
+		blogSubmit: function(frm, e){
+			frm
+				.prepend('<input type="hidden" value="ajax" name="bi_mode">')  //trigger ajax mode
+				.bind("submit",function(e){
+					e.preventDefault();
+					$.validity.start();
+					BlogIt.fn.blogRules('#dialog');
+					var result = $.validity.end();  //if valid then it's okay to proceed with the Ajax
+					if (result.valid){
+						$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action'),  //post with the action defined on the form
+							data: $(this).serialize(),
+							success: function(data){  //after PmForms finishes processing, update page with new content
+								BlogIt.fn.dialogClose();
+								if (data.out){
+									$('html,body').animate({scrollTop: $('#wikitext').offset().top-75}, 1);
+									$('#wikitext .blogit-post').replaceWith($(data.out).filter('.blogit-post'));  //update existing comment
+									BlogIt.fn.flash($('#wikitext .blogit-post'), data);
+								} else  BlogIt.fn.showMsg({msg:BlogIt.fn.xl("No data returned.")});
+							}
+						});
+					}
+				});
+		},
+
 		commentEdit: function(e, mode){
 			e.preventDefault();
 			$.ajax({dataType:'json', url:e.target.href,  //get the comment form from pmwiki
 				success: function(data){
 					if (data.out){  //form returned in data.out
-						$("#dialog").html(data.out).dialog('option', 'width', '500px').dialog("open");  //load the comment form into a dialog
+						$("#dialog").html(data.out).dialog('option', 'buttons', {})
+							.dialog('option', 'width', '500px').dialog("open");  //load the comment form into a dialog
 						BlogIt.fn.commentSubmit($('#dialog form'), mode, e);
 					}
 				}
@@ -139,13 +175,15 @@ BlogIt.fn = function($){
 						$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action'),  //post with the action defined on the form
 							data: $(this).serialize(),
 							success: function(data){  //after PmForms finishes processing, update page with new content
-								$('#dialog').dialog("close");
-								var $new_id=$(data.out).find('[id^=bi_ID]');  //find the new object in the returned DOM
-								if ($new_id.length!=1)  $new_id=$(data.out).filter('[id^=bi_ID]');  //needed for equilibrium, and similar skins, storing comments as non-LI
-								if (mode=='reply'||mode=='add')  $('#blogit-comment-list .blogit-comment-list').append($new_id);  //adding a new comment
-								else  $('#'+$(e.target).closest('"[id^=bi_ID]"').attr('id')).replaceWith($new_id);  //update existing comment
-								BlogIt.fn.flash($new_id, data);
-								if (mode=='add' && data.result!='error')  frm[0].reset();
+								BlogIt.fn.dialogClose();
+								if (data.out){
+									var $new_id=$(data.out).find('[id^=bi_ID]');  //find the new object in the returned DOM
+									if ($new_id.length!=1)  $new_id=$(data.out).filter('[id^=bi_ID]');  //needed for equilibrium, and similar skins, storing comments as non-LI
+									if (mode=='reply'||mode=='add')  $('#blogit-comment-list .blogit-comment-list').append($new_id);  //adding a new comment
+									else  $('#'+$(e.target).closest('"[id^=bi_ID]"').attr('id')).replaceWith($new_id);  //update existing comment
+									BlogIt.fn.flash($new_id, data);
+									if (mode=='add' && data.result!='error')  frm[0].reset();
+								} else  BlogIt.fn.showMsg({msg:BlogIt.fn.xl("No data returned.")});
 							}
 						});
 					}
@@ -156,6 +194,13 @@ BlogIt.fn = function($){
 			$((frm?frm+' ':'')+"#comment-author").require();
 			$((frm?frm+' ':'')+"#comment-email").require().match("email");
 			$((frm?frm+' ':'')+"#comment-website").match("url");
+		},
+		blogRules: function(frm){
+			$((frm?frm+' ':'')+"#entrydate").match("entryDate");
+			$((frm?frm+' ':'')+"#entrytitle,"+(frm?frm+' ':'')+"#entryurl")
+				.assert(	($((frm?frm+' ':'')+"#entryurl").val() || $((frm?frm+' ':'')+"#entrytitle").val()),
+					BlogIt.fn.xl('Either enter a Blog Title or a Pagename')
+				);
 		},
 		flash: function(o, data){
 			var bg = o.css("background-color");
