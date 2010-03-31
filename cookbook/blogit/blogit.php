@@ -559,28 +559,27 @@ global $PCache,$pagename;
 				unset($PCache[$pagename][$key]);
 	}
 }
+function bi_SendAjax($markup, $msg){
+global $pagename;
+	bi_ClearCache();  #Otherwise we retrieve the old values.
+	echo(json_encode(array(  #admin list uses a different format for listing comments
+		'out'=>MarkupToHTML($pagename, $markup),
+		'result'=>'success',
+		'msg'=>XL($msg)
+	)));
+}
 function bi_AjaxRedirect($result=''){
 global $bi_Pages,$pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt;
 bi_debugLog('AjaxRedirect');
 	if ($EnablePost){  #set to 0 is pmform failed (invalid captcha, etc)
 		if ($_REQUEST['target']=='blogit-comments'){
 #TODO: Need a way to determine if error occured in PmForm (if disable client-sdie validation, and email is null)
-			bi_ClearCache();  #Otherwise we retrieve the old values.
-			echo(json_encode(array(  #admin list uses a different format for listing comments
-				'out'=>MarkupToHTML($pagename, '(:includesection "' .($bi_Pages['admin']==$pagename ?'#unapproved-comments' :'#comments-pagelist')
-					.' entrycomments=readonly commentid=' .$bi_CommentPage .'":)'),
-				'result'=>'success',
-				'msg'=>($bi_CommentPage==$pagename ?'Successfully updated comment.' :'Successfully added new comment.')
-			)));
-
+			bi_SendAjax('(:includesection "' .($bi_Pages['admin']==$pagename ?'#unapproved-comments' :'#comments-pagelist')
+					.' entrycomments=readonly commentid=' .$bi_CommentPage .'":)',
+				($bi_CommentPage==$pagename ?'Successfully updated comment.' :'Successfully added new comment.')
+			);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
-			bi_ClearCache();  #Otherwise we retrieve the old values.
-			echo(json_encode(array(  #admin list uses a different format for listing comments
-				'out'=>MarkupToHTML($pagename, '(:includesection "#single-entry-view":)'),
-				'result'=>'success',
-				'msg'=>'Successfully updated blog entry.'
-			)));
-
+			bi_SendAjax('(:includesection "#single-entry-view":)', 'Successfully updated blog entry.');
 		}else  echo(json_encode($result));
 	}else  echo(json_encode(array('result'=>'error','msg'=>FmtPageName(implode($MessagesFmt), $pagename)) ));
 	exit;
@@ -671,7 +670,7 @@ global $bi_DateFmtRE;
 }
 function bi_JXL(){  #create javascript array holding all XL translations of text used client-side
 	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:', 'Commenter IP: ',
-			'Enter the IP to block:', 'Submit', 'Cancel', 'Either enter a Blog Title or a Pagename', 'You have unsaved changes.','Website:');
+			'Enter the IP to block:', 'Submit', 'Post', 'Cancel', 'Either enter a Blog Title or a Pagename', 'You have unsaved changes.','Website:');
 	foreach ($a as $k)  $t .= ($k!=XL($k) ?'BlogIt.xl["' .$k .'"]="' .XL($k) ."\";\n" :'');
 
 	$a=array('require'=>'This field is required.', 'date'=>'This field must be formatted as a date.',
