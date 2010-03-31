@@ -88,7 +88,7 @@ BlogIt.fn = function($){
 			$.ajax({dataType:'json', url:e.target.href,  //get the comment form from pmwiki
 				success: function(data){
 					if (data.out){  //form returned in data.out
-						var txt=(name=='edit' ?$(data.out).filter('#wikiedit') :data.out);
+						var txt=(name=='blog' ?$(data.out).filter('#wikiedit') :data.out);  //only show wikiedit, not the editing reference
 						$("#dialog").html( txt ).dialog('option', 'buttons', {})
 							.dialog('option', 'width', (name=='blog'?'750px':'500px')).dialog("open");  //load the edit form into a dialog
 						if (name=='blog')  BlogIt.fn.ajaxForm($('#dialog form'), BlogIt.fn.blogRules, BlogIt.fn.blogSubmit);  //blog edit
