@@ -87,6 +87,7 @@ bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','Ca
 	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_StatAction'));
 bi_setFmtPVA(array('$bi_Pages'=>$bi_Pages));
 $FmtPV['$bi_Mode']='$_REQUEST["bi_mode"]';
+$FmtPV['$bi_Src']='$_REQUEST["bi_src"]';  #stores the page that the ajax request was initiated from, or 'admin' if the admin page
 
 # ----------------------------------------
 # - PmWiki Config
@@ -163,9 +164,9 @@ $HandleActions['print']='bi_HandleBrowse';
 SDV($HandleActions['bi_admin'], 'bi_HandleAdmin'); SDV($HandleAuth['bi_admin'], 'blogit-admin');
 SDV($HandleActions['bi_ca'], 'bi_HandleCommentApprove'); SDV($HandleAuth['bi_ca'], 'comment-approve');
 SDV($HandleActions['bi_cua'], 'bi_HandleCommentUnapprove'); SDV($HandleAuth['bi_cua'], 'comment-approve');
-SDV($HandleActions['bi_be'], 'bi_HandleBlogEdit'); SDV($HandleAuth['bi_be'], 'comment-edit');
-SDV($HandleActions['bi_ce'], 'bi_HandleCommentEdit'); SDV($HandleAuth['bi_ce'], 'comment-edit');
-SDV($HandleActions['bi_cr'], 'bi_HandleCommentEdit'); SDV($HandleAuth['bi_cr'], 'comment-edit');  #comment-reply
+SDV($HandleActions['bi_be'], 'bi_HandleEdit'); SDV($HandleAuth['bi_be'], 'blog-edit');
+SDV($HandleActions['bi_ce'], 'bi_HandleEdit'); SDV($HandleAuth['bi_ce'], 'comment-edit');
+SDV($HandleActions['bi_cr'], 'bi_HandleEdit'); SDV($HandleAuth['bi_cr'], 'comment-edit');  #comment-reply
 SDV($HandleActions['bi_del'], 'bi_HandleDelete'); SDV($HandleAuth['bi_del'], 'comment-edit');
 SDV($HandleActions['bi_bip'], 'bi_HandleBlockIP'); SDV($HandleAuth['bi_bip'], 'comment-approve');
 SDV($HandleActions['bi_upgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['bi_upgrade'], 'admin');
@@ -248,31 +249,17 @@ bi_debugLog('HandleBrowse: '.$action.'['.$_REQUEST['bi_mode'].'] '.$_REQUEST['ta
 	bi_AddMarkup();  #If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling
 	$bi_OriginalFn['HandleActions'][($action=='print' ?'print': 'browse')]($pagename, $auth);  #don't restore the original browse, since PmForm might do a handle browse redirect
 }
-# Return the comment form DOM if ajax request, or set the GroupHeader to the comment form
-function bi_HandleBlogEdit($src, $auth='blog-edit'){  #action=bi_be
+# Return the comment form DOM if ajax request, or set the GroupHeader to the comment/blog form
+function bi_HandleEdit($src, $auth='blog-edit'){  #action=(bi_be|bi_ce|bi_cr)
 global $action,$_REQUEST,$pagename,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt;
-bi_debugLog('HandleBlogEdit');
-	if ( $bi_EntryType == 'blog' && bi_Auth($auth) ){
-		if ($_REQUEST['bi_mode']=='ajax'){
-			bi_Redirect('ajax', array('out'=>MarkupToHTML($pagename, '(:includesection "#blog-edit":)'), 'result'=>'success'));
-			return;
-		}else  $GroupHeaderFmt .= '(:includesection "#blog-edit":)';
+bi_debugLog('HandleEdit');
+	$type=($action=='bi_be' ?'blog' :'comment');
+	if ( ($bi_EntryType == $type || $action=='bi_cr') && bi_Auth($auth) ){
+		if ($_REQUEST['bi_mode']=='ajax')  bi_AjaxRedirect(array('out'=>MarkupToHTML($pagename, '(:includesection "#' .$type .'-edit":)'), 'result'=>'success'));
+		else  $GroupHeaderFmt .= '(:includesection "#' .$type .'-edit":)';
 	}
-	bi_AddMarkup();  #define markup to prevent PTV field being displayed at end of page
+	if ($type=='blog')  bi_AddMarkup();  #define markup to prevent PTV field being displayed at end of page
 	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];  //no need to goto blogit browse from bi_be
-	HandleDispatch($src, 'browse');
-}
-# Return the comment form DOM if ajax request, or set the GroupHeader to the comment form
-function bi_HandleCommentEdit($src, $auth='comment-edit'){  #action=bi_ce or action=bi_cr
-global $action,$_REQUEST,$pagename,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt;
-bi_debugLog('HandleCommentEdit');
-	if ( ($bi_EntryType == 'comment' || $action=='bi_cr') && bi_Auth($auth) ){
-		if ($_REQUEST['bi_mode']=='ajax'){
-			bi_Redirect('ajax', array('out'=>MarkupToHTML($pagename, '(:includesection "#comment-edit":)'), 'result'=>'success'));
-			return;
-		}else  $GroupHeaderFmt .= '(:includesection "#comment-edit":)';
-	}
-	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];
 	HandleDispatch($src, 'browse');
 }
 function bi_HandleCommentUnapprove($src, $auth='comment-approve'){  #action=bi_cua
@@ -429,7 +416,7 @@ global $bi_CommentSideBarLen, $pagename, $bi_UnstyleFn;
 }
 
 function blogitSkinMU($fn, $opt, $txt){
-global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern,$EnableBlocklist,$bi_Ajax;
+global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern,$EnableBlocklist,$bi_Ajax,$bi_Pages;
 	$args = ParseArgs($opt);  #$args['p'], args[]['s']
 	$dateFmt = array('long'=>'%B %d, %Y, at %I:%M %p', 'short'=>'%B %d, %Y', 'entry'=>'%d-%m-%Y (%H:%M)');
 	switch ($fn) {
@@ -450,7 +437,8 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 		case 'commentapprove': return (bi_Auth('comment-approve '.bi_BasePage($txt))
 			?$args['pre_text'].'[['.$txt.'?action=bi_'.($args['status']=='true'?'cua':'ca') .$bi_Ajax .' | $['.($args['status']=='true'?'un':'').'approve]]]'.$args['post_text']
 			:'');
-		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_ce' .$bi_Ajax .' | $[edit]]]'.$args['post_text'] :'');
+		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_ce'
+			.$bi_Ajax .($pagename==$bi_Pages['admin'] ?'&bi_src=admin' :'') .' | $[edit]]]'.$args['post_text'] :'');
 		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_del' .$bi_Ajax .' | $[delete]]]'.$args['post_text'] :'');
 		case 'commentreply': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.bi_BasePage($txt).'?action=bi_cr' .$bi_Ajax .' | $[reply]]]'.$args['post_text'] :'');
 		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_bip' .$bi_Ajax .' | $[block]]]'.$args['post_text'] :'');
@@ -566,12 +554,12 @@ global $pagename;
 	)));
 }
 function bi_AjaxRedirect($result=''){
-global $bi_Pages,$pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt;
+global $pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt;
 bi_debugLog('AjaxRedirect');
 	if ($EnablePost){  #set to 0 is pmform failed (invalid captcha, etc)
 		if ($_REQUEST['target']=='blogit-comments'){
 #TODO: Need a way to determine if error occured in PmForm (if disable client-sdie validation, and email is null)
-			bi_SendAjax('(:includesection "' .($bi_Pages['admin']==$pagename ?'#unapproved-comments' :'#comments-pagelist')
+			bi_SendAjax('(:includesection "' .($_REQUEST['ptv_bi_src']=='admin' ?'#unapproved-comments' :'#comments-pagelist')
 					.' entrycomments=readonly commentid=' .$bi_CommentPage .'":)',
 				($bi_CommentPage==$pagename ?'Successfully updated comment.' :'Successfully added new comment.')
 			);
