@@ -159,7 +159,7 @@ SDV($PmForm['blogit-comments'],
 $bi_OriginalFn['HandleActions'] = $HandleActions;
 $HandleActions['pmform']='bi_HandleProcessForm';
 $HandleActions['browse']='bi_HandleBrowse';
-#TODO: SDV($HandleActions['approvsites'],'bi_HandleUrlApprove');  #approveurl
+$HandleActions['print']='bi_HandleBrowse';
 SDV($HandleActions['bi_admin'], 'bi_HandleAdmin'); SDV($HandleAuth['bi_admin'], 'blogit-admin');
 SDV($HandleActions['bi_ca'], 'bi_HandleCommentApprove'); SDV($HandleAuth['bi_ca'], 'comment-approve');
 SDV($HandleActions['bi_cua'], 'bi_HandleCommentUnapprove'); SDV($HandleAuth['bi_cua'], 'comment-approve');
@@ -214,27 +214,16 @@ $MarkupExpr['bi_url'] = 'bi_URL($args)';
 $MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_Pages['new_entry'] .'" ?"' .$bi_DefaultGroup .'." :$args[0])';
 
 # ----------------------------------------
-# - Set GroupHeaderFmt and Footer
-if ($Group == $CategoryGroup){
-	if (@$bi_EntryType != 'blog')  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction($Name).':)';
-	$GroupFooterFmt .= $bi_GroupFooterFmt;
-}
-if ($action == 'print'){
-	$GroupPrintHeaderFmt .= $GroupHeaderFmt;
-	$GroupPrintFooterFmt .= $GroupFooterFmt;  #Needed if trying to print tag list.
-	bi_AddMarkup();
-}
-
-# ----------------------------------------
 # - HandleActions Functions
 # ----------------------------------------
 function bi_HandleBrowse($pagename, $auth = 'read'){
-global $bi_ResetPmFormField,$FmtPV,$HandleActions,$bi_OriginalFn,$Group,$bi_CommentGroup,$_REQUEST,$Now,$GroupHeaderFmt,$action,$bi_EntryType;
+global $bi_ResetPmFormField,$bi_OriginalFn,$bi_GroupFooterFmt,$bi_EntryType,$bi_CommentGroup,$action,$_REQUEST,$Now,$Name,
+	$HandleActions,$GroupPrintHeaderFmt,$GroupPrintFooterFmt,$GroupHeaderFmt,$GroupFooterFmt,$Group,$FmtPV,$CategoryGroup,$AsSpacedFunction;
+
 bi_debugLog('HandleBrowse: '.$action.'['.$_REQUEST['bi_mode'].'] '.$_REQUEST['target']);
 	if ($Group == $bi_CommentGroup){ bi_Redirect(); return; }  #After editing/deleting a comment page, and after HandlePmForm() has done a redirect()
 	if ($_REQUEST['bi_mode']=='ajax'){ bi_AjaxRedirect(); return; }
 
-#	if ($action=='pmform')
 	if ($action=='pmform' && $_REQUEST['target']=='blogit-entry'){
 		if (isset($bi_ResetPmFormField))
 			foreach ($bi_ResetPmFormField  as $k => $v) {
@@ -248,21 +237,16 @@ bi_debugLog('HandleBrowse: '.$action.'['.$_REQUEST['bi_mode'].'] '.$_REQUEST['ta
 		if ( ($bi_EntryStatus!='draft' && (!bi_FuturePost($Now) || $bi_AuthEditAdmin) ) || ($bi_EntryStatus=='draft' && $bi_AuthEditAdmin) )
 			$GroupHeaderFmt .= '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
 	}
-	bi_AddMarkup();  #If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling
-	$bi_OriginalFn['HandleActions']['browse']($pagename, $auth);  #don't restore the original browse, since PmForm might do a handle browse redirect
-}
-# Return the comment form DOM if ajax request, or set the GroupHeader to the comment form
-function bi_HandleCommentEdit($src, $auth='comment-edit'){  #action=bi_ce or action=bi_cr
-global $action,$_REQUEST,$pagename,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt;
-bi_debugLog('HandleCommentEdit');
-	if ( ($bi_EntryType == 'comment' || $action=='bi_cr') && bi_Auth($auth) ){
-		if ($_REQUEST['bi_mode']=='ajax'){
-			bi_Redirect('ajax', array('out'=>MarkupToHTML($pagename, '(:includesection "#comment-edit":)'), 'result'=>'success'));
-			return;
-		}else  $GroupHeaderFmt .= '(:includesection "#comment-edit":)';
+	if ($Group == $CategoryGroup){
+		if (@$bi_EntryType != 'blog')  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction($Name).':)';
+		$GroupFooterFmt .= $bi_GroupFooterFmt;
 	}
-	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];
-	HandleDispatch($src, 'browse');
+	if ($action == 'print'){
+		$GroupPrintHeaderFmt .= $GroupHeaderFmt;
+		$GroupPrintFooterFmt .= $GroupFooterFmt;  #Needed if trying to print tag list.
+	}
+	bi_AddMarkup();  #If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling
+	$bi_OriginalFn['HandleActions'][($action=='print' ?'print': 'browse')]($pagename, $auth);  #don't restore the original browse, since PmForm might do a handle browse redirect
 }
 # Return the comment form DOM if ajax request, or set the GroupHeader to the comment form
 function bi_HandleBlogEdit($src, $auth='blog-edit'){  #action=bi_be
@@ -276,6 +260,19 @@ bi_debugLog('HandleBlogEdit');
 	}
 	bi_AddMarkup();  #define markup to prevent PTV field being displayed at end of page
 	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];  //no need to goto blogit browse from bi_be
+	HandleDispatch($src, 'browse');
+}
+# Return the comment form DOM if ajax request, or set the GroupHeader to the comment form
+function bi_HandleCommentEdit($src, $auth='comment-edit'){  #action=bi_ce or action=bi_cr
+global $action,$_REQUEST,$pagename,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt;
+bi_debugLog('HandleCommentEdit');
+	if ( ($bi_EntryType == 'comment' || $action=='bi_cr') && bi_Auth($auth) ){
+		if ($_REQUEST['bi_mode']=='ajax'){
+			bi_Redirect('ajax', array('out'=>MarkupToHTML($pagename, '(:includesection "#comment-edit":)'), 'result'=>'success'));
+			return;
+		}else  $GroupHeaderFmt .= '(:includesection "#comment-edit":)';
+	}
+	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];
 	HandleDispatch($src, 'browse');
 }
 function bi_HandleCommentUnapprove($src, $auth='comment-approve'){  #action=bi_cua
