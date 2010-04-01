@@ -59,8 +59,7 @@ SDVA($bi_Paths,array('pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/
 # - Internal Use Only
 # ----------------------------------------
 SDV($BlogIt['debug'],false); bi_debugLog('====== action: ' .$action .'    Target: ' .$_REQUEST['target'] .'   Save: ' .@$_REQUEST['save']);
-SDVA($bi_Pages, array('admin'=>$SiteGroup.'.BlogIt-Admin', 'new_entry'=>$SiteGroup.'.BlogIt-NewEntry', 'blog_list'=>$SiteGroup.'.BlogList',
-	'blocklist'=>$SiteAdminGroup.'.Blocklist'));
+SDVA($bi_Pages, array('admin'=>$SiteGroup.'.BlogIt-Admin', 'blog_list'=>$SiteGroup.'.BlogList',	'blocklist'=>$SiteAdminGroup.'.Blocklist'));
 SDV($bi_TemplateList, (isset($bi_Skin)?$SiteGroup.'.BlogIt-SkinTemplate-'.$bi_Skin.' ' : '') .$SiteGroup .'.BlogIt-CoreTemplate');
 SDVA($bi_PageType, array('blog'));  #Comment is not in PageType list, since we don't want bloggers to be able to select 'comment' types.
 SDV($FPLTemplatePageFmt, array(
@@ -84,7 +83,7 @@ $bi_Forms=array('blogit-entry','blogit-comments');  //needs to be before cookies
 # ----------------------------------------
 # - Usable on Wiki Pages
 bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','CategoryGroup','Now','bi_CommentGroup',
-	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_StatAction'));
+	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_StatAction','action'));
 bi_setFmtPVA(array('$bi_Pages'=>$bi_Pages));
 $FmtPV['$bi_Mode']='$_REQUEST["bi_mode"]';
 $FmtPV['$bi_Src']='$_REQUEST["bi_src"]';  #stores the page that the ajax request was initiated from, or 'admin' if the admin page
@@ -165,6 +164,7 @@ SDV($HandleActions['bi_admin'], 'bi_HandleAdmin'); SDV($HandleAuth['bi_admin'], 
 SDV($HandleActions['bi_ca'], 'bi_HandleCommentApprove'); SDV($HandleAuth['bi_ca'], 'comment-approve');
 SDV($HandleActions['bi_cua'], 'bi_HandleCommentUnapprove'); SDV($HandleAuth['bi_cua'], 'comment-approve');
 SDV($HandleActions['bi_be'], 'bi_HandleEdit'); SDV($HandleAuth['bi_be'], 'blog-edit');
+SDV($HandleActions['bi_ne'], 'bi_HandleEdit'); SDV($HandleAuth['bi_ne'], 'blog-new');
 SDV($HandleActions['bi_ce'], 'bi_HandleEdit'); SDV($HandleAuth['bi_ce'], 'comment-edit');
 SDV($HandleActions['bi_cr'], 'bi_HandleEdit'); SDV($HandleAuth['bi_cr'], 'comment-edit');  #comment-reply
 SDV($HandleActions['bi_del'], 'bi_HandleDelete'); SDV($HandleAuth['bi_del'], 'comment-edit');
@@ -190,7 +190,7 @@ Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
 	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
 $SaveAttrPatterns['/\\(:includesection\\s.*?:\\)/i'] = ' ';  #prevents include sections becoming part of page targets list
 if (IsEnabled($EnableGUIButtons) && @$_REQUEST['bi_mode']!='ajax'){
-	if ($action=='bi_be' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry') || $pagename == $bi_Pages['new_entry'])
+	if ($action=='bi_be' || $action=='bi_ne' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry'))
 		include_once($bi_Paths['guiedit']);  #PmWiki only includes this automatically if action=edit.
 }else Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
 
@@ -212,7 +212,7 @@ $MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull(implode(\' \', $args)), ENT_Q
 $MarkupExpr['bi_param'] = '( bi_IsNull($args[1])=="" ?"" :"$args[0]=\"$args[1]\"")';
 $MarkupExpr['bi_base'] = 'bi_BasePage($args[0])';
 $MarkupExpr['bi_url'] = 'bi_URL($args)';
-$MarkupExpr['bi_default_url'] = '($args[0]=="' .$bi_Pages['new_entry'] .'" ?"' .$bi_DefaultGroup .'." :$args[0])';
+//$MarkupExpr['bi_default_url'] = '($args[0]=="' .$action$bi_Pages['new_entry'] .'" ?"' .$bi_DefaultGroup .'." :$args[0])';
 
 # ----------------------------------------
 # - HandleActions Functions
@@ -250,11 +250,11 @@ bi_debugLog('HandleBrowse: '.$action.'['.$_REQUEST['bi_mode'].'] '.$_REQUEST['ta
 	$bi_OriginalFn['HandleActions'][($action=='print' ?'print': 'browse')]($pagename, $auth);  #don't restore the original browse, since PmForm might do a handle browse redirect
 }
 # Return the comment form DOM if ajax request, or set the GroupHeader to the comment/blog form
-function bi_HandleEdit($src, $auth='blog-edit'){  #action=(bi_be|bi_ce|bi_cr)
-global $action,$_REQUEST,$pagename,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt;
+function bi_HandleEdit($src, $auth='blog-edit'){  #action=(bi_be|bi_ne|bi_ce|bi_cr)
+global $action,$_REQUEST,$pagename,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt,$bi_Pages;
 bi_debugLog('HandleEdit');
-	$type=($action=='bi_be' ?'blog' :'comment');
-	if ( ($bi_EntryType == $type || $action=='bi_cr') && bi_Auth($auth) ){
+	$type=($action=='bi_be'||($action=='bi_ne'&&$pagename==$bi_Pages['admin']) ?'blog' :'comment');
+	if ( ($bi_EntryType == $type || $action=='bi_ne' || $action=='bi_cr') && bi_Auth($auth) ){
 		if ($_REQUEST['bi_mode']=='ajax')  bi_AjaxRedirect(array('out'=>MarkupToHTML($pagename, '(:includesection "#' .$type .'-edit":)'), 'result'=>'success'));
 		else  $GroupHeaderFmt .= '(:includesection "#' .$type .'-edit":)';
 	}
@@ -514,16 +514,16 @@ global $pagename, $action, $bi_OriginalFn, $bi_CommentsEnabled, $bi_CommentGroup
 }
 # Called as part of markup condition. Determine whether the current user is authorized for an action
 function bi_Auth($condparm){  #condparm: comma separated list of actions, and optional space separated pagename -- "blog-new,blog-edit Blog.This-entry"
-global $AuthList, $bi_Auth, $pagename, $EnableAuthUser, $bi_Pages, $bi_OriginalFn;
-	@list($action, $pn) = explode(' ', $condparm, 2);
-	$action=explode(',', trim($action,'\'"'));
+global $AuthList,$bi_Auth,$pagename,$EnableAuthUser,$bi_Pages,$bi_OriginalFn,$action;
+	@list($bi_actions, $pn) = explode(' ', $condparm, 2);
+	$bi_actions=explode(',', trim($bi_actions,'\'"'));
 	if (!IsEnabled($EnableAuthUser))
-		$pn = ( in_array('*',$action)	|| in_array('sidebar',$action)
-			||($pagename==$bi_Pages['admin'] && in_array('blogit-admin',$action))
-			||($pagename==$bi_Pages['new_entry'] && in_array('blog-new',$action)) )
+		$pn = ( in_array('*',$bi_actions)	|| in_array('sidebar',$bi_actions)
+			||($pagename==$bi_Pages['admin'] && in_array('blogit-admin',$bi_actions))
+			||($pagename==$bi_Pages['admin'] && $action=='bi_ne' && in_array('blog-new',$bi_actions)) )
 			?$bi_Pages['auth']
 			:(isset($pn)) ?$pn :$pagename;
-	foreach ($action as $a){
+	foreach ($bi_actions as $a){
 		foreach ($bi_Auth as $role => $action_list){
 			if ( $a=='*' || in_array($a, $action_list) ){  #Is the action assigned to a role?
 				if ( (IsEnabled($EnableAuthUser) && $AuthList['@'.$role] > 0)  #the user is assigned to this role
