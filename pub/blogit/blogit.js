@@ -25,7 +25,7 @@ jQuery(document).ready(function($){
 		e.preventDefault();
 		BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.commentStatus(e.target, data); }}, e);
 	});
-	$("a[href*=action\=bi_be]").live('click', function(e){ BlogIt.fn.loadDialog(e,'blog'); });  //blog edit
+	$("a[href*=action\=bi_be],a[href*=action\=bi_ne]").live('click', function(e){ BlogIt.fn.loadDialog(e,'blog'); });  //blog edit
 	$("a[href*=action\=bi_del]").live('click', function(e){ BlogIt.fn.deleteDialog(e); });  //delete comments and blogs
 	$("a[href*=action\=bi_bip]").live('click', function(e){ BlogIt.fn.commentBlockIP(e); });  //block comment IP addresses
 	$("a[href*=action\=bi_ce]").live('click', function(e){ BlogIt.fn.loadDialog(e,'comment','edit'); });  //comment edit
@@ -34,7 +34,7 @@ jQuery(document).ready(function($){
 		window.onbeforeunload = function(){ return BlogIt.fn.xl('You have unsaved changes.'); }
 	});
 	$('#wikiedit.blogit-blog-form form :input:submit').bind('click', function(){
-		window.onbeforeunload = null;  //Don't trigger on submit buttons.
+		window.onbeforeunload = null;  //don't trigger on submit buttons.
 	});
 });
 
@@ -133,8 +133,8 @@ BlogIt.fn = function($){
 						$("#dialog").html( txt )
 							.dialog('option', 'buttons', btn)
 							.dialog('option', 'width', (name=='blog'?'750px':'400px')).dialog("open");  //load the edit form into a dialog
-						if (name=='blog')  BlogIt.fn.ajaxForm($('#dialog form'), BlogIt.fn.blogRules, BlogIt.fn.blogSubmit);  //blog edit
-						else  BlogIt.fn.ajaxForm($('#dialog form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, mode, e);  //comments
+						if (name=='blog')  BlogIt.fn.ajaxForm($('#dialog form'), BlogIt.fn.blogRules, BlogIt.fn.blogSubmit, mode, e);  //blog edit
+						else if (name=='comment')  BlogIt.fn.ajaxForm($('#dialog form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, mode, e);  //comments
 					}
 				}
 			});
@@ -159,6 +159,7 @@ BlogIt.fn = function($){
 					}
 				});
 		},
+		//routines called from ajaxForm
 		blogSubmit: function(data, eventTarget, mode, frm, eventTarget){  //e, mode, frm not used in this routine
 			$('html,body').animate({scrollTop: $('#wikitext').offset().top-75}, 1);
 			$('#wikitext .blogit-post').replaceWith($(data.out).bi_seek('.blogit-post'));  //update existing blog entry
