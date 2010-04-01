@@ -2,7 +2,7 @@
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	$("<div/>").attr({id:"dialog"}).appendTo("body");
-	$('#dialog').dialog({ resizable: true, modal: true, autoOpen: false });  //set defaults
+	$('#dialog').dialog({ resizable: true, modal: true, autoOpen: false, closeOnEscape: false });  //set defaults
 
 	//show error messages set by pmwiki, in .wikimessage
 	if ($('.wikimessage').length){ $('html,body').animate({scrollTop: $('.wikimessage').offset().top-175}, 1); }
@@ -49,7 +49,7 @@ BlogIt.fn = function($){
 		BlogIt.fn.showMsg(data);
 	};
 	//dialog functions
-	function dialogClose(){ $("#dialog").dialog("close").empty(); };
+	function dialogClose(data){ if (!data || (data && data.result!='error'))  $("#dialog").dialog("close").empty(); };
 	function dialogShow(txt, yes, no, w, ajax, e){
 		var $d = $("#dialog");
 		$d.html(txt).dialog('option', 'width', w);
@@ -151,9 +151,9 @@ BlogIt.fn = function($){
 						$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action'),  //post with the action defined on the form
 							data: $(this).serialize(),
 							success: function(data){  //after PmForms finishes processing, update page with new content
-								dialogClose();
+								dialogClose(data);
 								if (data.out)  submitFn(data, eventTarget, mode, frm, eventTarget);
-								else  BlogIt.fn.showMsg({msg:BlogIt.fn.xl("No data returned.")});
+								else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl("No data returned.")), result:'error'});
 							}
 						});
 					}
@@ -190,8 +190,8 @@ BlogIt.fn = function($){
 				'thisMessage':[data.msg],
 				'className': data.result,
 				'opacity': 95,
-				'displayNavigation':	false,
-				'autoClose': true,
+				'displayNavigation':	(data.result=='error' ?true :false),
+				'autoClose': (data.result=='error' ?false :true),
 				'delayTime': 3000
 			});
 		},
