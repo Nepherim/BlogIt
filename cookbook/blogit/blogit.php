@@ -183,7 +183,7 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_
 Markup('blogit', 'fulltext', '/\(:blogit (list|cleantext)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
 	"blogitMU_$1(PSS('$2'), PSS('$3'))");
 Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
-	'(date|intro|author|tags|edit|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentreply|commentblock|commenttext|commentid)'.
+	'(date|intro|author|tags|edit|newentry|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentreply|commentblock|commenttext|commentid)'.
 	'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
 	"blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
@@ -212,7 +212,6 @@ $MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull(implode(\' \', $args)), ENT_Q
 $MarkupExpr['bi_param'] = '( bi_IsNull($args[1])=="" ?"" :"$args[0]=\"$args[1]\"")';
 $MarkupExpr['bi_base'] = 'bi_BasePage($args[0])';
 $MarkupExpr['bi_url'] = 'bi_URL($args)';
-//$MarkupExpr['bi_default_url'] = '($args[0]=="' .$action$bi_Pages['new_entry'] .'" ?"' .$bi_DefaultGroup .'." :$args[0])';
 
 # ----------------------------------------
 # - HandleActions Functions
@@ -254,7 +253,7 @@ function bi_HandleEdit($src, $auth='blog-edit'){  #action=(bi_be|bi_ne|bi_ce|bi_
 global $action,$_REQUEST,$pagename,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt,$bi_Pages;
 bi_debugLog('HandleEdit');
 	$type=($action=='bi_be'||($action=='bi_ne'&&$pagename==$bi_Pages['admin']) ?'blog' :'comment');
-	if ( ($bi_EntryType == $type || $action=='bi_ne' || $action=='bi_cr') && bi_Auth($auth) ){
+	if ( ($bi_EntryType==$type || $action=='bi_ne' || $action=='bi_cr') && bi_Auth($auth) ){
 		if ($_REQUEST['bi_mode']=='ajax')  bi_AjaxRedirect(array('out'=>MarkupToHTML($pagename, '(:includesection "#' .$type .'-edit":)'), 'result'=>'success'));
 		else  $GroupHeaderFmt .= '(:includesection "#' .$type .'-edit":)';
 	}
@@ -426,6 +425,7 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 			?$args['pre_text'] .(PageExists(MakePageName($pagename, "$bi_AuthorGroup/$txt")) ?"[[$bi_AuthorGroup/$txt]]" :$txt) .$args['post_text']
 			:'');
 		case 'edit': return (bi_Auth('blog-edit '.$args['page']) ?$args['pre_text'] .'[['.$args['page'].'?action=bi_be' .$bi_Ajax .' | '.$txt.']]'.$args['post-text'] :'');
+		case 'newentry': return (bi_Auth('blog-new '.$bi_Pages['auth']) ?$args['pre_text'] .'[['.$bi_Pages['admin'].'?action=bi_ne' .$bi_Ajax .' | '.$txt.']]'.$args['post-text'] :'');
 		case 'delete': return (bi_Auth('blog-edit '.$args['page']) ?$args['pre_text'] .'[['.$args['page'].'?action=bi_del' .$bi_Ajax .' | '.$txt.']]'.$args['post-text'] :'');
 		case 'tags': return ($txt>'' ?$args['pre_text'].bi_SaveTags('', html_entity_decode($txt, ENT_QUOTES), $bi_TagSeparator).$args['post_text'] :'');
 		case 'commentcount': return ($args['status']!='none' && $bi_CommentsEnabled
@@ -554,7 +554,7 @@ global $pagename;
 	)));
 }
 function bi_AjaxRedirect($result=''){
-global $pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt;
+global $pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action;
 bi_debugLog('AjaxRedirect');
 	if ($EnablePost){  #set to 0 is pmform failed (invalid captcha, etc)
 		if ($_REQUEST['target']=='blogit-comments'){
@@ -564,7 +564,7 @@ bi_debugLog('AjaxRedirect');
 				($bi_CommentPage==$pagename ?'Successfully updated comment.' :'Successfully added new comment.')
 			);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
-			bi_SendAjax('(:includesection "#single-entry-view":)', 'Successfully updated blog entry.');
+			bi_SendAjax('(:includesection "#single-entry-view":)', 'Successfully '. ($action='bi_ne' ?'added' :'updated') .' blog entry.');
 		}else  echo(json_encode($result));
 	}else  echo(json_encode(array('result'=>'error','msg'=>FmtPageName(implode($MessagesFmt), $pagename)) ));
 	exit;
