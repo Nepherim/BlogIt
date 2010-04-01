@@ -556,9 +556,8 @@ global $pagename;
 function bi_AjaxRedirect($result=''){
 global $pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action;
 bi_debugLog('AjaxRedirect');
-	if ($EnablePost){  #set to 0 is pmform failed (invalid captcha, etc)
+	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 is pmform failed (invalid captcha, etc)
 		if ($_REQUEST['target']=='blogit-comments'){
-#TODO: Need a way to determine if error occured in PmForm (if disable client-sdie validation, and email is null)
 			bi_SendAjax('(:includesection "' .($_REQUEST['ptv_bi_src']=='admin' ?'#unapproved-comments' :'#comments-pagelist')
 					.' entrycomments=readonly commentid=' .$bi_CommentPage .'":)',
 				($bi_CommentPage==$pagename ?'Successfully updated comment.' :'Successfully added new comment.')
