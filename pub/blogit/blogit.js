@@ -147,9 +147,12 @@ BlogIt.fn = function($){
 					rulesFn('#dialog');  //BlogIt.fn.blogRules
 					var result = $.validity.end();  //if valid then it's okay to proceed with the Ajax
 					if (result.valid){
-						var $container = $(eventTarget.target)
-							.closest('#wikitext .blogit-post, #wikitext .blogit-post-summary, #wikitext .blogit-commentblock, #wikitext .blogit-commentblock-admin, #wikitext .blogit-blog-list-row');
-						$(this).prepend('<input type="hidden" value="' +$container.attr('class') +'" name="bi_style">')  //trigger multi-entry mode
+						var $container;
+						if (eventTarget){  //eventTarget is null for user clicking Post button (mode=='add')
+							$container = $(eventTarget.target)
+								.closest('#wikitext .blogit-post, #wikitext .blogit-post-summary, #wikitext .blogit-commentblock, #wikitext .blogit-commentblock-admin, #wikitext .blogit-blog-list-row');
+							$(this).prepend('<input type="hidden" value="' +$container.attr('class') +'" name="bi_style">')  //trigger multi-entry mode
+						}
 						$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action'),  //post with the action defined on the form
 							data: $(this).serialize(),
 							success: function(data){  //after PmForms finishes processing, update page with new content
