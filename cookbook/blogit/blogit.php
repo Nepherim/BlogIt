@@ -86,7 +86,6 @@ bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','Ca
 	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_StatAction','action'));
 bi_setFmtPVA(array('$bi_Pages'=>$bi_Pages));
 $FmtPV['$bi_Mode']='$_REQUEST["bi_mode"]';
-$FmtPV['$bi_Src']='$_REQUEST["bi_src"]';  #stores the page that the ajax request was initiated from, or 'admin' if the admin page
 
 # ----------------------------------------
 # - PmWiki Config
@@ -437,8 +436,7 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 		case 'commentapprove': return (bi_Auth('comment-approve '.bi_BasePage($txt))
 			?$args['pre_text'].'[['.$txt.'?action=bi_'.($args['status']=='true'?'cua':'ca') .$bi_Ajax .' | $['.($args['status']=='true'?'un':'').'approve]]]'.$args['post_text']
 			:'');
-		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_ce'
-			.$bi_Ajax .($pagename==$bi_Pages['admin'] ?'&bi_src=admin' :'') .' | $[edit]]]'.$args['post_text'] :'');
+		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_ce' .$bi_Ajax .' | $[edit]]]'.$args['post_text'] :'');
 		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_del' .$bi_Ajax .' | $[delete]]]'.$args['post_text'] :'');
 		case 'commentreply': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.bi_BasePage($txt).'?action=bi_cr' .$bi_Ajax .' | $[reply]]]'.$args['post_text'] :'');
 		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_bip' .$bi_Ajax .' | $[block]]]'.$args['post_text'] :'');
@@ -546,6 +544,7 @@ global $PCache,$pagename;
 }
 function bi_SendAjax($markup, $msg){
 global $pagename;
+bi_debugLog('bi_SendAjax: '.$markup);
 	bi_ClearCache();  #Otherwise we retrieve the old values.
 	echo(json_encode(array(  #admin list uses a different format for listing comments
 		'out'=>MarkupToHTML($pagename, $markup),
@@ -554,16 +553,23 @@ global $pagename;
 	)));
 }
 function bi_AjaxRedirect($result=''){
-global $pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action;
-bi_debugLog('AjaxRedirect');
+global $pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action, $Name, $Group;
+bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 is pmform failed (invalid captcha, etc)
 		if ($_REQUEST['target']=='blogit-comments'){
-			bi_SendAjax('(:includesection "' .($_REQUEST['ptv_bi_src']=='admin' ?'#unapproved-comments' :'#comments-pagelist')
-					.' entrycomments=readonly commentid=' .$bi_CommentPage .'":)',
+			bi_SendAjax('(:includesection "' .($_REQUEST['bi_style']=='blogit-commentblock-admin' ?'#unapproved-comments' :'#comments-pagelist')
+				.' commentid=' .$bi_CommentPage.' entrycomments=readonly":)',
 				($bi_CommentPage==$pagename ?'Successfully updated comment.' :'Successfully added new comment.')
 			);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
-			bi_SendAjax('(:includesection "#single-entry-view":)', 'Successfully '. ($action='bi_ne' ?'added' :'updated') .' blog entry.');
+			bi_SendAjax('(:includesection "'.
+				($_REQUEST['bi_style']=='blogit-post-summary'
+					?'#blog-summary-pagelist group=' .$Group .' name='.$Name  #main blog summary page
+					:($_REQUEST['bi_style']=='blogit-blog-list-row'  #blog list from admin page
+						?'#blog-grid group=' .$Group .' name='.$Name
+						:'#single-entry-view')  #single entry blog view
+				)
+				.'":)', 'Successfully '. ($action=='bi_ne' ?'added' :'updated') .' blog entry.');
 		}else  echo(json_encode($result));
 	}else  echo(json_encode(array('result'=>'error','msg'=>FmtPageName(implode($MessagesFmt), $pagename)) ));
 	exit;
