@@ -63,10 +63,9 @@ BlogIt.fn = function($){
 		$d.dialog("open");
 	};
 	//visuals
-	function flash(o, data){
-		var bg = o.css("background-color");
-		o.css({backgroundColor:'#BBFFB6'});
-		o.css({backgroundColor:'#BBFFB6'}).delay(500).fadeTo(500, 0.2, function () {
+	function flash($o, data){
+		var bg = $o.css("background-color");
+		$o.css({backgroundColor:'#BBFFB6'}).delay(500).fadeTo(500, 0.2, function () {
 			$(this).fadeTo(500,1).css("background-color", bg);
 		});
 		BlogIt.fn.showMsg(data);
@@ -132,7 +131,7 @@ BlogIt.fn = function($){
 						btn[BlogIt.fn.xl('Submit')] = function(){ $(this).find('form').submit(); };
 						$("#dialog").html( txt )
 							.dialog('option', 'buttons', btn)
-							.dialog('option', 'width', (name=='blog'?'750px':'400px')).dialog("open");  //load the edit form into a dialog
+							.dialog('option', 'width', (name=='blog'?'750px':'430px')).dialog("open");  //load the edit form into a dialog
 						if (name=='blog')  BlogIt.fn.ajaxForm($('#dialog form'), BlogIt.fn.blogRules, BlogIt.fn.blogSubmit, mode, e);  //blog edit
 						else if (name=='comment')  BlogIt.fn.ajaxForm($('#dialog form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, mode, e);  //comments
 					}
@@ -148,11 +147,14 @@ BlogIt.fn = function($){
 					rulesFn('#dialog');  //BlogIt.fn.blogRules
 					var result = $.validity.end();  //if valid then it's okay to proceed with the Ajax
 					if (result.valid){
+						var $container = $(eventTarget.target)
+							.closest('#wikitext .blogit-post, #wikitext .blogit-post-summary, #wikitext .blogit-commentblock, #wikitext .blogit-commentblock-admin, #wikitext .blogit-blog-list-row');
+						$(this).prepend('<input type="hidden" value="' +$container.attr('class') +'" name="bi_style">')  //trigger multi-entry mode
 						$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action'),  //post with the action defined on the form
 							data: $(this).serialize(),
 							success: function(data){  //after PmForms finishes processing, update page with new content
 								dialogClose(data);
-								if (data.out)  submitFn(data, eventTarget, mode, frm, eventTarget);
+								if (data.out)  submitFn(data, eventTarget, mode, frm, eventTarget, $container);
 								else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl("No data returned.")), result:'error'});
 							}
 						});
@@ -160,16 +162,17 @@ BlogIt.fn = function($){
 				});
 		},
 		//routines called from ajaxForm
-		blogSubmit: function(data, eventTarget, mode, frm, eventTarget){  //e, mode, frm not used in this routine
+		blogSubmit: function(data, eventTarget, mode, frm, eventTarget, $container){  //e, mode, frm not used in this routine
 			$('html,body').animate({scrollTop: $('#wikitext').offset().top-75}, 1);
-			$('#wikitext .blogit-post').replaceWith($(data.out).bi_seek('.blogit-post'));  //update existing blog entry
-			flash($('#wikitext .blogit-post'), data);
+			var $new=$(data.out).bi_seek('.'+$container.attr('class'));
+			$container.replaceWith($new);  //update existing blog entry
+			flash($new, data);
 		},
-		commentSubmit: function(data, eventTarget, mode, frm, eventTarget){  //eventTarget is null for user clicking Post button (mode=='add')
-			var $new_id=$(data.out).bi_seek('[id^=bi_ID]');
-			if (mode=='reply'||mode=='add')  $('#blogit-comment-list .blogit-comment-list').append($new_id);  //adding a new comment
-			else  $( '#'+$(eventTarget.target).closest('"[id^=bi_ID]"').attr('id') ).replaceWith($new_id);  //update existing comment
-			flash($new_id, data);
+		commentSubmit: function(data, eventTarget, mode, frm, eventTarget, $container){  //eventTarget is null for user clicking Post button (mode=='add')
+			var $new=$(data.out).bi_seek('[id^=bi_ID]');
+			if (mode=='reply'||mode=='add')  $('#blogit-comment-list .blogit-comment-list').append($new);  //adding a new comment
+			else $(eventTarget.target).closest('"[id^=bi_ID]"').replaceWith($new);  //update existing comment
+			flash($new, data);
 			if (mode=='add' && data.result!='error')  frm[0].reset();
 		},
 		commentRules: function(frm){
