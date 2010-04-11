@@ -24,6 +24,7 @@ SDV($bi_EntriesPerPage, 15);
 SDV($bi_DisplayFuture, 'false');
 SDVA($bi_BlogList, array('blog1'));  #Ensure 'blog1' key remains; you can add keys for other blogs.
 SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
+SDVA($bi_Ajax, array('bi_ce'=>'ajax', 'bi_ca'=>'ajax', 'bi_cua'=>'ajax', 'bi_be'=>'normal-ajax', 'bi_ne'=>'normal-ajax', 'bi_del'=>'ajax'));  #key: action; value: ajax style
 
 # ----------------------------------------
 # - Advanced user settings
@@ -37,7 +38,6 @@ SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDV($bi_Cookie, $CookiePrefix.'blogit-');
 SDV($bi_UnstyleFn, '');
 SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));  #Needed if skin is set in group config, which is processed after main config
-SDV($bi_Ajax, '&bi_mode=ajax');
 SDVA($bi_StatusType, array('draft', 'publish', 'sticky'));
 SDVA($bi_CommentType, array('open', 'readonly', 'none'));
 SDVA($bi_CommentApprovalType, array('true', 'false'));
@@ -77,6 +77,7 @@ SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''  #either regexes to include (
 		'pmwiki' => '!^('. $SiteGroup .'|' .$SiteAdminGroup .'|PmWiki)\.!',
 		'self' => FmtPageName('!^$FullName$!', $pagename)
 )));
+$bi_Ajax['bi_cr']='ajax'; $bi_Ajax['bi_bip']='ajax';  #comment reply is always ajax
 SDV($PmFormRedirectFunction,'bi_Redirect');
 $bi_Forms=array('blogit-entry','blogit-comments');  //needs to be before cookies
 
@@ -109,11 +110,13 @@ if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths
 # - Javascript
 SDV($HTMLHeaderFmt['jquery-ui.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui/ui-lightness/jquery-ui.custom.css" type="text/css" />');
 SDV($HTMLHeaderFmt['jquery-validity.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.validity.css" type="text/css" />');
+SDV($HTMLHeaderFmt['jquery.autoSuggest.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.autoSuggest.css" type="text/css" />');
 SDV($HTMLHeaderFmt['blogit.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />');
 SDV($HTMLHeaderFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.js"></script>');
 SDV($HTMLHeaderFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.js"></script>');
 SDV($HTMLHeaderFmt['jquery-validity.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.js"></script>');
 SDV($HTMLHeaderFmt['jquery-showmessage.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.js"></script>');
+SDV($HTMLHeaderFmt['jquery.autoSuggest.min.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.autoSuggest.min.js"></script>');
 $HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
 $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
 	BlogIt.pm["pubdirurl"]="'.$PubDirUrl.'/blogit";
@@ -156,7 +159,7 @@ SDV($PmForm['blogit-comments'],
 # ----------------------------------------
 # - Handle Actions
 $bi_OriginalFn['HandleActions'] = $HandleActions;
-$HandleActions['pmform']='bi_HandleProcessForm';
+$HandleActions['pmform']='bi_HandleProcessForm';  //occurs when a form is submitted
 $HandleActions['browse']='bi_HandleBrowse';
 $HandleActions['print']='bi_HandleBrowse';
 SDV($HandleActions['bi_admin'], 'bi_HandleAdmin'); SDV($HandleAuth['bi_admin'], 'blogit-admin');
@@ -191,7 +194,7 @@ $SaveAttrPatterns['/\\(:includesection\\s.*?:\\)/i'] = ' ';  #prevents include s
 if (IsEnabled($EnableGUIButtons) && @$_REQUEST['bi_mode']!='ajax'){
 	if ($action=='bi_be' || $action=='bi_ne' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry'))
 		include_once($bi_Paths['guiedit']);  #PmWiki only includes this automatically if action=edit.
-}else Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
+}else  Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
 
 # ----------------------------------------
 # - Conditions
@@ -230,7 +233,7 @@ bi_debugLog('HandleBrowse: '.$action.'['.$_REQUEST['bi_mode'].'] '.$_REQUEST['ta
 				$FmtPV['$bi_Default_'.$k]='"'.$v.'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
 			}
 		$GroupHeaderFmt .= '(:includesection "#comment-edit":)';
-	}elseif ($bi_EntryType == 'blog' && $action='browse'){
+	}elseif ($bi_EntryType == 'blog' && $action=='browse'){
 		$bi_EntryStatus = PageTextVar($pagename,'entrystatus');
 		$bi_AuthEditAdmin = bi_Auth('blog-edit,blog-new,blogit-admin');
 		if ( ($bi_EntryStatus!='draft' && (!bi_FuturePost($Now) || $bi_AuthEditAdmin) ) || ($bi_EntryStatus=='draft' && $bi_AuthEditAdmin) )
@@ -250,7 +253,7 @@ bi_debugLog('HandleBrowse: '.$action.'['.$_REQUEST['bi_mode'].'] '.$_REQUEST['ta
 # Return the comment form DOM if ajax request, or set the GroupHeader to the comment/blog form
 function bi_HandleEdit($src, $auth='blog-edit'){  #action=(bi_be|bi_ne|bi_ce|bi_cr)
 global $action,$_REQUEST,$pagename,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt,$bi_Pages;
-bi_debugLog('HandleEdit');
+bi_debugLog('HandleEdit: '.$action.' - '.$bi_EntryType);
 	$type=($action=='bi_be'||($action=='bi_ne'&&$pagename==$bi_Pages['admin']) ?'blog' :'comment');
 	if ( ($bi_EntryType==$type || $action=='bi_ne' || $action=='bi_cr') && bi_Auth($auth) ){
 		if ($_REQUEST['bi_mode']=='ajax')  bi_AjaxRedirect(array('out'=>MarkupToHTML($pagename, '(:includesection "#' .$type .'-edit":)'), 'result'=>'success'));
@@ -300,8 +303,8 @@ global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$ROSPatt
 bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 	$bi_ResetPmFormField = array();
 
-	if ( $_POST['target']=='blogit-entry' )
-		$GroupHeaderFmt .= '(:includesection "#blog-edit":)';  #Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
+	#Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
+	if ( $_POST['target']=='blogit-entry' )  $GroupHeaderFmt .= '(:includesection "#blog-edit":)';
 	if (@$_POST['target']=='blogit-entry' && (@$_POST['save']||@$_POST['bi_mode']=='ajax')){  //jquery doesn't serialize submit buttons
 		#Allow future posts to create tag -- otherwise may never happen, since user may never edit the post again.
 		if ( $_POST['ptv_entrystatus']!='draft' )  $AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
@@ -412,9 +415,15 @@ global $bi_CommentSideBarLen, $pagename, $bi_UnstyleFn;
 	preg_match('/^.{0,' .$m .'}\b/', $text, $match);
 	return trim($match[0]);
 }
-
+function bi_Link($pre, $page, $action, $txt, $post){  //valid actions: ajax, normal, ajax-normal, normal-ajax
+global $bi_Ajax,$PubDirUrl;
+	$hyphen=strpos($bi_Ajax[$action],'-');
+	return $pre .'[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],0,4)=='ajax' ?'&bi_mode=ajax' :'') .' | ' .$txt .']]'
+		.($hyphen ?'[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],$hyphen+1)=='ajax' ?'&bi_mode=ajax' :'') .' | ' .$PubDirUrl .'/blogit/link.gif]]' :'')
+		.$post;
+}
 function blogitSkinMU($fn, $opt, $txt){
-global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern,$EnableBlocklist,$bi_Ajax,$bi_Pages;
+global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern,$EnableBlocklist,$bi_Pages;
 	$args = ParseArgs($opt);  #$args['p'], args[]['s']
 	$dateFmt = array('long'=>'%B %d, %Y, at %I:%M %p', 'short'=>'%B %d, %Y', 'entry'=>'%d-%m-%Y (%H:%M)');
 	switch ($fn) {
@@ -423,9 +432,17 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 		case 'author': return ($txt>''
 			?$args['pre_text'] .(PageExists(MakePageName($pagename, "$bi_AuthorGroup/$txt")) ?"[[$bi_AuthorGroup/$txt]]" :$txt) .$args['post_text']
 			:'');
-		case 'edit': return (bi_Auth('blog-edit '.$args['page']) ?$args['pre_text'] .'[['.$args['page'].'?action=bi_be' .$bi_Ajax .' | '.$txt.']]'.$args['post-text'] :'');
-		case 'newentry': return (bi_Auth('blog-new '.$bi_Pages['auth']) ?$args['pre_text'] .'[['.$bi_Pages['admin'].'?action=bi_ne' .$bi_Ajax .' | '.$txt.']]'.$args['post-text'] :'');
-		case 'delete': return (bi_Auth('blog-edit '.$args['page']) ?$args['pre_text'] .'[['.$args['page'].'?action=bi_del' .$bi_Ajax .' | '.$txt.']]'.$args['post-text'] :'');
+		case 'edit': return (bi_Auth('blog-edit '.$args['page']) ?bi_Link($args['pre_text'], $args['page'], 'bi_be', $txt, $args['post-text']) :'');
+		case 'newentry': return (bi_Auth('blog-new '.$bi_Pages['auth']) ?bi_Link($args['pre_text'], $bi_Pages['admin'], 'bi_ne', $txt, $args['post-text']) :'');
+		case 'delete': return (bi_Auth('blog-edit '.$args['page']) ?bi_Link($args['pre_text'], $args['page'], 'bi_del', $txt, $args['post-text']) :'');
+		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_ce', '$[edit]', $args['post_text']) :'');
+		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_del', '$[delete]', $args['post_text']) :'');
+		case 'commentreply': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], bi_BasePage($txt), 'bi_cr', '$[reply]', $args['post_text']) :'');
+		case 'commentapprove': return (bi_Auth('comment-approve ' .bi_BasePage($txt))
+			?bi_Link($args['pre_text'], $txt, 'bi_'.($args['status']=='true'?'cua':'ca'), '$['.($args['status']=='true'?'un':'').'approve]', $args['post_text']) :'');
+		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt))
+			?bi_Link($args['pre_text'], $txt, 'bi_bip', '$[block]', $args['post_text']) :'');
+
 		case 'tags': return ($txt>'' ?$args['pre_text'].bi_SaveTags('', html_entity_decode($txt, ENT_QUOTES), $bi_TagSeparator).$args['post_text'] :'');
 		case 'commentcount': return ($args['status']!='none' && $bi_CommentsEnabled
 			?$args['pre_text'].'[['.$args['group'].'.'.$args['name'].'#blogit-comment-list | '.
@@ -433,13 +450,6 @@ global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkTo
 				$txt.']]'.$args['post_text']
 			:'');
 		case 'commentauthor': return ($bi_LinkToCommentSite=='true' && $args['website']>'' ?'[['.$args['website'].' | '.$args['author'].']]' :$args['author']);
-		case 'commentapprove': return (bi_Auth('comment-approve '.bi_BasePage($txt))
-			?$args['pre_text'].'[['.$txt.'?action=bi_'.($args['status']=='true'?'cua':'ca') .$bi_Ajax .' | $['.($args['status']=='true'?'un':'').'approve]]]'.$args['post_text']
-			:'');
-		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_ce' .$bi_Ajax .' | $[edit]]]'.$args['post_text'] :'');
-		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_del' .$bi_Ajax .' | $[delete]]]'.$args['post_text'] :'');
-		case 'commentreply': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?$args['pre_text'].'[['.bi_BasePage($txt).'?action=bi_cr' .$bi_Ajax .' | $[reply]]]'.$args['post_text'] :'');
-		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt)) ?$args['pre_text'].'[['.$txt.'?action=bi_bip' .$bi_Ajax .' | $[block]]]'.$args['post_text'] :'');
 		case 'commenttext': return ( strtr($txt, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />', "\x0B" => '<br />')) );
 		case 'commentid': {
 			$x = preg_match($bi_CommentPattern, $txt, $m );
@@ -542,7 +552,7 @@ global $PCache,$pagename;
 				unset($PCache[$pagename][$key]);
 	}
 }
-function bi_SendAjax($markup, $msg){
+function bi_SendAjax($markup, $msg=''){
 global $pagename;
 bi_debugLog('bi_SendAjax: '.$markup);
 	bi_ClearCache();  #Otherwise we retrieve the old values.
@@ -553,7 +563,7 @@ bi_debugLog('bi_SendAjax: '.$markup);
 	)));
 }
 function bi_AjaxRedirect($result=''){
-global $pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action, $Name, $Group;
+global $pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action, $Name, $Group,$bi_Pages;
 bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 is pmform failed (invalid captcha, etc)
 		if ($_REQUEST['target']=='blogit-comments'){
@@ -562,14 +572,14 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 				($bi_CommentPage==$pagename ?'Successfully updated comment.' :'Successfully added new comment.')
 			);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
-			bi_SendAjax('(:includesection "'.
-				($_REQUEST['bi_style']=='blogit-post-summary'
+			bi_SendAjax(($_REQUEST['bi_style']!='undefined'  #might have clicked from many places. We only care about a few.
+				?'(:includesection "' .($_REQUEST['bi_style']=='blogit-post-summary'
 					?'#blog-summary-pagelist group=' .$Group .' name='.$Name  #main blog summary page
 					:($_REQUEST['bi_style']=='blogit-blog-list-row'  #blog list from admin page
 						?'#blog-grid group=' .$Group .' name='.$Name
 						:'#single-entry-view')  #single entry blog view
-				)
-				.'":)', 'Successfully '. ($action=='bi_ne' ?'added' :'updated') .' blog entry.');
+					).'":)'
+				:''), 'Successfully '. ($action=='bi_ne'||($action=='pmform' && $pagename==$bi_Pages['admin']) ?'added' :'updated') .' blog entry.');
 		}else  echo(json_encode($result));
 	}else  echo(json_encode(array('result'=>'error','msg'=>FmtPageName(implode($MessagesFmt), $pagename)) ));
 	exit;
