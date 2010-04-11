@@ -21,15 +21,15 @@ jQuery(document).ready(function($){
 	$("#wikiedit.blogit-blog-form form").validity(function() { BlogIt.fn.blogRules(); });
 	$("#wikitext .blogit-comment-form").closest('form').validity(function(){ BlogIt.fn.commentRules(); });
 
-	$("a[href*=action\=bi_ca],a[href*=action\=bi_cua]").live('click', function(e){  //comment un/approve
+	$("a[href*=action\=bi_ca&bi_mode\=ajax],a[href*=action\=bi_cua&bi_mode\=ajax]").live('click', function(e){  //comment un/approve
 		e.preventDefault();
 		BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.commentStatus(e.target, data); }}, e);
 	});
-	$("a[href*=action\=bi_be],a[href*=action\=bi_ne]").live('click', function(e){ BlogIt.fn.loadDialog(e,'blog'); });  //blog edit
-	$("a[href*=action\=bi_del]").live('click', function(e){ BlogIt.fn.deleteDialog(e); });  //delete comments and blogs
+	$("a[href*=action\=bi_be&bi_mode\=ajax],a[href*=action\=bi_ne&bi_mode\=ajax]").live('click', function(e){ BlogIt.fn.loadDialog(e,'blog'); });  //blog edit
+	$("a[href*=action\=bi_del&bi_mode\=ajax]").live('click', function(e){ BlogIt.fn.deleteDialog(e); });  //delete comments and blogs
 	$("a[href*=action\=bi_bip]").live('click', function(e){ BlogIt.fn.commentBlockIP(e); });  //block comment IP addresses
-	$("a[href*=action\=bi_ce]").live('click', function(e){ BlogIt.fn.loadDialog(e,'comment','edit'); });  //comment edit
-	$("a[href*=action\=bi_cr]").live('click', function(e){ BlogIt.fn.loadDialog(e,'comment','reply'); });  //comment reply (admins)
+	$("a[href*=action\=bi_ce&bi_mode\=ajax]").live('click', function(e){ BlogIt.fn.loadDialog(e,'comment','edit'); });  //comment edit
+	$("a[href*=action\=bi_cr&bi_mode\=ajax]").live('click', function(e){ BlogIt.fn.loadDialog(e,'comment','reply'); });  //comment reply (admins)
 	$("#wikiedit.blogit-blog-form form :input:not(:submit)").bind('change', function(){  //if any field (not a submit button) changes...
 		window.onbeforeunload = function(){ return BlogIt.fn.xl('You have unsaved changes.'); }
 	});
@@ -49,7 +49,14 @@ BlogIt.fn = function($){
 		BlogIt.fn.showMsg(data);
 	};
 	//dialog functions
-	function dialogClose(data){ if (!data || (data && data.result!='error'))  $("#dialog").dialog("close").empty(); };
+	function dialogWait(clear){
+		$("#dialog").siblings(".ui-dialog-titlebar").find(".ui-dialog-title")
+			.css((clear ?{background:""} :{background: "url("+BlogIt.pm.pubdirurl+"/wait.gif) no-repeat left center", width:"18px", height:"18px"}));
+	};
+	function dialogClose(data){
+		dialogWait(true); 
+		if (!data || (data && data.result!='error'))  $("#dialog").dialog("close").empty(); 
+	};
 	function dialogShow(txt, yes, no, w, ajax, e){
 		var $d = $("#dialog");
 		$d.html(txt).dialog('option', 'width', w);
@@ -122,7 +129,7 @@ BlogIt.fn = function($){
 		},
 		loadDialog: function(e,name,mode){
 			e.preventDefault();
-			$.ajax({dataType:'json', url:e.target.href,  //get the comment form from pmwiki
+			$.ajax({dataType:'json', url:e.currentTarget.href,  //get the comment form from pmwiki; not .target, because actual target might be an image wrapped in an anchor
 				success: function(data){
 					if (data.out){  //form returned in data.out
 						var txt=(name=='blog' ?$(data.out).filter('#wikiedit') :data.out);  //only show wikiedit, not the editing reference
@@ -153,12 +160,13 @@ BlogIt.fn = function($){
 								.closest('#wikitext .blogit-post, #wikitext .blogit-post-summary, #wikitext .blogit-commentblock, #wikitext .blogit-commentblock-admin, #wikitext .blogit-blog-list-row');
 							$(this).prepend('<input type="hidden" value="' +$container.attr('class') +'" name="bi_style">')  //trigger multi-entry mode
 						}
+						dialogWait();
 						$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action'),  //post with the action defined on the form
 							data: $(this).serialize(),
 							success: function(data){  //after PmForms finishes processing, update page with new content
 								dialogClose(data);
 								if (data.out)  submitFn(data, eventTarget, mode, frm, eventTarget, $container);
-								else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl("No data returned.")), result:'error'});
+								else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl("No data returned.")), result:(data.result || 'error')});
 							}
 						});
 					}
