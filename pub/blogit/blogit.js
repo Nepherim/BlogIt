@@ -36,6 +36,10 @@ jQuery(document).ready(function($){
 	$('#wikiedit.blogit-blog-form form :input:submit').bind('click', function(){
 		window.onbeforeunload = null;  //don't trigger on submit buttons.
 	});
+
+	$('#entrytags').autocomplete(BlogIt.pm.categories.split(','), { multiple:true })
+		.live('blur', function(e){ $this=$(this); $this.val($this.val().replace(/[,|\s]+$/,"")); });
+
 });
 
 var BlogIt={ fmt:{}, xl:{}, fn:{}, pm:{} };
@@ -54,8 +58,8 @@ BlogIt.fn = function($){
 			.css((clear ?{background:""} :{background: "url("+BlogIt.pm.pubdirurl+"/wait.gif) no-repeat left center", width:"18px", height:"18px"}));
 	};
 	function dialogClose(data){
-		dialogWait(true); 
-		if (!data || (data && data.result!='error'))  $("#dialog").dialog("close").empty(); 
+		dialogWait(true);
+		if (!data || (data && data.result!='error'))  $("#dialog").dialog("close").empty();
 	};
 	function dialogShow(txt, yes, no, w, ajax, e){
 		var $d = $("#dialog");

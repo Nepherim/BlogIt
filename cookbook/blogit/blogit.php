@@ -109,17 +109,18 @@ if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths
 # ----------------------------------------
 # - Javascript
 SDV($HTMLHeaderFmt['jquery-ui.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui/ui-lightness/jquery-ui.custom.css" type="text/css" />');
-SDV($HTMLHeaderFmt['jquery-validity.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.validity.css" type="text/css" />');
-SDV($HTMLHeaderFmt['jquery.autoSuggest.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.autoSuggest.css" type="text/css" />');
+SDV($HTMLHeaderFmt['jquery.validity.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.validity.css" type="text/css" />');
+SDV($HTMLHeaderFmt['jquery.autocomplete.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.autocomplete.css" type="text/css" />');
 SDV($HTMLHeaderFmt['blogit.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />');
-SDV($HTMLHeaderFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.js"></script>');
+SDV($HTMLHeaderFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>');
 SDV($HTMLHeaderFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.js"></script>');
-SDV($HTMLHeaderFmt['jquery-validity.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.js"></script>');
-SDV($HTMLHeaderFmt['jquery-showmessage.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.js"></script>');
-SDV($HTMLHeaderFmt['jquery.autoSuggest.min.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.autoSuggest.min.js"></script>');
+SDV($HTMLHeaderFmt['jquery.validity.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.min.js"></script>');
+SDV($HTMLHeaderFmt['jquery.showmessage.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.min.js"></script>');
+SDV($HTMLHeaderFmt['jquery.autocomplete.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.autocomplete.min.js"></script>');
 $HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
 $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
 	BlogIt.pm["pubdirurl"]="'.$PubDirUrl.'/blogit";
+	BlogIt.pm["categories"]="' .bi_CategoryList() .'";
 	BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE().'$/;'."\n".
 	bi_JXL()."\n".
 '</script>';
@@ -332,6 +333,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		$_POST['ptv_entrytype'] = 'blog';  #Prevent spoofing.
 		$_POST['ptv_entrytitle'] = (empty($title) ?$pg :$_POST['ptv_entrytitle']);  #use either the url or the original title (not the clean title)
 		$_POST['ptv_entryurl'] = MakePageName($pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .(empty($pg) ?$title :$pg) );
+		$_POST['ptv_entrytags'] = implode(', ', array_unique(explode(', ',$_POST['ptv_entrytags'])));  #remove duplicates
 		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_entryauthor'];
 
@@ -544,6 +546,12 @@ global $AuthList,$bi_Auth,$pagename,$EnableAuthUser,$bi_Pages,$bi_OriginalFn,$ac
 # ----------------------------------------
 # - Internal Functions
 # ----------------------------------------
+function bi_CategoryList(){
+global $CategoryGroup;
+	$c = ListPages('/^' .$CategoryGroup .'\./');
+	array_walk($c, create_function('&$v,$k,$l', '$v = substr($v,$l);'), strlen($CategoryGroup)+1);
+	return implode(',',$c);
+}
 function bi_ClearCache(){
 global $PCache,$pagename;
 	if (is_array($PCache[$pagename])) {
@@ -643,6 +651,10 @@ global $pagename;
 	# generate a new separated string.
 	return ($allTags ?'[[!'.implode(']]'.$sep.'[[!', $allTags).']]' :'');
 }
+function bi_GetPmMarkup($body, $tags, $title){  #wrapper for bi_SaveTags, also used in blogit_upgrade.php
+global $bi_TagSeparator;
+	return bi_SaveTags($body, $tags, $bi_TagSeparator) .'(:title ' .$title .':)';
+}
 function bi_setMakePageNamePatterns(){
 global $MakePageNamePatterns, $bi_MakePageNamePatterns;
 	$MakePageNamePatterns = array_merge(
@@ -659,10 +671,6 @@ function bi_FuturePost($now){
 global $pagename,$bi_DisplayFuture;
 	$bi_EntryDate = PageTextVar($pagename,'entrydate');
 	return ($bi_EntryDate>$now || $bi_DisplayFuture=='true');
-}
-function bi_GetPmMarkup($body, $tags, $title){
-global $bi_TagSeparator;
-	return bi_SaveTags($body, $tags, $bi_TagSeparator) .'(:title ' .$title .':)';
 }
 function bi_DateFmtRE($f='%d-%m-%Y %H:%M'){
 global $bi_DateFmtRE;
