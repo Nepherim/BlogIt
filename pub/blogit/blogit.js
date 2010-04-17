@@ -37,9 +37,7 @@ jQuery(document).ready(function($){
 		window.onbeforeunload = null;  //don't trigger on submit buttons.
 	});
 
-	$('#entrytags').autocomplete(BlogIt.pm.categories.split(','), { multiple:true })
-		.live('blur', function(e){ $this=$(this); $this.val($this.val().replace(/[,|\s]+$/,"")); });
-
+	BlogIt.fn.addTagEvents();
 });
 
 var BlogIt={ fmt:{}, xl:{}, fn:{}, pm:{} };
@@ -150,6 +148,7 @@ BlogIt.fn = function($){
 			});
 		},
 		ajaxForm: function(frm, rulesFn, submitFn, mode, eventTarget){
+			BlogIt.fn.addTagEvents();
 			frm
 				.prepend('<input type="hidden" value="ajax" name="bi_mode">')  //trigger ajax mode
 				.bind("submit",function(e){
@@ -201,6 +200,10 @@ BlogIt.fn = function($){
 				.assert(	($((frm?frm+' ':'')+"#entryurl").val() || $((frm?frm+' ':'')+"#entrytitle").val()),
 					BlogIt.fn.xl('Either enter a Blog Title or a Pagename')
 				);
+		},
+		addTagEvents: function(){
+			$('#entrytags').autocomplete(BlogIt.pm.categories.split(','), { multiple:true })
+				.live('blur', function(e){ $this=$(this); $this.val($this.val().replace(/[,|\s]+$/,"")); });
 		},
 //Visuals
 		showMsg: function(data){
