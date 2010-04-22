@@ -132,7 +132,7 @@ $PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_-\w]*)\]\](?: *\n)?)(.
 $pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
 $bi_EntryType = PageTextVar($pagename,'entrytype');  #PageTextVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 bi_debugLog('entryType: '.$bi_EntryType);
-list($Group, $Name) = explode('.', $pagename);
+list($bi_Group, $bi_Name) = explode('.', $pagename);
 if ($pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"'.htmlentities(stripmagic($_GET['blogid'])).'"';
 if ( bi_Auth('*') ){
 	$EnablePostCaptchaRequired = 0;
@@ -150,7 +150,7 @@ include_once($bi_Paths['pmform']);
 $PmFormPostPatterns['/\r/'] = '';  #fixes a bug in pmforms where multi-line entries/comments are stored across multiple lines in the base page
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
 array_unshift ($PmFormTemplatesFmt,	($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$bi_Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
-$bi_CommentPage=(preg_match($bi_CommentPattern,$pagename) ?$pagename :$bi_CommentGroup .'.' .$Group .'-' .$Name .'-' .date('Ymd\THms'));
+$bi_CommentPage=(preg_match($bi_CommentPattern,$pagename) ?$pagename :$bi_CommentGroup .'.' .$bi_Group .'-' .$bi_Name .'-' .date('Ymd\THms'));
 SDV($PmForm['blogit-entry'], 'form=#blog-form-control fmt=#blog-post-control' .(@$_REQUEST['bi_mode']=='ajax' ?' successpage=""' :''));  //PmForm does a redirect browse if successpage is set
 #if page is an existing comment (ie, has a comment page name) then use it, otherwise create it
 SDV($PmForm['blogit-comments'],
@@ -220,11 +220,11 @@ $MarkupExpr['bi_url'] = 'bi_URL($args)';
 # - HandleActions Functions
 # ----------------------------------------
 function bi_HandleBrowse($pagename, $auth = 'read'){
-global $bi_ResetPmFormField,$bi_OriginalFn,$bi_GroupFooterFmt,$bi_EntryType,$bi_CommentGroup,$action,$_REQUEST,$Now,$Name,
-	$HandleActions,$GroupPrintHeaderFmt,$GroupPrintFooterFmt,$GroupHeaderFmt,$GroupFooterFmt,$Group,$FmtPV,$CategoryGroup,$AsSpacedFunction;
+global $bi_ResetPmFormField,$bi_OriginalFn,$bi_GroupFooterFmt,$bi_EntryType,$bi_CommentGroup,$action,$_REQUEST,$Now,$bi_Name,
+	$HandleActions,$GroupPrintHeaderFmt,$GroupPrintFooterFmt,$GroupHeaderFmt,$GroupFooterFmt,$bi_Group,$FmtPV,$CategoryGroup,$AsSpacedFunction;
 
 bi_debugLog('HandleBrowse: '.$action.'['.$_REQUEST['bi_mode'].'] '.$_REQUEST['target']);
-	if ($Group == $bi_CommentGroup){ bi_Redirect(); return; }  #After editing/deleting a comment page, and after HandlePmForm() has done a redirect()
+	if ($bi_Group == $bi_CommentGroup){ bi_Redirect(); return; }  #After editing/deleting a comment page, and after HandlePmForm() has done a redirect()
 	if ($_REQUEST['bi_mode']=='ajax'){ bi_AjaxRedirect(); return; }
 
 	if ($action=='pmform' && $_REQUEST['target']=='blogit-entry'){
@@ -240,8 +240,8 @@ bi_debugLog('HandleBrowse: '.$action.'['.$_REQUEST['bi_mode'].'] '.$_REQUEST['ta
 		if ( ($bi_EntryStatus!='draft' && (!bi_FuturePost($Now) || $bi_AuthEditAdmin) ) || ($bi_EntryStatus=='draft' && $bi_AuthEditAdmin) )
 			$GroupHeaderFmt .= '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
 	}
-	if ($Group == $CategoryGroup){
-		if (@$bi_EntryType != 'blog')  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction($Name).':)';
+	if ($bi_Group == $CategoryGroup){
+		if (@$bi_EntryType != 'blog')  $GroupHeaderFmt .= '(:title '.$AsSpacedFunction($bi_Name).':)';
 		$GroupFooterFmt .= $bi_GroupFooterFmt;
 	}
 	if ($action == 'print'){
@@ -571,7 +571,7 @@ bi_debugLog('bi_SendAjax: '.$markup);
 	)));
 }
 function bi_AjaxRedirect($result=''){
-global $pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action, $Name, $Group,$bi_Pages;
+global $pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action, $bi_Name, $bi_Group,$bi_Pages;
 bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 is pmform failed (invalid captcha, etc)
 		if ($_REQUEST['target']=='blogit-comments'){
@@ -582,9 +582,9 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
 			bi_SendAjax(($_REQUEST['bi_style']!='undefined'  #might have clicked from many places. We only care about a few.
 				?'(:includesection "' .($_REQUEST['bi_style']=='blogit-post-summary'
-					?'#blog-summary-pagelist group=' .$Group .' name='.$Name  #main blog summary page
+					?'#blog-summary-pagelist group=' .$bi_Group .' name='.$bi_Name  #main blog summary page
 					:($_REQUEST['bi_style']=='blogit-blog-list-row'  #blog list from admin page
-						?'#blog-grid group=' .$Group .' name='.$Name
+						?'#blog-grid group=' .$bi_Group .' name='.$bi_Name
 						:'#single-entry-view')  #single entry blog view
 					).'":)'
 				:''), 'Successfully '. ($action=='bi_ne'||($action=='pmform' && $pagename==$bi_Pages['admin']) ?'added' :'updated') .' blog entry.');
@@ -663,8 +663,8 @@ global $MakePageNamePatterns, $bi_MakePageNamePatterns;
 	);
 }
 function AsSpacedHyphens($text) {
-global $bi_OriginalFn,$bi_EntryType,$Group,$CategoryGroup,$action;
-	if ($Group==$CategoryGroup || isset($bi_EntryType) || $action=='blogitupgrade')  return (strtr($bi_OriginalFn['AsSpacedFunction']($text),'-',' '));
+global $bi_OriginalFn,$bi_EntryType,$bi_Group,$CategoryGroup,$action;
+	if ($bi_Group==$CategoryGroup || isset($bi_EntryType) || $action=='blogitupgrade')  return (strtr($bi_OriginalFn['AsSpacedFunction']($text),'-',' '));
 	else  return ($bi_OriginalFn['AsSpacedFunction']($text));
 }
 function bi_FuturePost($now){
