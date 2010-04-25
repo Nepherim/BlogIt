@@ -90,7 +90,6 @@ $FmtPV['$bi_Mode']='$_REQUEST["bi_mode"]';
 
 # ----------------------------------------
 # - PmWiki Config
-$HandleAuth['source'] = $HandleAuth['diff'] = 'edit';  #[1] Prevent viewing source and diff, primarily for Comments, as this would reveal email.
 bi_addPageStore();
 $bi_OriginalFn['AsSpacedFunction'] = $AsSpacedFunction;
 $AsSpacedFunction = 'AsSpacedHyphens';  #[1]
@@ -129,14 +128,14 @@ $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
 # - Cookies
 # Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_-\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';
-$pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
-$bi_EntryType = PageTextVar($pagename,'entrytype');  #PageTextVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
+$bi_Pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
+$bi_EntryType = PageTextVar($bi_Pagename,'entrytype');  #PageTextVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 bi_debugLog('entryType: '.$bi_EntryType);
-list($bi_Group, $bi_Name) = explode('.', $pagename);
-if ($pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"'.htmlentities(stripmagic($_GET['blogid'])).'"';
+list($bi_Group, $bi_Name) = explode('.', $bi_Pagename);
+if ($bi_Pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"'.htmlentities(stripmagic($_GET['blogid'])).'"';
 if ( bi_Auth('*') ){
 	$EnablePostCaptchaRequired = 0;
-	if (isset($bi_EntryType)||in_array($pagename,$bi_Pages)){
+	if (isset($bi_EntryType)||in_array($bi_Pagename,$bi_Pages)){
 		# Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
 		$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
 		if (@$_POST['cancel'] && ($action=='pmform' && in_array($_REQUEST['target'],$bi_Forms)))  bi_Redirect();  //ajax cancel is handled client-side
@@ -150,12 +149,10 @@ include_once($bi_Paths['pmform']);
 $PmFormPostPatterns['/\r/'] = '';  #fixes a bug in pmforms where multi-line entries/comments are stored across multiple lines in the base page
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
 array_unshift ($PmFormTemplatesFmt,	($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$bi_Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
-$bi_CommentPage=(preg_match($bi_CommentPattern,$pagename) ?$pagename :$bi_CommentGroup .'.' .$bi_Group .'-' .$bi_Name .'-' .date('Ymd\THms'));
+$bi_CommentPage=(preg_match($bi_CommentPattern,$bi_Pagename) ?$bi_Pagename :$bi_CommentGroup .'.' .$bi_Group .'-' .$bi_Name .'-' .date('Ymd\THms'));
 SDV($PmForm['blogit-entry'], 'form=#blog-form-control fmt=#blog-post-control' .(@$_REQUEST['bi_mode']=='ajax' ?' successpage=""' :''));  //PmForm does a redirect browse if successpage is set
 #if page is an existing comment (ie, has a comment page name) then use it, otherwise create it
-SDV($PmForm['blogit-comments'],
-	'saveto="' . $bi_CommentPage.'" '.
-	'form=#comment-form-control fmt=#comment-post-control');
+SDV($PmForm['blogit-comments'], 'saveto="' . $bi_CommentPage.'" ' .'form=#comment-form-control fmt=#comment-post-control');
 
 # ----------------------------------------
 # - Handle Actions
@@ -253,11 +250,11 @@ bi_debugLog('HandleBrowse: '.$action.'['.$_REQUEST['bi_mode'].'] '.$_REQUEST['ta
 }
 # Return the comment form DOM if ajax request, or set the GroupHeader to the comment/blog form
 function bi_HandleEdit($src, $auth='blog-edit'){  #action=(bi_be|bi_ne|bi_ce|bi_cr)
-global $action,$_REQUEST,$pagename,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt,$bi_Pages;
+global $action,$_REQUEST,$bi_Pagename,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt,$bi_Pages;
 bi_debugLog('HandleEdit: '.$action.' - '.$bi_EntryType);
-	$type=($action=='bi_be'||($action=='bi_ne'&&$pagename==$bi_Pages['admin']) ?'blog' :'comment');
+	$type=($action=='bi_be'||($action=='bi_ne'&&$bi_Pagename==$bi_Pages['admin']) ?'blog' :'comment');
 	if ( ($bi_EntryType==$type || $action=='bi_ne' || $action=='bi_cr') && bi_Auth($auth) ){
-		if ($_REQUEST['bi_mode']=='ajax')  bi_AjaxRedirect(array('out'=>MarkupToHTML($pagename, '(:includesection "#' .$type .'-edit":)'), 'result'=>'success'));
+		if ($_REQUEST['bi_mode']=='ajax')  bi_AjaxRedirect(array('out'=>MarkupToHTML($bi_Pagename, '(:includesection "#' .$type .'-edit":)'), 'result'=>'success'));
 		else  $GroupHeaderFmt .= '(:includesection "#' .$type .'-edit":)';
 	}
 	if ($type=='blog')  bi_AddMarkup();  #define markup to prevent PTV field being displayed at end of page
@@ -299,7 +296,7 @@ global $_GET,$GroupHeaderFmt;
 }
 function bi_HandleProcessForm ($src, $auth='read'){  //$action=pmform
 global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$ROSPatterns,$CategoryGroup,
-	$pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$GroupHeaderFmt,
+	$bi_Pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$GroupHeaderFmt,
 	$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired;
 bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 	$bi_ResetPmFormField = array();
@@ -332,7 +329,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		bi_setMakePageNamePatterns();
 		$_POST['ptv_entrytype'] = 'blog';  #Prevent spoofing.
 		$_POST['ptv_entrytitle'] = (empty($title) ?$pg :$_POST['ptv_entrytitle']);  #use either the url or the original title (not the clean title)
-		$_POST['ptv_entryurl'] = MakePageName($pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .(empty($pg) ?$title :$pg) );
+		$_POST['ptv_entryurl'] = MakePageName($bi_Pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .(empty($pg) ?$title :$pg) );
 		$_POST['ptv_entrytags'] = implode(', ', array_unique(explode(', ',$_POST['ptv_entrytags'])));  #remove duplicates
 		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_entryauthor'];
@@ -342,8 +339,8 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_commenttext'] = rtrim($_POST['ptv_commenttext'],"\n\r\x0B")."\n";  #ensures markup is closed correctly (eg, links at end of comment)
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
-		$ce=preg_match($bi_CommentPattern,$pagename) && bi_Auth('comment-edit');  #editing an existing comment?
-		$_POST['ptv_commentapproved'] = ($ce ?$_POST['ptv_commentapproved'] :(bi_Auth('comment-approve,blogit-admin '.$pagename) ?'true' :$bi_DefaultCommentStatus));
+		$ce=preg_match($bi_CommentPattern,$bi_Pagename) && bi_Auth('comment-edit');  #editing an existing comment?
+		$_POST['ptv_commentapproved'] = ($ce ?$_POST['ptv_commentapproved'] :(bi_Auth('comment-approve,blogit-admin '.$bi_Pagename) ?'true' :$bi_DefaultCommentStatus));
 		$_POST['ptv_commentdate'] = ($ce ?$_POST['ptv_commentdate'] :$Now);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_commentauthor'];
 	}
@@ -408,9 +405,9 @@ function blogitMU_list($name, $text){
 }
 # options is the length of the string, or use $bi_CommentSideBarLen is empty
 function blogitMU_cleantext($options, $text){
-global $bi_CommentSideBarLen, $pagename, $bi_UnstyleFn;
+global $bi_CommentSideBarLen, $bi_Pagename, $bi_UnstyleFn;
 # SteP fixes: allow for unstyling; honor $options when empty($m); break $text on a word boundary
-	if($bi_UnstyleFn>'')	$text = $bi_UnstyleFn($pagename, $text);
+	if($bi_UnstyleFn>'')	$text = $bi_UnstyleFn($bi_Pagename, $text);
 	$l = (empty($options) ?$bi_CommentSideBarLen :$options);
 	$m = strpos($text, "\n");
 	$m = ( empty($m) ?$l :min($m, $l) );
@@ -425,14 +422,14 @@ global $bi_Ajax,$PubDirUrl;
 		.$post;
 }
 function blogitSkinMU($fn, $opt, $txt){
-global $bi_AuthorGroup,$pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern,$EnableBlocklist,$bi_Pages;
+global $bi_AuthorGroup,$bi_Pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern,$EnableBlocklist,$bi_Pages;
 	$args = ParseArgs($opt);  #$args['p'], args[]['s']
 	$dateFmt = array('long'=>'%B %d, %Y, at %I:%M %p', 'short'=>'%B %d, %Y', 'entry'=>'%d-%m-%Y (%H:%M)');
 	switch ($fn) {
 		case 'date': return ME_ftime(XL(array_key_exists($args['fmt'],$dateFmt) ?$dateFmt[$args['fmt']] :$args['fmt']), '@'.$txt);
 		case 'intro': return '(:div999991 class="'.$args['class'].'":)' .blogitMU_intro('', $txt) .'%blogit-more%'. blogitMU_more($args['page'], $txt) ."%%\n(:div99991end:)";
 		case 'author': return ($txt>''
-			?$args['pre_text'] .(PageExists(MakePageName($pagename, "$bi_AuthorGroup/$txt")) ?"[[$bi_AuthorGroup/$txt]]" :$txt) .$args['post_text']
+			?$args['pre_text'] .(PageExists(MakePageName($bi_Pagename, "$bi_AuthorGroup/$txt")) ?"[[$bi_AuthorGroup/$txt]]" :$txt) .$args['post_text']
 			:'');
 		case 'edit': return (bi_Auth('blog-edit '.$args['page']) ?bi_Link($args['pre_text'], $args['page'], 'bi_be', $txt, $args['post-text']) :'');
 		case 'newentry': return (bi_Auth('blog-new '.$bi_Pages['auth']) ?bi_Link($args['pre_text'], $bi_Pages['admin'], 'bi_ne', $txt, $args['post-text']) :'');
@@ -473,10 +470,10 @@ function bi_includeSection($pagename, $inclspec){
 # - Condition Functions
 # ----------------------------------------
 function bi_IsPage($pn){
-global $pagename;
-	$mp = MakePageName($pagename, $pn);
+global $bi_Pagename;
+	$mp = MakePageName($bi_Pagename, $pn);
 	if (empty($mp))  return true;
-	if ($mp==$pagename)  return false;
+	if ($mp==$bi_Pagename)  return false;
 	return PageExists($mp);
 }
 function bi_IsDate($d, $f='%d-%m-%Y %H:%M'){  #accepts a date, and a date format (not a regular expression)
@@ -512,7 +509,7 @@ global $_GET;
 # - Authentication Functions
 # ----------------------------------------
 function bi_BlogItAuth($pn, $level, $authprompt=true, $since=0) {
-global $pagename, $action, $bi_OriginalFn, $bi_CommentsEnabled, $bi_CommentGroup, $bi_EntryType;
+global $bi_Pagename, $action, $bi_OriginalFn, $bi_CommentsEnabled, $bi_CommentGroup, $bi_EntryType;
 	# Set level to read if a non-authenticated user is posting a comment.
 	if ( (($level=='edit') || ($level=='publish'))
 		&& $action=='pmform' && $bi_EntryType == 'blog'
@@ -524,15 +521,15 @@ global $pagename, $action, $bi_OriginalFn, $bi_CommentsEnabled, $bi_CommentGroup
 }
 # Called as part of markup condition. Determine whether the current user is authorized for an action
 function bi_Auth($condparm){  #condparm: comma separated list of actions, and optional space separated pagename -- "blog-new,blog-edit Blog.This-entry"
-global $AuthList,$bi_Auth,$pagename,$EnableAuthUser,$bi_Pages,$bi_OriginalFn,$action;
+global $AuthList,$bi_Auth,$bi_Pagename,$EnableAuthUser,$bi_Pages,$bi_OriginalFn,$action;
 	@list($bi_actions, $pn) = explode(' ', $condparm, 2);
 	$bi_actions=explode(',', trim($bi_actions,'\'"'));
 	if (!IsEnabled($EnableAuthUser))
 		$pn = ( in_array('*',$bi_actions)	|| in_array('sidebar',$bi_actions)
-			||($pagename==$bi_Pages['admin'] && in_array('blogit-admin',$bi_actions))
-			||($pagename==$bi_Pages['admin'] && $action=='bi_ne' && in_array('blog-new',$bi_actions)) )
+			||($bi_Pagename==$bi_Pages['admin'] && in_array('blogit-admin',$bi_actions))
+			||($bi_Pagename==$bi_Pages['admin'] && $action=='bi_ne' && in_array('blog-new',$bi_actions)) )
 			?$bi_Pages['auth']
-			:(isset($pn)) ?$pn :$pagename;
+			:(isset($pn)) ?$pn :$bi_Pagename;
 	foreach ($bi_actions as $a){
 		foreach ($bi_Auth as $role => $action_list){
 			if ( $a=='*' || in_array($a, $action_list) ){  #Is the action assigned to a role?
@@ -553,31 +550,31 @@ global $CategoryGroup;
 	return implode(',',$c);
 }
 function bi_ClearCache(){
-global $PCache,$pagename;
-	if (is_array($PCache[$pagename])) {
-		foreach(array_keys($PCache[$pagename]) as $key)
+global $PCache,$bi_Pagename;
+	if (is_array($PCache[$bi_Pagename])) {
+		foreach(array_keys($PCache[$bi_Pagename]) as $key)
 			if (substr($key,0,3)=='=p_' || $key=='=pagetextvars')
-				unset($PCache[$pagename][$key]);
+				unset($PCache[$bi_Pagename][$key]);
 	}
 }
 function bi_SendAjax($markup, $msg=''){
-global $pagename;
+global $bi_Pagename;
 bi_debugLog('bi_SendAjax: '.$markup);
 	bi_ClearCache();  #Otherwise we retrieve the old values.
 	echo(json_encode(array(  #admin list uses a different format for listing comments
-		'out'=>MarkupToHTML($pagename, $markup),
+		'out'=>MarkupToHTML($bi_Pagename, $markup),
 		'result'=>'success',
 		'msg'=>XL($msg)
 	)));
 }
 function bi_AjaxRedirect($result=''){
-global $pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action, $bi_Name, $bi_Group,$bi_Pages;
+global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action, $bi_Name, $bi_Group,$bi_Pages;
 bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 is pmform failed (invalid captcha, etc)
 		if ($_REQUEST['target']=='blogit-comments'){
 			bi_SendAjax('(:includesection "' .($_REQUEST['bi_style']=='blogit-commentblock-admin' ?'#unapproved-comments' :'#comments-pagelist')
 				.' commentid=' .$bi_CommentPage.' entrycomments=readonly":)',
-				($bi_CommentPage==$pagename ?'Successfully updated comment.' :'Successfully added new comment.')
+				($bi_CommentPage==$bi_Pagename ?'Successfully updated comment.' :'Successfully added new comment.')
 			);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
 			bi_SendAjax(($_REQUEST['bi_style']!='undefined'  #might have clicked from many places. We only care about a few.
@@ -587,19 +584,19 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 						?'#blog-grid group=' .$bi_Group .' name='.$bi_Name
 						:'#single-entry-view')  #single entry blog view
 					).'":)'
-				:''), 'Successfully '. ($action=='bi_ne'||($action=='pmform' && $pagename==$bi_Pages['admin']) ?'added' :'updated') .' blog entry.');
+				:''), 'Successfully '. ($action=='bi_ne'||($action=='pmform' && $bi_Pagename==$bi_Pages['admin']) ?'added' :'updated') .' blog entry.');
 		}else  echo(json_encode($result));
-	}else  echo(json_encode(array('result'=>'error','msg'=>FmtPageName(implode($MessagesFmt), $pagename)) ));
+	}else  echo(json_encode(array('result'=>'error','msg'=>FmtPageName(implode($MessagesFmt), $bi_Pagename)) ));
 	exit;
 }
 # Direct back to the refering page or $src
 function bi_Redirect($src='', $result=''){
-global $pagename,$_REQUEST;
+global $bi_Pagename,$_REQUEST;
 bi_debugLog('Redirect');
 	if ($src=='ajax' || $_REQUEST['bi_mode']=='ajax')  { bi_AjaxRedirect($result); }  #don't redirect ajax requests, just send back json object
 	$history=bi_GetHistory();
 	#use $src if provided, or history is empty; use pagename if $src and history are empty; use history if no $src and history exists.
-	$r = ($src>''||empty($history) ?FmtPageName('$PageUrl', bi_BasePage(($src>'' ?$src :$pagename))) :$history);
+	$r = ($src>''||empty($history) ?FmtPageName('$PageUrl', bi_BasePage(($src>'' ?$src :$bi_Pagename))) :$history);
 bi_debugLog('Redirecting: '.$r);
 	bi_storeCookie($r);
 
@@ -615,10 +612,10 @@ global $bi_Cookie,$_COOKIE,$action,$_REQUEST;
 	return ( ($action=='pmform' && $_REQUEST['target']=='blogit-entry' ?@$_COOKIE[$bi_Cookie.'back-2'] :@$_COOKIE[$bi_Cookie.'back-1']) );
 }
 function bi_storeCookie($url=''){
-global $bi_Cookie,$pagename,$_REQUEST,$_GET,$action;
+global $bi_Cookie,$bi_Pagename,$_REQUEST,$_GET,$action;
 	if (empty($url)){
 		$bi_Params = bi_Implode($_GET);
-		$url = FmtPageName('$PageUrl', $pagename ) .(!empty($bi_Params) ?'?'.$bi_Params :'');  #current
+		$url = FmtPageName('$PageUrl', $bi_Pagename ) .(!empty($bi_Params) ?'?'.$bi_Params :'');  #current
 	}
 	$history = bi_GetHistory();
  	if ( $url!=$history && $_REQUEST['bi_mode']!='ajax' && $action!='pmform'){  #don't record if reloading, ajax, or redirected from pmform
@@ -638,7 +635,7 @@ global $PageTextVarPatterns;
 # Combines categories in body [[!...]] with separated tag list in tag-field.
 # Stores combined list in tag-field in PmWiki format [[!...]][[!...]].
 function bi_SaveTags($body, $user_tags, $sep) {
-global $pagename;
+global $bi_Pagename;
 	# Read tags from body, strip [[!...]]
 	if ($body)  $bodyTags = (preg_match_all('/\[\[\!(.*?)\]\]/e', $body, $match) ?$match[1] :array());  #array of tags contained in [[!...]] markup.
 
@@ -668,8 +665,8 @@ global $bi_OriginalFn,$bi_EntryType,$bi_Group,$CategoryGroup,$action;
 	else  return ($bi_OriginalFn['AsSpacedFunction']($text));
 }
 function bi_FuturePost($now){
-global $pagename,$bi_DisplayFuture;
-	$bi_EntryDate = PageTextVar($pagename,'entrydate');
+global $bi_Pagename,$bi_DisplayFuture;
+	$bi_EntryDate = PageTextVar($bi_Pagename,'entrydate');
 	return ($bi_EntryDate>$now || $bi_DisplayFuture=='true');
 }
 function bi_DateFmtRE($f='%d-%m-%Y %H:%M'){

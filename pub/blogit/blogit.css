@@ -18,16 +18,16 @@ label.error{
 	font-size:18px;
 	border-bottom:1px solid #bbb;
 	z-index: 2000 !important;
-}
+	}
 #showMessage.notification{
 	background-color: rgb(247, 247, 247);
 	color: red;
-}
+	}
 #showMessage.success{
 	background-color: #BBFFB6;
 	color: #060;
-}
+	}
 #showMessage.error{
 	background-color: #fdd;
 	color: #f00;
-}
+	}
