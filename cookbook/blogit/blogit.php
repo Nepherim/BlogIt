@@ -296,8 +296,8 @@ global $_GET,$GroupHeaderFmt;
 	HandleDispatch($src, 'browse');
 }
 function bi_HandleProcessForm ($src, $auth='read'){  //$action=pmform
-global $bi_ResetPmFormField,$_POST,$RecipeInfo,$bi_EnablePostDirectives,$ROSPatterns,$CategoryGroup,
-	$bi_Pagename,$bi_DefaultGroup,$bi_TagSeparator,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$GroupHeaderFmt,
+global $bi_ResetPmFormField,$_POST,$bi_EnablePostDirectives,$ROSPatterns,$CategoryGroup,
+	$bi_Pagename,$bi_DefaultGroup,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$GroupHeaderFmt,
 	$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired;
 bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 	$bi_ResetPmFormField = array();
@@ -423,7 +423,7 @@ global $bi_Ajax,$PubDirUrl;
 		.$post;
 }
 function blogitSkinMU($fn, $opt, $txt){
-global $bi_AuthorGroup,$bi_Pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern,$EnableBlocklist,$bi_Pages;
+global $bi_AuthorGroup,$bi_Pagename,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern,$EnableBlocklist,$bi_Pages;
 	$args = ParseArgs($opt);  #$args['p'], args[]['s']
 	$dateFmt = array('long'=>'%B %d, %Y, at %I:%M %p', 'short'=>'%B %d, %Y', 'entry'=>'%d-%m-%Y (%H:%M)');
 	switch ($fn) {
@@ -443,7 +443,7 @@ global $bi_AuthorGroup,$bi_Pagename,$bi_TagSeparator,$bi_CommentsEnabled,$bi_Lin
 		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt))
 			?bi_Link($args['pre_text'], $txt, 'bi_bip', '$[block]', $args['post_text']) :'');
 
-		case 'tags': return ($txt>'' ?$args['pre_text'].bi_SaveTags('', html_entity_decode($txt, ENT_QUOTES), $bi_TagSeparator).$args['post_text'] :'');
+		case 'tags': return ($txt>'' ?$args['pre_text'].bi_SaveTags('', html_entity_decode($txt, ENT_QUOTES), 'display').$args['post_text'] :'');
 		case 'commentcount': return ($args['status']!='none' && $bi_CommentsEnabled
 			?$args['pre_text'].'[['.$args['group'].'.'.$args['name'].'#blogit-comment-list | '.
 				'(:includesection "#comments-count-pagelist entrygroup=\''.$args['group'].'\' entryname=\''.$args['name'].'\' commentstatus=true":)'.
@@ -510,7 +510,7 @@ global $_GET;
 # - Authentication Functions
 # ----------------------------------------
 function bi_BlogItAuth($pn, $level, $authprompt=true, $since=0) {
-global $bi_Pagename, $action, $bi_OriginalFn, $bi_CommentsEnabled, $bi_CommentGroup, $bi_EntryType;
+global $action, $bi_OriginalFn, $bi_CommentsEnabled, $bi_CommentGroup, $bi_EntryType;
 	# Set level to read if a non-authenticated user is posting a comment.
 	if ( (($level=='edit') || ($level=='publish'))
 		&& $action=='pmform' && $bi_EntryType == 'blog'
@@ -569,7 +569,7 @@ bi_debugLog('bi_SendAjax: '.$markup);
 	)));
 }
 function bi_AjaxRedirect($result=''){
-global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action, $bi_Name, $bi_Group,$bi_Pages;
+global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action,$bi_Name,$bi_Group,$bi_Pages;
 bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 is pmform failed (invalid captcha, etc)
 		if ($_REQUEST['target']=='blogit-comments'){
@@ -635,23 +635,23 @@ global $PageTextVarPatterns;
 }
 # Combines categories in body [[!...]] with separated tag list in tag-field.
 # Stores combined list in tag-field in PmWiki format [[!...]][[!...]].
-function bi_SaveTags($body, $user_tags, $sep) {
-global $bi_Pagename;
+function bi_SaveTags($body, $user_tags, $mode='save') {
+global $CategoryGroup,$bi_TagSeparator;
 	# Read tags from body, strip [[!...]]
 	if ($body)  $bodyTags = (preg_match_all('/\[\[\!(.*?)\]\]/e', $body, $match) ?$match[1] :array());  #array of tags contained in [[!...]] markup.
 
 	# Make sure tag-field entries are in standard separated format, and place in array
-	if ($user_tags) $fieldTags = explode($sep, preg_replace('/'.trim($sep).'\s*/', $sep, $user_tags));
+	if ($user_tags) $fieldTags = explode($bi_TagSeparator, preg_replace('/'.trim($bi_TagSeparator).'\s*/', $bi_TagSeparator, $user_tags));
 	# Concatenate the tag-field tags, with those in the body,
 	$allTags = array_unique(array_merge((array)$fieldTags, (array)$bodyTags));
 	sort($allTags);
 
 	# generate a new separated string.
-	return ($allTags ?'[[!'.implode(']]'.$sep.'[[!', $allTags).']]' :'');
+	if ($mode=='display')  return ($allTags ?'[['.$CategoryGroup.'.'.implode('|+]]'.$bi_TagSeparator.'[['.$CategoryGroup.'.', $allTags).'|+]]' :'');
+	else  return ($allTags ?'[[!'.implode(']]'.$bi_TagSeparator.'[[!', $allTags).']]' :'');
 }
 function bi_GetPmMarkup($body, $tags, $title){  #wrapper for bi_SaveTags, also used in blogit_upgrade.php
-global $bi_TagSeparator;
-	return bi_SaveTags($body, $tags, $bi_TagSeparator) .'(:title ' .$title .':)';
+	return bi_SaveTags($body, $tags) .'(:title ' .$title .':)';
 }
 function bi_setMakePageNamePatterns(){
 global $MakePageNamePatterns, $bi_MakePageNamePatterns;
