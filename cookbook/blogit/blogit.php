@@ -37,6 +37,7 @@ SDV($bi_EnablePostDirectives, true);  #Set to true to allow posting of directive
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDV($bi_Cookie, $CookiePrefix.'blogit-');
 SDV($bi_UnstyleFn, '');
+SDV($HTMLHeaderFmt['blogit-meta-tag'], '<meta name="generator" content="BlogIt ' .$RecipeInfo['BlogIt']['Version'] .'" />');
 SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));  #Needed if skin is set in group config, which is processed after main config
 SDVA($bi_StatusType, array('draft', 'publish', 'sticky'));
 SDVA($bi_CommentType, array('open', 'readonly', 'none'));
