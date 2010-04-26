@@ -203,7 +203,8 @@ BlogIt.fn = function($){
 				);
 		},
 		addTagEvents: function(){
-			$('#entrytags').autocomplete(BlogIt.pm.categories.split(','), { multiple:true })
+			//Add autocomplete. :not only adds autocomplete if not already added.
+			$('#entrytags:not(.ac_input)').autocomplete(BlogIt.pm.categories.split(','), { multiple:true })
 				.live('blur', function(e){ $this=$(this); $this.val($this.val().replace(/[,|\s]+$/,"")); });
 		},
 //Visuals
