@@ -205,7 +205,7 @@ BlogIt.fn = function($){
 		addTagEvents: function(){
 			//Add autocomplete. :not only adds autocomplete if not already added.
 			$('#entrytags:not(.ac_input)').autocomplete(BlogIt.pm.categories.split(','), { multiple:true })
-				.live('blur', function(e){ $this=$(this); $this.val($this.val().replace(/[,|\s]+$/,"")); });
+			$('#entrytags').live('blur', function(e){ $this=$(this); $this.val($this.val().replace(/[,|\s]+$/,"")); });
 		},
 //Visuals
 		showMsg: function(data){
