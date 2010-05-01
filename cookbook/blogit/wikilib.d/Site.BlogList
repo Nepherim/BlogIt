@@ -6,10 +6,13 @@ csum=
 ctime=1231905189
 host=127.0.0.1
 name=Site.BlogList
-rev=19
+rev=20
 targets=
-text=(:includesection "#blog-yearly-archive-pagelist blogid={(bi_ifnull '{$bi_BlogId}' blog1)} status=$[publish],$[sticky]":)
-time=1272493985
+text=(:includesection "#blog-yearly-archive-pagelist blogid={(bi_ifnull '{$bi_BlogId}' blog1)} status=publish,sticky":)
+time=1272676382
+author:1272676382=daveg
+diff:1272676382:1272493985:=1c1%0a%3c (:includesection "#blog-yearly-archive-pagelist blogid={(bi_ifnull '{$bi_BlogId}' blog1)} status=publish,sticky":)%0a\ No newline at end of file%0a---%0a> (:includesection "#blog-yearly-archive-pagelist blogid={(bi_ifnull '{$bi_BlogId}' blog1)} status=$[publish],$[sticky]":)%0a\ No newline at end of file%0a
+host:1272676382=127.0.0.1
 author:1272493985=daveg
 diff:1272493985:1264284021:=1c1%0a%3c (:includesection "#blog-yearly-archive-pagelist blogid={(bi_ifnull '{$bi_BlogId}' blog1)} status=$[publish],$[sticky]":)%0a\ No newline at end of file%0a---%0a> (:includesection "#blog-yearly-archive-pagelist blogid={(bi_ifnull "{$bi_BlogId}" blog1)} status=$[publish],$[sticky]":)%0a\ No newline at end of file%0a
 host:1272493985=127.0.0.1
