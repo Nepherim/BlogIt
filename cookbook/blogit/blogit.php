@@ -62,6 +62,9 @@ SDVA($bi_SkinClasses, array(
 	'comment-block-admin' => 'blogit-commentblock-admin',
 	'blog-list-row' => 'blogit-blog-list-row'
 ));
+SDVA($bi_SkinSettings, array(
+	'ajax_textarea_rows' => '18'  #make sure whole dialog fits on low res monitors
+));
 
 # ----------------------------------------
 # - Internal Use Only
@@ -94,6 +97,7 @@ $bi_Forms=array('blogit-entry','blogit-comments');  //needs to be before cookies
 bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','CategoryGroup','Now','bi_CommentGroup',
 	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_StatAction','action'));
 bi_setFmtPVA(array('$bi_Pages'=>$bi_Pages));
+bi_setFmtPVA(array('$bi_SkinSettings'=>$bi_SkinSettings));
 $FmtPV['$bi_Mode']='$_REQUEST["bi_mode"]';
 
 # ----------------------------------------
