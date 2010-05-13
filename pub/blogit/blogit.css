@@ -9,8 +9,15 @@
 	padding: 0 !important;
 	background-color: transparent !important;
 	}
+.blogit-guibuttons{
+	margin-top: 10px;
+	}
 #dialog{
 	display: none;
+	text-align: left;
+	}
+#dialog .blogit-blog-form{
+	margin-top: 0px !important;
 	}
 label.error{
 	padding-left:12px;
