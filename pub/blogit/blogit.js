@@ -160,8 +160,7 @@ BlogIt.fn = function($){
 					if (result.valid){
 						var $container;
 						if (eventTarget){  //eventTarget is null for user clicking Post button (mode=='add')
-							$container = $(eventTarget.target)
-								.closest('#wikitext .blogit-post, #wikitext .blogit-post-summary, #wikitext .blogit-commentblock, #wikitext .blogit-commentblock-admin, #wikitext .blogit-blog-list-row');
+							$container = $(eventTarget.target).closest(BlogIt.pm['skin-classes']);  //use closest since going from target up the DOM
 							$(this).prepend('<input type="hidden" value="' +$container.attr('class') +'" name="bi_style">')  //trigger multi-entry mode
 						}
 						dialogWait();
@@ -178,8 +177,8 @@ BlogIt.fn = function($){
 		},
 		//routines called from ajaxForm
 		blogSubmit: function(data, eventTarget, mode, frm, eventTarget, $container){  //e, mode, frm not used in this routine
-			$('html,body').animate({scrollTop: $('#wikitext').offset().top-75}, 1);
-			var $new=$(data.out).bi_seek('.'+$container.attr('class'));
+			//can't use closest since no eventTarget on DOM passed back from server; use bi_seek (filter/find) to start from top of DOM, work down
+			var $new=$(data.out).bi_seek('.'+$container.attr('class').replace(/ +/g, '.'));  //class is "class1 class2", bi_seek (find/filter) needs ".class1.class2"
 			$container.replaceWith($new);  //update existing blog entry
 			flash($new, data);
 		},

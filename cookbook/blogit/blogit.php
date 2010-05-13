@@ -55,6 +55,13 @@ SDVA($bi_FixPageTitlePatterns, array(
 	'/[.\\/#]/' => ''	#remove dots, forward and backslashes in page titles as MakePageName returns '' when these characters are present
 ));
 SDVA($bi_Paths,array('pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/scripts/guiedit.php", 'convert'=>"$FarmD/cookbook/blogit/blogit_upgrade.php"));
+SDVA($bi_SkinClasses, array(
+	'blog-entry' => 'blogit-post',  #container for entry, including ajax edit-link
+	'blog-entry-summary' => 'blogit-post-summary',
+	'comment-block' => 'blogit-comment-list',  #OR blogit-commentblock; container for the list of comments
+	'comment-block-admin' => 'blogit-commentblock-admin',
+	'blog-list-row' => 'blogit-blog-list-row'
+));
 
 # ----------------------------------------
 # - Internal Use Only
@@ -123,6 +130,7 @@ $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
 	BlogIt.pm["pubdirurl"]="'.$PubDirUrl.'/blogit";
 	BlogIt.pm["categories"]="' .bi_CategoryList() .'";
 	BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE().'$/;'."\n".
+	'BlogIt.pm["skin-classes"]=".'.implode(',.',$bi_SkinClasses).'";'."\n".
 	bi_JXL()."\n".
 '</script>';
 
@@ -208,7 +216,8 @@ $Conditions['bi_lt'] = 'bi_LT($condparm)';
 # - Markup Expressions
 # if [0] is null or {$... then returns [1]; if [0] != null then returns ([2] or [0] if [2] is null)
 $MarkupExpr['bi_ifnull'] = '( bi_IsNull($args[0])!="" ?( bi_IsNull($args[2])=="" ?$args[0] :$args[2]) :$args[1])';
-# Calls to bi_encode should NOT be quoted: {(bi_encode {*$Title})} NOT {(bi_encode '{*$Title}')}. $args will contain each 'word' as an array element
+# Calls to bi_encode should NOT be quoted: {(bi_encode {*$Title})} NOT {(bi_encode '{*$Title}')}, as titles with ' will terminate early.
+# $args will contain each 'word' as an array element
 $MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull(implode(\' \', $args)), ENT_QUOTES)';
 # bi_param "group" "group_val"   Returns: group="group_val" if group_val != ""; else returns ""   0:param name; 1:value
 $MarkupExpr['bi_param'] = '( bi_IsNull($args[1])=="" ?"" :"$args[0]=\"$args[1]\"")';
@@ -269,7 +278,7 @@ function bi_HandleCommentUnapprove($src, $auth='comment-approve'){  #action=bi_c
 function bi_HandleCommentApprove($src, $auth='comment-approve', $approve=true){  #action=bi_ca
 global $_POST,$Now,$ChangeSummary,$_GET;
 	$m = XL(($approve?'a':'una').'pprove comment');
-	$result = array('msg'=>XL('Unable to ').$m, 'result'=>'error');
+	$result = array('msg'=>XL('Unable to '.$m.'.'), 'result'=>'error');
 	if (bi_Auth($auth)){
 		if ($src)  $old = RetrieveAuthPage($src,'read',false);
 		if ($old){
@@ -280,7 +289,7 @@ global $_POST,$Now,$ChangeSummary,$_GET;
 				'/\(:commentapproved:'.($approve?'false':'true').':\)/', '(:commentapproved:'.($approve?'true':'false').':)',
 				$new['text']);
 			PostPage($src,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
-			$result = array('msg'=>ucfirst($m).' successful.', 'result'=>'success');
+			$result = array('msg'=>XL(ucfirst($m).' successful.'), 'result'=>'success');
 		}
 	}
 	bi_Redirect($_GET['bi_mode'], $result);
@@ -563,26 +572,33 @@ function bi_SendAjax($markup, $msg=''){
 global $bi_Pagename;
 bi_debugLog('bi_SendAjax: '.$markup);
 	bi_ClearCache();  #Otherwise we retrieve the old values.
+
+	//need to force all characters to UTF8, otherwise json_encode returns null (ie, GlossyHue contains >> character, which causes return null)
 	echo(json_encode(array(  #admin list uses a different format for listing comments
-		'out'=>MarkupToHTML($bi_Pagename, $markup),
-		'result'=>'success',
-		'msg'=>XL($msg)
+		'out'=>utf8_encode(MarkupToHTML($bi_Pagename, $markup)), 'result'=>'success', 'msg'=>XL($msg)
 	)));
 }
 function bi_AjaxRedirect($result=''){
-global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action,$bi_Name,$bi_Group,$bi_Pages;
+global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action,$bi_Name,$bi_Group,$bi_Pages,$bi_SkinClasses;
 bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
+	#bi_style contains the class(es) of the containing object of the user click-event trigger for the ajax request
+	$targetClasses = explode(' ',$_REQUEST['bi_style']);  #might have embedded skin classes, not related to blogit
+	foreach ($bi_SkinClasses as $k => $v){  #find the blogit classes that relate to ajax blocks
+		$i = array_search($v, $targetClasses);
+		if ($i!==false && $i!==null) break;
+	}
+	if ($i!==false && $i!==null)  $targetClass = $targetClasses[$i];  #assume we can only have one ajax related blogit class per DOM object
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 is pmform failed (invalid captcha, etc)
 		if ($_REQUEST['target']=='blogit-comments'){
-			bi_SendAjax('(:includesection "' .($_REQUEST['bi_style']=='blogit-commentblock-admin' ?'#unapproved-comments' :'#comments-pagelist')
+			bi_SendAjax('(:includesection "' .($targetClass==$bi_SkinClasses['comment-block-admin'] ?'#unapproved-comments' :'#comments-pagelist')
 				.' commentid=' .$bi_CommentPage.' entrycomments=readonly":)',
 				($bi_CommentPage==$bi_Pagename ?'Successfully updated comment.' :'Successfully added new comment.')
 			);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
-			bi_SendAjax(($_REQUEST['bi_style']!='undefined'  #might have clicked from many places. We only care about a few.
-				?'(:includesection "' .($_REQUEST['bi_style']=='blogit-post-summary'
+			bi_SendAjax((isset($targetClass)  #might have clicked from many places. We only care about a few.
+				?'(:includesection "' .($targetClass==$bi_SkinClasses['blog-entry-summary']
 					?'#blog-summary-pagelist group=' .$bi_Group .' name='.$bi_Name  #main blog summary page
-					:($_REQUEST['bi_style']=='blogit-blog-list-row'  #blog list from admin page
+					:($targetClass==$bi_SkinClasses['blog-list-row']  #blog list from admin page
 						?'#blog-grid group=' .$bi_Group .' name='.$bi_Name
 						:'#single-entry-view')  #single entry blog view
 					).'":)'
@@ -677,7 +693,7 @@ global $bi_DateFmtRE;
 }
 function bi_JXL(){  #create javascript array holding all XL translations of text used client-side
 	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:', 'Commenter IP: ',
-			'Enter the IP to block:', 'Submit', 'Post', 'Cancel', 'Either enter a Blog Title or a Pagename', 'You have unsaved changes.','Website:');
+			'Enter the IP to block:', 'Submit', 'Post', 'Cancel', 'Either enter a Blog Title or a Pagename.', 'You have unsaved changes.','Website:');
 	foreach ($a as $k)  $t .= ($k!=XL($k) ?'BlogIt.xl["' .$k .'"]="' .XL($k) ."\";\n" :'');
 
 	$a=array('require'=>'This field is required.', 'date'=>'This field must be formatted as a date.',
@@ -706,7 +722,7 @@ global $WikiLibDirs;
 	array_splice($WikiLibDirs, $where, 0, array(new PageStore($PageStorePath)));
 }
 function bi_debugLog ($msg, $out=false){
-	if ($out || (!$out && $GLOBALS['BlogIt']['debug']) )  error_log(date('r'). ' [blogit]: '. $msg);
+	if ($out || (!$out && $GLOBALS['BlogIt']['debug']) )  error_log(date('r'). ' [blogit]: '. (is_array($msg) ?"array\n\t" .implode("\n\t",$msg) :$msg));
 }
 if (!function_exists('json_encode')) {  #required in <PHP5.2, ref http://www.mike-griffiths.co.uk/php-json_encode-alternative/
 	function json_encode($a=false) {
