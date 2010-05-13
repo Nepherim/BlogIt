@@ -428,8 +428,8 @@ global $bi_CommentSideBarLen, $bi_Pagename, $bi_UnstyleFn;
 function bi_Link($pre, $page, $action, $txt, $post){  //valid actions: ajax, normal, ajax-normal, normal-ajax
 global $bi_Ajax,$PubDirUrl;
 	$hyphen=strpos($bi_Ajax[$action],'-');
-	return $pre .'%apply=link class=blogit-admin-link%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],0,4)=='ajax' ?'&bi_mode=ajax' :'') .' | ' .$txt .']]%%'
-		.($hyphen ?'%apply=link class=blogit-admin-link%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],$hyphen+1)=='ajax' ?'&bi_mode=ajax' :'') .' | ' .$PubDirUrl .'/blogit/link.gif]]%%' :'')
+	return $pre .'%apply=link class=blogit-admin-link%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],0,4)=='ajax' ?'&amp;bi_mode=ajax' :'') .' | ' .$txt .']]%%'
+		.($hyphen ?'%apply=link class=blogit-admin-link%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],$hyphen+1)=='ajax' ?'&amp;bi_mode=ajax' :'') .' | ' .$PubDirUrl .'/blogit/link.gif]]%%' :'')
 		.$post;
 }
 function blogitSkinMU($fn, $opt, $txt){
