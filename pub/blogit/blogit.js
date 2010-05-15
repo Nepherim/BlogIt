@@ -45,6 +45,17 @@ var BlogIt={ fmt:{}, xl:{}, fn:{}, pm:{} };
 BlogIt.fn = function($){
 //private declarations
 	var _unapprove;
+	$.ajaxSetup({
+		timeout: 10000,  //timeout of 10 seconds
+		error: function(request,error){
+			BlogIt.fn.showMsg({result:'error', msg:(
+				(error=='parsererror' ?'Parsing JSON request failed.'
+				:(error=='timeout' ?'Request timeout.'
+				:'Error: '+error+"\n"+request.readyState+"\nresponseText: "+request.responseText
+				))
+			)});
+		}
+	});
 	function updateCount(e,m){ return e.replace(': '+m, ': '+(_unapprove ?(parseInt(m)+1) :(m-1))); };
 	function getEnteredIP(e){ return e+'&bi_ip='+$("#blogit_ip").val(); };
 	function objectRemove(o, data){
@@ -209,7 +220,7 @@ BlogIt.fn = function($){
 //Visuals
 		showMsg: function(data){
 			if (data.msg)  $.showMessage({
-				'thisMessage':[data.msg],
+				'thisMessage':[BlogIt.fn.xl(data.msg)],
 				'className': data.result,
 				'opacity': 95,
 				'displayNavigation':	(data.result=='error' ?true :false),

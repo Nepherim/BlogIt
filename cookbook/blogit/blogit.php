@@ -579,7 +579,7 @@ bi_debugLog('bi_SendAjax: '.$markup);
 
 	//need to force all characters to UTF8, otherwise json_encode returns null (ie, GlossyHue contains >> character, which causes return null)
 	echo(json_encode(array(  #admin list uses a different format for listing comments
-		'out'=>utf8_encode(MarkupToHTML($bi_Pagename, $markup)), 'result'=>'success', 'msg'=>XL($msg)
+		'out'=>utf8_encode(MarkupToHTML($bi_Pagename, $markup)), 'result'=>'success', 'msg'=>utf8_encode(XL($msg))
 	)));
 }
 function bi_AjaxRedirect($result=''){
@@ -589,7 +589,7 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 	$targetClasses = explode(' ',$_REQUEST['bi_style']);  #might have embedded skin classes, not related to blogit
 	foreach ($bi_SkinClasses as $k => $v){  #find the blogit classes that relate to ajax blocks
 		$i = array_search($v, $targetClasses);
-		if ($i!==false && $i!==null) break;
+		if ($i!==false && $i!==null)  break;
 	}
 	if ($i!==false && $i!==null)  $targetClass = $targetClasses[$i];  #assume we can only have one ajax related blogit class per DOM object
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 is pmform failed (invalid captcha, etc)
@@ -608,7 +608,7 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 					).'":)'
 				:''), 'Successfully '. ($action=='bi_ne'||($action=='pmform' && $bi_Pagename==$bi_Pages['admin']) ?'added' :'updated') .' blog entry.');
 		}else  echo(json_encode($result));
-	}else  echo(json_encode(array('result'=>'error','msg'=>FmtPageName(implode($MessagesFmt), $bi_Pagename)) ));
+	}else  echo(json_encode(array('result'=>'error','msg'=>FmtPageName(utf8_encode(implode($MessagesFmt)), $bi_Pagename)) ));
 	exit;
 }
 # Direct back to the refering page or $src
@@ -697,7 +697,8 @@ global $bi_DateFmtRE;
 }
 function bi_JXL(){  #create javascript array holding all XL translations of text used client-side
 	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:', 'Commenter IP: ',
-			'Enter the IP to block:', 'Submit', 'Post', 'Cancel', 'Either enter a Blog Title or a Pagename.', 'You have unsaved changes.','Website:');
+			'Enter the IP to block:', 'Submit', 'Post', 'Cancel', 'Either enter a Blog Title or a Pagename.', 'You have unsaved changes.','Website:',
+			'Parsing JSON request failed.','Request timeout.','Error: ');
 	foreach ($a as $k)  $t .= ($k!=XL($k) ?'BlogIt.xl["' .$k .'"]="' .XL($k) ."\";\n" :'');
 
 	$a=array('require'=>'This field is required.', 'date'=>'This field must be formatted as a date.',
