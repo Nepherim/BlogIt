@@ -46,7 +46,7 @@ BlogIt.fn = function($){
 //private declarations
 	var _unapprove;
 	$.ajaxSetup({
-		timeout: 10000,  //timeout of 10 seconds
+		timeout: 15000,  //timeout of 10 seconds
 		error: function(request,error){
 			BlogIt.fn.showMsg({result:'error', msg:(
 				(error=='parsererror' ?'Parsing JSON request failed.'
