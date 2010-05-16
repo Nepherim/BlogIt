@@ -591,6 +591,7 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 		if ($i!==false && $i!==null)  break;
 	}
 	if ($i!==false && $i!==null)  $targetClass = $targetClasses[$i];  #assume we can only have one ajax related blogit class per DOM object
+
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 is pmform failed (invalid captcha, etc)
 		if ($_REQUEST['target']=='blogit-comments'){
 			bi_SendAjax('(:includesection "' .($targetClass==$bi_SkinClasses['comment-block-admin'] ?'#unapproved-comments' :'#comments-pagelist')
@@ -606,7 +607,10 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 						:'#single-entry-view')  #single entry blog view
 					).'":)'
 				:''), 'Successfully '. ($action=='bi_ne'||($action=='pmform' && $bi_Pagename==$bi_Pages['admin']) ?'added' :'updated') .' blog entry.');
-		}else  echo(bi_json_encode($result));
+		}else  {
+			bi_debugLog('HERE');
+			echo(bi_json_encode($result));
+		}
 	}else  echo(bi_json_encode(array('result'=>'error','msg'=>FmtPageName(utf8_encode(implode($MessagesFmt)), $bi_Pagename)) ));
 	exit;
 }
@@ -738,11 +742,16 @@ function bi_toUTF8($str){
 		|[\xF1-\xF3][\x80-\xBF]{3}  #planes 4-15
 		|\xF4[\x80-\x8F][\x80-\xBF]{2}  #plane 16
 		)+%xs', $str)
-	?$str :utf8_encode($str));
+	?utf8_encode($str) :$str);
 }
 # Need to force all characters to UTF8, otherwise json_encode returns null (ie, GlossyHue contains >> character, which causes return null)
 function bi_json_encode($a=false){
-	return json_encode(array_map(bi_toUTF8,$a));
+	bi_debugLog('Before conversion');
+	bi_debugLog($a);
+	$x= json_encode(array_map(bi_toUTF8,$a));
+	bi_debugLog('Post conversion');
+	bi_debugLog($x);
+	return $x;
 }
 if (!function_exists('json_encode')){  #required in <PHP5.2, ref http://www.mike-griffiths.co.uk/php-json_encode-alternative/
 	function json_encode($a=false){
