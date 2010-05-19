@@ -77,7 +77,7 @@ SDV($FPLTemplatePageFmt, array(
 	'{$FullName}', ($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$bi_Skin :''), '{$SiteGroup}.BlogIt-CoreTemplate',
 	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'));
 SDV($bi_CommentPattern, '/^' .$bi_CommentGroup .'[\/\.](.*?)-(.*?)-(\d{8}T\d{6}){1}\z/');
-SDVA($bi_DateFmtRE,array('/\//'=>'\\/','/%d|%e/'=>'(0?[1-9]|[12][0-9]|3[01])', '/%m/'=>'(0?[1-9]|1[012])', '/%g|%G|%y|%Y/'=>'(19\d\d|20\d\d)',
+SDVA($bi_DateFmtRE,array('/\//'=>'\/','/%d|%e/'=>'(0?[1-9]|[12][0-9]|3[01])', '/%m/'=>'(0?[1-9]|1[012])', '/%g|%G|%y|%Y/'=>'(19\d\d|20\d\d)',
 	'/%H|%I|%l/'=>'([0-1]?\d|2[0-3])', '/%M/'=>'([0-5]\d)'));
 SDVA($SearchPatterns['blogit-comments'], array('comments' => $bi_CommentPattern));  #Used in pagelists
 SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''  #either regexes to include ('/'), regexes to exclude ('!'):
@@ -577,7 +577,7 @@ global $bi_Pagename;
 bi_debugLog('bi_SendAjax: '.$markup);
 	bi_ClearCache();  #Otherwise we retrieve the old values.
 
-	echo(bi_json_encode(array(  #admin list uses a different format for listing comments
+	echo(bi_UTF8_json_encode(array(  #admin list uses a different format for listing comments
 		'out'=>MarkupToHTML($bi_Pagename, $markup), 'result'=>'success', 'msg'=>XL($msg)
 	)));
 }
@@ -609,9 +609,9 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 				:''), 'Successfully '. ($action=='bi_ne'||($action=='pmform' && $bi_Pagename==$bi_Pages['admin']) ?'added' :'updated') .' blog entry.');
 		}else  {
 			bi_debugLog('HERE');
-			echo(bi_json_encode($result));
+			echo(bi_UTF8_json_encode($result));
 		}
-	}else  echo(bi_json_encode(array('result'=>'error','msg'=>FmtPageName(utf8_encode(implode($MessagesFmt)), $bi_Pagename)) ));
+	}else  echo(bi_UTF8_json_encode(array('result'=>'error','msg'=>FmtPageName(utf8_encode(implode($MessagesFmt)), $bi_Pagename)) ));
 	exit;
 }
 # Direct back to the refering page or $src
@@ -733,7 +733,7 @@ function bi_debugLog ($msg, $out=false){
 	if ($out || (!$out && $GLOBALS['BlogIt']['debug']) )  error_log(date('r'). ' [blogit]: '. (is_array($msg) ?"array\n\t" .implode("\n\t",$msg) :$msg));
 }
 function bi_toUTF8($str){
-	return (preg_match('%(?:
+	return (preg_match('%(?:  #search for UTF8 characters
 		[\xC2-\xDF][\x80-\xBF]  #non-overlong 2-byte
 		|\xE0[\xA0-\xBF][\x80-\xBF]  #excluding overlongs
 		|[\xE1-\xEC\xEE\xEF][\x80-\xBF]{2}  #straight 3-byte
@@ -742,40 +742,34 @@ function bi_toUTF8($str){
 		|[\xF1-\xF3][\x80-\xBF]{3}  #planes 4-15
 		|\xF4[\x80-\x8F][\x80-\xBF]{2}  #plane 16
 		)+%xs', $str)
-	?utf8_encode($str) :$str);
+		?$str :utf8_encode($str));
 }
 # Need to force all characters to UTF8, otherwise json_encode returns null (ie, GlossyHue contains >> character, which causes return null)
-function bi_json_encode($a=false){
-	bi_debugLog('Before conversion');
-	bi_debugLog($a);
-	$x= json_encode(array_map(bi_toUTF8,$a));
-	bi_debugLog('Post conversion');
-	bi_debugLog($x);
-	return $x;
+function bi_UTF8_json_encode($a=false){
+	return bi_json_encode(array_map(bi_toUTF8,$a));
 }
-if (!function_exists('json_encode')){  #required in <PHP5.2, ref http://www.mike-griffiths.co.uk/php-json_encode-alternative/
-	function json_encode($a=false){
-	bi_debugLog('json_encode');
-		if (is_null($a)) return 'null';
-		if ($a === false) return 'false';
-		if ($a === true) return 'true';
-		if (is_scalar($a)){
-			if (is_float($a))  return floatval(str_replace(",", ".", strval($a)));  #Always use "." for floats.
-			if (is_string($a)) {
-				static $jsonReplaces = array(array("\\", "/", "\n", "\t", "\r", "\b", "\f", '"'), array('\\\\', '\\/', '\\n', '\\t', '\\r', '\\b', '\\f', '\"'));
-				return '"' . str_replace($jsonReplaces[0], $jsonReplaces[1], $a) . '"';
-			}else  return $a;
-		}
-		$isList = true;
-		for ($i = 0, reset($a); $i < count($a); $i++, next($a))
-			if (key($a) !== $i){ $isList = false; break; }
-		$result = array();
-		if ($isList){
-			foreach ($a as $v)  $result[] = json_encode($v);
-			return '[ ' . join(', ', $result) . ' ]';
-		}else{
-			foreach ($a as $k => $v) $result[] = json_encode($k).': '.json_encode($v);
-			return '{ ' . join(', ', $result) . ' }';
-		}
+#json_encode only in PHP5.2+. Rather than overriding json_encode, and supporting two versions. ref http://www.mike-griffiths.co.uk/php-json_encode-alternative/
+function bi_json_encode($a=false){
+bi_debugLog('bi_json_encode');
+	if (is_null($a)) return 'null';
+	if ($a === false) return 'false';
+	if ($a === true) return 'true';
+	if (is_scalar($a)){
+		if (is_float($a))  return floatval(str_replace(",", ".", strval($a)));  #Always use "." for floats.
+		if (is_string($a)) {
+			static $jsonReplaces = array(array("\\", "/", "\n", "\t", "\r", "\b", "\f", '"'), array('\\\\', '\\/', '\\n', '\\t', '\\r', '\\b', '\\f', '\"'));
+			return '"' . str_replace($jsonReplaces[0], $jsonReplaces[1], $a) . '"';
+		}else  return $a;
+	}
+	$isList = true;
+	for ($i = 0, reset($a); $i < count($a); $i++, next($a))
+		if (key($a) !== $i){ $isList = false; break; }
+	$result = array();
+	if ($isList){
+		foreach ($a as $v)  $result[] = bi_json_encode($v);
+		return '[ ' . join(', ', $result) . ' ]';
+	}else{
+		foreach ($a as $k => $v) $result[] = bi_json_encode($k).': '.bi_json_encode($v);
+		return '{ ' . join(', ', $result) . ' }';
 	}
 }

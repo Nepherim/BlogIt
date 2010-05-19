@@ -45,8 +45,8 @@ var BlogIt={ fmt:{}, xl:{}, fn:{}, pm:{} };
 BlogIt.fn = function($){
 //private declarations
 	var _unapprove;
-	$.ajaxSetup({
-		timeout: 15000,  //timeout of 10 seconds
+	$.ajaxSetup({ timeout: 15000,  //timeout of 10 seconds
+//		scriptCharset: "utf-8" ,contentType: "application/x-www-form-urlencoded; charset=UTF-8",
 		error: function(request,error){
 			BlogIt.fn.showMsg({result:'error', msg:(
 				(error=='parsererror' ?'Parsing JSON request failed.'
@@ -139,6 +139,7 @@ BlogIt.fn = function($){
 			}
 			var cc_Obj = $('a[href*=action=bi_admin&s=unapproved-comments]');
 			var cc_Txt = cc_Obj.html();
+			// TODO: returns number component: cc_Txt.match(/\d+/).join('');
 			cc_Obj.html( cc_Txt.replace(new RegExp(BlogIt.fn.xl('Unapproved Comments:')+' (\\d*)'), updateCount) );
 		},
 		loadDialog: function(e,name,mode){
