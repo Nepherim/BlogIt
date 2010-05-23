@@ -39,9 +39,9 @@ SDV($bi_Cookie, $CookiePrefix.'blogit-');
 SDV($bi_UnstyleFn, '');
 SDV($HTMLHeaderFmt['blogit-meta-tag'], '<meta name="generator" content="BlogIt ' .$RecipeInfo['BlogIt']['Version'] .'" />');
 SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));  #Needed if skin is set in group config, which is processed after main config
-SDVA($bi_StatusType, array('draft', 'publish', 'sticky'));
-SDVA($bi_CommentType, array('open', 'readonly', 'none'));
-SDVA($bi_CommentApprovalType, array('true', 'false'));
+bi_SDVSA($bi_StatusType, array('draft', 'publish', 'sticky'));
+bi_SDVSA($bi_CommentType, array('open', 'readonly', 'none'));
+bi_SDVSA($bi_CommentApprovalType, array('true', 'false'));
 SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',  #strip single-quotes
@@ -713,6 +713,10 @@ function bi_JXL(){  #create javascript array holding all XL translations of text
 # ----------------------------------------
 # - General Helper Functions
 # ----------------------------------------
+# Only sets defaults if the array is empty or not set; SDVA *adds* key/values to those set by user
+function bi_SDVSA(&$var,$val){
+	$var = (is_array($var) && !empty($var) ?$var :$val);
+}
 function bi_setFmtPV($a){
 	foreach ($a as $k)  $GLOBALS['FmtPV']['$'.$k]='$GLOBALS["'.$k.'"]';
 }
