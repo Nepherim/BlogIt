@@ -133,7 +133,7 @@ $HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .
 $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
 	BlogIt.pm["pubdirurl"]="'.$PubDirUrl.'/blogit";
 	BlogIt.pm["categories"]="' .bi_CategoryList() .'";
-	BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE().'$/;'."\n".
+	BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE(XL('%d-%m-%Y %H:%M')).'$/;'."\n".
 	'BlogIt.pm["skin-classes"]=".'.implode(',.',$bi_SkinClasses).'";'."\n".
 	bi_JXL()."\n".
 '</script>';
@@ -337,8 +337,9 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		# If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
 		# NB: If page subsequently fails to post (due to incorrect p/w or captcha) then entrydate is already in unix time format.
 		$_POST['ptv_entrydate'] = (empty($_POST['ptv_entrydate']) ?$Now :$_POST['ptv_entrydate']);
-		if (bi_IsDate($_POST['ptv_entrydate'])){ if (!preg_match('!\d{5,}!',$_POST['ptv_entrydate']))  $_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']); }
-		else  $bi_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
+		if (bi_IsDate($_POST['ptv_entrydate'])){
+			if (!preg_match('!\d{5,}!',$_POST['ptv_entrydate']))  $_POST['ptv_entrydate'] = strtotime($_POST['ptv_entrydate']);
+		}else  $bi_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
 
 		# Determine page name from title, replacing ' ' with '-' for seo.
 		bi_setMakePageNamePatterns();
@@ -491,9 +492,14 @@ global $bi_Pagename;
 	if ($mp==$bi_Pagename)  return false;
 	return PageExists($mp);
 }
+function bi_DateFmtRE($f='%d-%m-%Y %H:%M'){
+global $bi_DateFmtRE;
+	return preg_replace(array_keys($bi_DateFmtRE), array_values($bi_DateFmtRE),$f);
+}
 function bi_IsDate($d, $f='%d-%m-%Y %H:%M'){  #accepts a date, and a date format (not a regular expression)
 	if (empty($d))  return true;  #false causes two date invalid messages.
-	if (preg_match('!\d{5,}!',$d))  $d=strftime(XL($f),$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
+	$f=XL($f);
+	if (preg_match('!\d{5,}!',$d))  $d=strftime($f,$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
 	if (preg_match('!^'.bi_DateFmtRE($f).'$!',$d,$x)  #does %d match the regular expression version of $f? if it does m/d/y are in $x
 		&& (checkdate($x[2], $x[1], $x[3]) || checkdate($x[1], $x[2], $x[3]) || checkdate($x[3], $x[1], $x[2]))
 	)  return true;
@@ -693,10 +699,6 @@ function bi_FuturePost($now){
 global $bi_Pagename,$bi_DisplayFuture;
 	$bi_EntryDate = PageTextVar($bi_Pagename,'entrydate');
 	return ($bi_EntryDate>$now || $bi_DisplayFuture=='true');
-}
-function bi_DateFmtRE($f='%d-%m-%Y %H:%M'){
-global $bi_DateFmtRE;
-	return preg_replace(array_keys($bi_DateFmtRE), array_values($bi_DateFmtRE), XL($f));
 }
 function bi_JXL(){  #create javascript array holding all XL translations of text used client-side
 	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:', 'Commenter IP: ',
