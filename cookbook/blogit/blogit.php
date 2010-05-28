@@ -614,7 +614,6 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 					).'":)'
 				:''), 'Successfully '. ($action=='bi_ne'||($action=='pmform' && $bi_Pagename==$bi_Pages['admin']) ?'added' :'updated') .' blog entry.');
 		}else  {
-			bi_debugLog('HERE');
 			echo(bi_UTF8_json_encode($result));
 		}
 	}else  echo(bi_UTF8_json_encode(array('result'=>'error','msg'=>FmtPageName(utf8_encode(implode($MessagesFmt)), $bi_Pagename)) ));
