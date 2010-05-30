@@ -135,6 +135,7 @@ $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
 	BlogIt.pm["categories"]="' .bi_CategoryList() .'";
 	BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE(XL('%d-%m-%Y %H:%M')).'$/;'."\n".
 	'BlogIt.pm["skin-classes"]=".'.implode(',.',$bi_SkinClasses).'";'."\n".
+	'BlogIt.pm["charset"]=".'.$Charset.'";'."\n".
 	bi_JXL()."\n".
 '</script>';
 
@@ -315,10 +316,10 @@ global $bi_ResetPmFormField,$_POST,$bi_EnablePostDirectives,$ROSPatterns,$Catego
 	$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired;
 bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 	$bi_ResetPmFormField = array();
-
 	#Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	if ( $_POST['target']=='blogit-entry' )  $GroupHeaderFmt .= '(:includesection "#blog-edit":)';
 	if (@$_POST['target']=='blogit-entry' && (@$_POST['save']||@$_POST['bi_mode']=='ajax')){  //jquery doesn't serialize submit buttons
+		bi_decodeUTF8($_POST);  #ajax posts from jquery are always utf8
 		#Allow future posts to create tag -- otherwise may never happen, since user may never edit the post again.
 		if ( $_POST['ptv_entrystatus']!='draft' )  $AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
 
@@ -352,6 +353,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 
 	#only set defaults if we're not editing the comment
 	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']=='blogit-comments'){
+		bi_decodeUTF8($_POST);  #ajax posts from jquery are always utf8
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_commenttext'] = rtrim($_POST['ptv_commenttext'],"\n\r\x0B")."\n";  #ensures markup is closed correctly (eg, links at end of comment)
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
@@ -583,9 +585,9 @@ global $bi_Pagename;
 bi_debugLog('bi_SendAjax: '.$markup);
 	bi_ClearCache();  #Otherwise we retrieve the old values.
 
-	echo(bi_UTF8_json_encode(array(  #admin list uses a different format for listing comments
+	bi_echo_json_encode(array(  #admin list uses a different format for listing comments
 		'out'=>MarkupToHTML($bi_Pagename, $markup), 'result'=>'success', 'msg'=>XL($msg)
-	)));
+	));
 }
 function bi_AjaxRedirect($result=''){
 global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action,$bi_Name,$bi_Group,$bi_Pages,$bi_SkinClasses;
@@ -613,10 +615,8 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 						:'#single-entry-view')  #single entry blog view
 					).'":)'
 				:''), 'Successfully '. ($action=='bi_ne'||($action=='pmform' && $bi_Pagename==$bi_Pages['admin']) ?'added' :'updated') .' blog entry.');
-		}else  {
-			echo(bi_UTF8_json_encode($result));
-		}
-	}else  echo(bi_UTF8_json_encode(array('result'=>'error','msg'=>FmtPageName(utf8_encode(implode($MessagesFmt)), $bi_Pagename)) ));
+		}else  bi_echo_json_encode($result);
+	}else  bi_echo_json_encode(array('result'=>'error','msg'=>FmtPageName(utf8_encode(implode($MessagesFmt)), $bi_Pagename)) );
 	exit;
 }
 # Direct back to the refering page or $src
@@ -737,25 +737,20 @@ global $WikiLibDirs;
 function bi_debugLog ($msg, $out=false){
 	if ($out || (!$out && $GLOBALS['BlogIt']['debug']) )  error_log(date('r'). ' [blogit]: '. (is_array($msg) ?"array\n\t" .implode("\n\t",$msg) :$msg));
 }
-function bi_toUTF8($str){
-	return (preg_match('%(?:  #search for UTF8 characters
-		[\xC2-\xDF][\x80-\xBF]  #non-overlong 2-byte
-		|\xE0[\xA0-\xBF][\x80-\xBF]  #excluding overlongs
-		|[\xE1-\xEC\xEE\xEF][\x80-\xBF]{2}  #straight 3-byte
-		|\xED[\x80-\x9F][\x80-\xBF]  #excluding surrogates
-		|\xF0[\x90-\xBF][\x80-\xBF]{2}  #planes 1-3
-		|[\xF1-\xF3][\x80-\xBF]{3}  #planes 4-15
-		|\xF4[\x80-\x8F][\x80-\xBF]{2}  #plane 16
-		)+%xs', $str)
-		?$str :utf8_encode($str));
+function bi_echo_json_encode($a=false){
+global $Charset;
+	@header("Content-type: application/json; charset=$Charset");  #force encoding, otherwise jQuery assumes UTF8
+	echo bi_json_encode($a);
 }
-# Need to force all characters to UTF8, otherwise json_encode returns null (ie, GlossyHue contains >> character, which causes return null)
-function bi_UTF8_json_encode($a=false){
-	return bi_json_encode(array_map(bi_toUTF8,$a));
+#jQuery will always POST with UTF8, even if charset parameter is set, since it uses encodeURIComponent() ref: http://stackoverflow.com/questions/657871/another-jquery-encoding-problem-on-ie
+function bi_decodeUTF8(&$a,$p='ptv_'){
+global $Charset,$_POST;
+	if ($_POST['bi_mode']!='ajax' && strtoupper($Charset)!='UTF-8')  return;  #Conversion only required is submitted from jquery ajax request
+	foreach ($a as $k=>$v)  if (substr($k,0,strlen($p))==$p)
+		$a[$k]=iconv('UTF-8',$Charset,$v); #stripslashes(nl2br($v)); #mb_convert_encoding($v,$Charset,'UTF-8');
 }
 #json_encode only in PHP5.2+. Rather than overriding json_encode, and supporting two versions. ref http://www.mike-griffiths.co.uk/php-json_encode-alternative/
 function bi_json_encode($a=false){
-bi_debugLog('bi_json_encode');
 	if (is_null($a)) return 'null';
 	if ($a === false) return 'false';
 	if ($a === true) return 'true';

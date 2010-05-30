@@ -45,8 +45,8 @@ var BlogIt={ fmt:{}, xl:{}, fn:{}, pm:{} };
 BlogIt.fn = function($){
 //private declarations
 	var _unapprove;
-	$.ajaxSetup({ timeout: 15000,  //timeout of 10 seconds
-//		scriptCharset: "utf-8" ,contentType: "application/x-www-form-urlencoded; charset=UTF-8",
+	$.ajaxSetup({ timeout: 15000,  //timeout of 15 seconds
+		contentType: "application/x-www-form-urlencoded; charset="+BlogIt.pm["charset"],  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 		error: function(request,error){
 			BlogIt.fn.showMsg({result:'error', msg:(
 				(error=='parsererror' ?'Parsing JSON request failed.'
@@ -142,6 +142,7 @@ BlogIt.fn = function($){
 			// TODO: returns number component: cc_Txt.match(/\d+/).join('');
 			cc_Obj.html( cc_Txt.replace(new RegExp(BlogIt.fn.xl('Unapproved Comments:')+' (\\d*)'), updateCount) );
 		},
+		//opens a dialog with content from PmWiki
 		loadDialog: function(e,name,mode){
 			e.preventDefault();
 			$.ajax({dataType:'json', url:e.currentTarget.href,  //get the comment form from pmwiki; not .target, because actual target might be an image wrapped in an anchor
@@ -160,6 +161,7 @@ BlogIt.fn = function($){
 				}
 			});
 		},
+		//defines the actions to perform when clicking Submit/Cancel from dialogs
 		ajaxForm: function(frm, rulesFn, submitFn, mode, eventTarget){
 			BlogIt.fn.addTagEvents();
 			frm
@@ -177,7 +179,7 @@ BlogIt.fn = function($){
 						}
 						dialogWait();
 						$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action'),  //post with the action defined on the form
-							data: $(this).serialize(),
+							data: $(this).serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 							success: function(data){  //after PmForms finishes processing, update page with new content
 								dialogClose(data);
 								if (data.out)  submitFn(data, eventTarget, mode, frm, eventTarget, $container);
@@ -187,7 +189,7 @@ BlogIt.fn = function($){
 					}
 				});
 		},
-		//routines called from ajaxForm
+//routines called from ajaxForm
 		blogSubmit: function(data, eventTarget, mode, frm, eventTarget, $container){  //e, mode, frm not used in this routine
 			//can't use closest since no eventTarget on DOM passed back from server; use bi_seek (filter/find) to start from top of DOM, work down
 			var $new=$(data.out).bi_seek('.'+$container.attr('class').replace(/ +/g, '.'));  //class is "class1 class2", bi_seek (find/filter) needs ".class1.class2"
