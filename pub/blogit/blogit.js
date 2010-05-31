@@ -232,7 +232,7 @@ BlogIt.fn = function($){
 			});
 		},
 //Utilities
-		xl: function(t){ return (BlogIt.xl[t] || t); },
+		xl: function(t){ return ( (BlogIt.xl[t] ?$('<div>'+BlogIt.xl[t]+'</div>').html() :t) ); },
 		ajax: function(ajax, e){
 			ajax["dataType"] = ajax.dataType || "json";
 			ajax["url"] = ( typeof ajax.url == "function" ?ajax.url(e.target.href) :(ajax.url || e.target.href) );
