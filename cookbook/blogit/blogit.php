@@ -703,11 +703,11 @@ function bi_JXL(){  #create javascript array holding all XL translations of text
 	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:', 'Commenter IP: ',
 			'Enter the IP to block:', 'Submit', 'Post', 'Cancel', 'Either enter a Blog Title or a Pagename.', 'You have unsaved changes.','Website:',
 			'Parsing JSON request failed.','Request timeout.','Error: ');
-	foreach ($a as $k)  $t .= ($k!=XL($k) ?'BlogIt.xl["' .$k .'"]="' .XL($k) ."\";\n" :'');
+	foreach ($a as $k)  $t .= ($k!=XL($k) ?'BlogIt.xl["' .$k .'"]="' .html_entity_decode(XL($k)) ."\";\n" :'');
 
 	$a=array('require'=>'This field is required.', 'date'=>'This field must be formatted as a date.',
 		'email'=>'This field must be formatted as an email.', 'url'=>'This field must be formatted as a URL.');
-	foreach ($a as $k=>$v)  $t1 .= ($v!=XL($v) ?$k .':"' .XL($v) ."\",\n" :'');
+	foreach ($a as $k=>$v)  $t1 .= ($v!=XL($v) ?$k .':"' .html_entity_decode(XL($v)) ."\",\n" :'');
 	return ($t1>'' ?$t .'jQuery.extend(jQuery.validity.messages, {' .substr($t1,0,-2).'});' :$t);
 }
 
