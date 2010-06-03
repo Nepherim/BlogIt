@@ -347,7 +347,8 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		bi_setMakePageNamePatterns();
 		$_POST['ptv_entrytype'] = 'blog';  #Prevent spoofing.
 		$_POST['ptv_entrytitle'] = (empty($title) ?$pg :$_POST['ptv_entrytitle']);  #use either the url or the original title (not the clean title)
-		$_POST['ptv_entryurl'] = MakePageName($bi_Pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .(empty($pg) ?$title :$pg) );
+		$_POST['ptv_entryurl'] = (empty($title)&&empty($pg) ?$_POST['ptv_entryurl']
+			:MakePageName($bi_Pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .(empty($pg) ?$title :$pg) ));
 		$_POST['ptv_entrytags'] = implode(', ', array_unique(explode(', ',$_POST['ptv_entrytags'])));  #remove duplicates
 		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_entryauthor'];
@@ -444,7 +445,7 @@ function blogitSkinMU($fn, $opt, $txt){
 global $bi_AuthorGroup,$bi_Pagename,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern,$EnableBlocklist,$bi_Pages;
 	$args = ParseArgs($opt);  #$args['p'], args[]['s']
 	$dateFmt = array('long'=>'%B %d, %Y, at %I:%M %p', 'short'=>'%B %d, %Y', 'entry'=>'%d-%m-%Y %H:%M');
-	switch ($fn) {
+	switch ($fn){
 		case 'date': return ME_ftime(XL(array_key_exists($args['fmt'],$dateFmt) ?$dateFmt[$args['fmt']] :$args['fmt']), '@'.$txt);
 		case 'intro': return '(:div999991 class="'.$args['class'].'":)' .blogitMU_intro('', $txt) .'%blogit-more%'. blogitMU_more($args['page'], $txt) ."%%\n(:div99991end:)";
 		case 'author': return ($txt>''
@@ -468,10 +469,7 @@ global $bi_AuthorGroup,$bi_Pagename,$bi_CommentsEnabled,$bi_LinkToCommentSite,$b
 			:'');
 		case 'commentauthor': return ($bi_LinkToCommentSite=='true' && $args['website']>'' ?'[['.$args['website'].' | '.$args['author'].']]' :$args['author']);
 		case 'commenttext': return ( strtr($txt, array("\r\n" => '<br />', "\r" => '<br />', "\n" => '<br />', "\x0B" => '<br />')) );
-		case 'commentid': {
-			$x = preg_match($bi_CommentPattern, $txt, $m );
-			return 'bi_ID' .($x ?$m[3] :$txt);  #1-group; 2-name; 3-commentid, OR FullName for blog-list
-		}
+		case 'commentid': return 'bi_ID' .(preg_match($bi_CommentPattern, $txt, $m) ?$m[3] :$txt);  #1-group; 2-name; 3-commentid, OR FullName for blog-list
 	}
 }
 function bi_includeSection($pagename, $inclspec){
@@ -502,17 +500,15 @@ function bi_IsDate($d, $f='%d-%m-%Y %H:%M'){  #accepts a date, and a date format
 	if (empty($d))  return true;  #false causes two date invalid messages.
 	$f=XL($f);
 	if (preg_match('!\d{5,}!',$d))  $d=strftime($f,$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
-	if (preg_match('!^'.bi_DateFmtRE($f).'$!',$d,$x)  #does %d match the regular expression version of $f? if it does m/d/y are in $x
-		&& (checkdate($x[2], $x[1], $x[3]) || checkdate($x[1], $x[2], $x[3]) || checkdate($x[3], $x[1], $x[2]))
-	)  return true;
-	return false;
+	return (preg_match('!^'.bi_DateFmtRE($f).'$!',$d,$x)  #does %d match the regular expression version of $f? if it does m/d/y are in $x
+		&& (checkdate($x[2],$x[1],$x[3]) || checkdate($x[1],$x[2],$x[3]) || checkdate($x[3],$x[1],$x[2]))
+		?true :false);
 }
 function bi_strtotime($d, $z='US'){
 bi_debugLog('Date: '.$d.' ['.$z.']');
 	if (preg_match('!\d{5,}!',$_POST['ptv_entrydate']))  return $d;
 	if ($bi_DateZone=='US')  return strtotime($d);
-	else  return strtotime(str_replace('/','-',$d));
-#	else  return strtotime(preg_replace('!^'.bi_DateFmtRE($f).'$!','$2/$1/$3 $4:$5',$d));
+	else  return strtotime(str_replace('/','-',$d));  #TODO: strtotime(preg_replace('!^'.bi_DateFmtRE($f).'$!','$2/$1/$3 $4:$5',$d));
 }
 function bi_IsNull($e){
 	return (!empty($e) && substr($e,0,3)!='{*$' && substr($e,0,2)!='{$' && substr($e,0,3)!='{=$' ?$e :'');
@@ -754,7 +750,7 @@ function bi_decodeUTF8(&$a,$p='ptv_'){
 global $Charset,$_POST;
 	if ($_POST['bi_mode']!='ajax' && strtoupper($Charset)!='UTF-8')  return;  #Conversion only required is submitted from jquery ajax request
 	foreach ($a as $k=>$v)  if (substr($k,0,strlen($p))==$p)
-		$a[$k]=iconv('UTF-8',$Charset,$v); #stripslashes(nl2br($v)); #mb_convert_encoding($v,$Charset,'UTF-8');
+		$a[$k]=iconv('UTF-8',$Charset,$v); #TODO: stripslashes(nl2br($v)); #mb_convert_encoding($v,$Charset,'UTF-8');
 }
 #json_encode only in PHP5.2+. Rather than overriding json_encode, and supporting two versions. ref http://www.mike-griffiths.co.uk/php-json_encode-alternative/
 function bi_json_encode($a=false){

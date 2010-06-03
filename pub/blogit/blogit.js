@@ -189,7 +189,7 @@ BlogIt.fn = function($){
 					}
 				});
 		},
-//routines called from ajaxForm
+//Routines called from ajaxForm
 		blogSubmit: function(data, eventTarget, mode, frm, eventTarget, $container){  //e, mode, frm not used in this routine
 			//can't use closest since no eventTarget on DOM passed back from server; use bi_seek (filter/find) to start from top of DOM, work down
 			var $new=$(data.out).bi_seek('.'+$container.attr('class').replace(/ +/g, '.'));  //class is "class1 class2", bi_seek (find/filter) needs ".class1.class2"
