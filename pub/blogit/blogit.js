@@ -46,7 +46,7 @@ BlogIt.fn = function($){
 //private declarations
 	var _unapprove;
 	$.ajaxSetup({ timeout: 15000,  //timeout of 15 seconds
-		contentType: "application/x-www-form-urlencoded; charset="+BlogIt.pm["charset"],  //NOTE: jquery will always send with UTF8, regardless of charset specified.
+		contentType: "application/x-www-form-urlencoded; charset="+BlogIt.pm['charset'],  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 		error: function(request,error){
 			BlogIt.fn.showMsg({result:'error', msg:(
 				(error=='parsererror' ?'Parsing JSON request failed.'
@@ -226,7 +226,7 @@ BlogIt.fn = function($){
 				'opacity': 95,
 				'displayNavigation':	(data.result=='error' ?true :false),
 				'autoClose': (data.result=='error' ?false :true),
-				'delayTime': 3000
+				'delayTime': BlogIt.pm['ajax-message-timer']
 			});
 		},
 //Utilities

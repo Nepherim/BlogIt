@@ -30,6 +30,7 @@ SDV($bi_DateZone, (substr($XL['blogit']['%d-%m-%Y %H:%M'],0,6) == '%d/%m/' ?'EU'
 # ----------------------------------------
 # - Skin settings
 SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));  #Needed if skin is set in group config, which is processed after main config
+SDV($bi_AjaxMsgTimer, 3000);  #Number of milli-seconds that the top ajax message is displayed for
 #key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
 SDVA($bi_Ajax, array('bi_ce'=>'ajax', 'bi_ca'=>'ajax', 'bi_cua'=>'ajax', 'bi_be'=>'normal-ajax', 'bi_ne'=>'normal-ajax', 'bi_del'=>'ajax'));
 SDVA($bi_SkinClasses, array(  #provide CSS classes as the value, which tells blogit where to find content used for dynamic ajax page updates
@@ -142,6 +143,7 @@ $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
 	BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE(XL('%d-%m-%Y %H:%M')).'$/;'."\n".
 	'BlogIt.pm["skin-classes"]=".'.implode(',.',$bi_SkinClasses).'";'."\n".
 	'BlogIt.pm["charset"]="'.$Charset.'";'."\n".
+	'BlogIt.pm["ajax-message-timer"]='.$bi_AjaxMsgTimer.';'."\n".
 	bi_JXL()."\n".
 '</script>';
 
