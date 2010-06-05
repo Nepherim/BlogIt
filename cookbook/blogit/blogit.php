@@ -57,12 +57,12 @@ SDVA($bi_FixPageTitlePatterns, array(
 	'/[.\\/#]/' => ''	#remove dots, forward and backslashes in page titles as MakePageName returns '' when these characters are present
 ));
 SDVA($bi_Paths,array('pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/scripts/guiedit.php", 'convert'=>"$FarmD/cookbook/blogit/blogit_upgrade.php"));
-SDVA($bi_SkinClasses, array(
-	'blog-entry' => 'blogit-post',  #container for entry, including ajax edit-link
-	'blog-entry-summary' => 'blogit-post-summary',
-	'comment-block' => 'blogit-comment-list',  #OR blogit-commentblock; container for the list of comments
-	'comment-block-admin' => 'blogit-commentblock-admin',
-	'blog-list-row' => 'blogit-blog-list-row'
+SDVA($bi_SkinClasses, array(  #provide CSS classes as the value, which tells blogit where to find content used for dynamic ajax page updates
+	'blog-entry' => 'blogit-post',  #container for entry, which should include the ajax edit-link
+	'blog-entry-summary' => 'blogit-post-summary',  #surrounds a blog entry in multi-entry view (in #multi-entry-view)
+	'comment-block' => 'blogit-comment-list',  #applied to each block containing a single comment, usually LI elements (in #comment-view-all and #comment-view-admin)
+	'comment-block-admin' => 'blogit-commentblock-admin',  #surrounds the comment list section; just includes the list, not the entry form (in #comment-view-admin)
+	'blog-list-row' => 'blogit-blog-list-row'  #used in the grid displaying draft/approved blog entries. Usually applied to the row for each entry (in #blog-list-view)
 ));
 SDVA($bi_SkinSettings, array(
 	'ajax_textarea_rows' => '18'  #make sure whole dialog fits on low res monitors
