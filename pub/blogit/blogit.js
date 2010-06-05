@@ -56,11 +56,17 @@ BlogIt.fn = function($){
 			)});
 		}
 	});
-	function updateCount(e,m){ return e.replace(': '+m, ': '+(_unapprove ?(parseInt(m)+1) :(m-1))); };
+	function updateCommentCount(_unapprove){
+		var cc_Obj = $('a[href*=action=bi_admin&s=unapproved-comments]');
+		var cc_Txt = cc_Obj.html();
+		var cc = cc_Txt.match(/\d+/).join('');  //parse out the number from the link text (assume the only number there is the unapproved comment count)
+		cc_Obj.html( cc_Txt.replace(cc, (_unapprove ?(parseInt(cc)+1) :(cc-1)) ));
+	}
 	function getEnteredIP(e){ return e+'&bi_ip='+$("#blogit_ip").val(); };
 	function objectRemove(o, data){
 		$(o).closest('"[id^=bi_ID]"').fadeOut(500, function(){ $(this).remove(); });
 		BlogIt.fn.showMsg(data);
+		if (data.data && data.data=='false')  updateCommentCount(false);  //data.data contains the comment approval status
 	};
 	//dialog functions
 	function dialogWait(clear){
@@ -130,17 +136,9 @@ BlogIt.fn = function($){
 			var $o = $(o).closest('"[id^=bi_ID]"');
 			flash($o, data);
 			_unapprove = ( $(o).html()==BlogIt.fn.xl("unapprove") );
-			if (_unapprove){
-				o.href = o.href.replace("bi_cua", "bi_ca");
-				$(o).html(BlogIt.fn.xl("approve"));
-			}else{
-				o.href = o.href.replace("bi_ca", "bi_cua");
-				$(o).html(BlogIt.fn.xl("unapprove"));
-			}
-			var cc_Obj = $('a[href*=action=bi_admin&s=unapproved-comments]');
-			var cc_Txt = cc_Obj.html();
-			// TODO: returns number component: cc_Txt.match(/\d+/).join('');
-			cc_Obj.html( cc_Txt.replace(new RegExp(BlogIt.fn.xl('Unapproved Comments:')+' (\\d*)'), updateCount) );
+			o.href = (_unapprove ?o.href.replace("bi_cua", "bi_ca") :o.href.replace("bi_ca", "bi_cua"));
+			$(o).html(BlogIt.fn.xl( (_unapprove ?"approve" :"unapprove") ));
+			updateCommentCount(_unapprove);
 		},
 		//opens a dialog with content from PmWiki
 		loadDialog: function(e,name,mode){

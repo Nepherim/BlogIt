@@ -24,9 +24,24 @@ SDV($bi_EntriesPerPage, 15);
 SDV($bi_DisplayFuture, 'false');
 SDVA($bi_BlogList, array('blog1'));  #Ensure 'blog1' key remains; you can add keys for other blogs.
 SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
-SDVA($bi_Ajax, array('bi_ce'=>'ajax', 'bi_ca'=>'ajax', 'bi_cua'=>'ajax', 'bi_be'=>'normal-ajax', 'bi_ne'=>'normal-ajax', 'bi_del'=>'ajax'));  #key: action; value: ajax style
 #cheap hack: strtotime assumes dates with '/' are US 'mm/dd/yyyy' , so need to know when Eu fmt is used
 SDV($bi_DateZone, (substr($XL['blogit']['%d-%m-%Y %H:%M'],0,6) == '%d/%m/' ?'EU' :'US'));
+
+# ----------------------------------------
+# - Skin settings
+SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));  #Needed if skin is set in group config, which is processed after main config
+#key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
+SDVA($bi_Ajax, array('bi_ce'=>'ajax', 'bi_ca'=>'ajax', 'bi_cua'=>'ajax', 'bi_be'=>'normal-ajax', 'bi_ne'=>'normal-ajax', 'bi_del'=>'ajax'));
+SDVA($bi_SkinClasses, array(  #provide CSS classes as the value, which tells blogit where to find content used for dynamic ajax page updates
+	'blog-entry' => 'blogit-post',  #container for entry, which should include the ajax edit-link
+	'blog-entry-summary' => 'blogit-post-summary',  #surrounds a blog entry in multi-entry view (in #multi-entry-view)
+	'comment-block' => 'blogit-comment-list',  #applied to each block containing a single comment, usually LI elements (in #comment-view-all and #comment-view-admin)
+	'comment-block-admin' => 'blogit-commentblock-admin',  #surrounds the comment list section; just includes the list, not the entry form (in #comment-view-admin)
+	'blog-list-row' => 'blogit-blog-list-row'  #used in the grid displaying draft/approved blog entries. Usually applied to the row for each entry (in #blog-list-view)
+));
+SDVA($bi_SkinSettings, array(
+	'ajax_textarea_rows' => '18'  #make sure whole ajax dialog fits on low res monitors
+));
 
 # ----------------------------------------
 # - Advanced user settings
@@ -40,7 +55,6 @@ SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDV($bi_Cookie, $CookiePrefix.'blogit-');
 SDV($bi_UnstyleFn, '');
 SDV($HTMLHeaderFmt['blogit-meta-tag'], '<meta name="generator" content="BlogIt ' .$RecipeInfo['BlogIt']['Version'] .'" />');
-SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));  #Needed if skin is set in group config, which is processed after main config
 bi_SDVSA($bi_StatusType, array('draft', 'publish', 'sticky'));
 bi_SDVSA($bi_CommentType, array('open', 'readonly', 'none'));
 bi_SDVSA($bi_CommentApprovalType, array('true', 'false'));
@@ -57,16 +71,6 @@ SDVA($bi_FixPageTitlePatterns, array(
 	'/[.\\/#]/' => ''	#remove dots, forward and backslashes in page titles as MakePageName returns '' when these characters are present
 ));
 SDVA($bi_Paths,array('pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/scripts/guiedit.php", 'convert'=>"$FarmD/cookbook/blogit/blogit_upgrade.php"));
-SDVA($bi_SkinClasses, array(  #provide CSS classes as the value, which tells blogit where to find content used for dynamic ajax page updates
-	'blog-entry' => 'blogit-post',  #container for entry, which should include the ajax edit-link
-	'blog-entry-summary' => 'blogit-post-summary',  #surrounds a blog entry in multi-entry view (in #multi-entry-view)
-	'comment-block' => 'blogit-comment-list',  #applied to each block containing a single comment, usually LI elements (in #comment-view-all and #comment-view-admin)
-	'comment-block-admin' => 'blogit-commentblock-admin',  #surrounds the comment list section; just includes the list, not the entry form (in #comment-view-admin)
-	'blog-list-row' => 'blogit-blog-list-row'  #used in the grid displaying draft/approved blog entries. Usually applied to the row for each entry (in #blog-list-view)
-));
-SDVA($bi_SkinSettings, array(
-	'ajax_textarea_rows' => '18'  #make sure whole dialog fits on low res monitors
-));
 
 # ----------------------------------------
 # - Internal Use Only
@@ -374,7 +378,8 @@ global $bi_EntryType,$WikiDir,$LastModFile,$_GET;
 		&& (bi_Auth( ($bi_EntryType=='comment' ?'comment-edit' :'blog-edit') .' ' .$src) && RetrieveAuthPage($src,'read',false, READPAGE_CURRENT)) ){
 		$WikiDir->delete($src);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
-		$result = array('msg'=>XL('Delete successful.'), 'result'=>'success');
+		#'data' contains the comment approval status, allowing update of Unapproved Comment count when deleting unapproved comments.
+		$result = array('msg'=>XL('Delete successful.'), 'result'=>'success', 'data'=>($bi_EntryType=='comment' ?PageTextVar($src,'commentapproved') :''));
 	}
 	bi_Redirect($_GET['bi_mode'], $result);
 }
