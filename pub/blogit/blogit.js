@@ -57,9 +57,8 @@ BlogIt.fn = function($){
 	});
 	function updateCommentCount(approvedCC, unapprovedCC){
 		function updateCC(e, c){
-			var cc_Txt = e.text();
-			var cc = cc_Txt.match(/\d+/).join('');  //parse out the number from the link text (assume the only number there is the unapproved comment count)
-			e.html( cc_Txt.replace(cc, (parseInt(cc)+c)) );
+			var cc = e.text().match(/\d+/).join('');  //parse out the number from the link text (assume the only number there is the comment count)
+			e.html( e.html().replace(cc, (parseInt(cc)+c)) );
 		}
 		$('.'+BlogIt.pm['skin-classes']['approved-comment-count']).each(function(i,e){ updateCC($(e), approvedCC); });
 		$('a[href*=action=bi_admin&s=unapproved-comments]').each(function(i,e){ updateCC($(e), unapprovedCC); });
@@ -175,7 +174,7 @@ BlogIt.fn = function($){
 					if (result.valid){
 						var $container;
 						if (eventTarget){  //eventTarget is null for user clicking Post button (mode=='add')
-							$container = $(eventTarget.target).closest(BlogIt.fn.concatJSON(BlogIt.pm['skin-classes'], 1));  //use closest since going from target up the DOM
+							$container = $(eventTarget.target).closest('.'+BlogIt.fn.concatJSON(BlogIt.pm['skin-classes'],',','.'));  //use closest since going from target up the DOM
 							$(this).prepend('<input type="hidden" value="' +$container.attr('class') +'" name="bi_style">')  //trigger multi-entry mode
 						}
 						dialogWait();
@@ -243,10 +242,10 @@ BlogIt.fn = function($){
 			ajax["context"] = ajax.context || e.target;
 			$.ajax(ajax);
 		},
-		concatJSON: function(json){
-			var t='';
-			for (k in json)  t+=','+json[k];
-			return (t>'' ?t.replace(/^[,|\s]+/,"") :t);
+		concatJSON: function(json,s,p){  //s=separator; p=element Prefix
+			var t=''; s=s||','; p=p||'';
+			for (k in json)  t+=s+p+json[k];
+			return (t>'' ?t.replace(new RegExp( "^["+s+"|\s]+"), "") :t);
 		}
 	};
 }(jQuery);

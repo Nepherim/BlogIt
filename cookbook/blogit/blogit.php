@@ -34,7 +34,7 @@ SDV($bi_AjaxMsgTimer, 3000);  #Number of milli-seconds that the top ajax message
 #key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
 SDVA($bi_Ajax, array('bi_ce'=>'ajax', 'bi_ca'=>'ajax', 'bi_cua'=>'ajax', 'bi_be'=>'normal-ajax', 'bi_ne'=>'normal-ajax', 'bi_del'=>'ajax'));
 SDVA($bi_SkinClasses, array(  #provide CSS classes as the value, which tells blogit where to find content used for dynamic ajax page updates
-	'blog-entry' => 'blogit-post',  #container for entry, which should include the ajax edit-link
+	'blog-entry' => 'blogit-post',  #container for entry in single-entry view, which should include the ajax edit-link
 	'blog-entry-summary' => 'blogit-post-summary',  #surrounds a blog entry in multi-entry view (in #multi-entry-view)
 	'comment-block' => 'blogit-comment-list',  #applied to each block containing a single comment, usually LI elements (in #comment-view-all and #comment-view-admin)
 	'comment-block-admin' => 'blogit-commentblock-admin',  #surrounds the comment list section; just includes the list, not the entry form (in #comment-view-admin)
