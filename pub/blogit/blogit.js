@@ -38,7 +38,6 @@ jQuery(document).ready(function($){
 	});
 
 	BlogIt.fn.addTagEvents();
-
 });
 
 var BlogIt={ fmt:{}, xl:{}, fn:{}, pm:{} };
@@ -56,17 +55,20 @@ BlogIt.fn = function($){
 			)});
 		}
 	});
-	function updateCommentCount(_unapprove){
-		var cc_Obj = $('a[href*=action=bi_admin&s=unapproved-comments]');
-		var cc_Txt = cc_Obj.html();
-		var cc = cc_Txt.match(/\d+/).join('');  //parse out the number from the link text (assume the only number there is the unapproved comment count)
-		cc_Obj.html( cc_Txt.replace(cc, (_unapprove ?(parseInt(cc)+1) :(cc-1)) ));
+	function updateCommentCount(approvedCC, unapprovedCC){
+		function updateCC(e, c){
+			var cc_Txt = e.text();
+			var cc = cc_Txt.match(/\d+/).join('');  //parse out the number from the link text (assume the only number there is the unapproved comment count)
+			e.html( cc_Txt.replace(cc, (parseInt(cc)+c)) );
+		}
+		$('.'+BlogIt.pm['skin-classes']['approved-comment-count']).each(function(i,e){ updateCC($(e), approvedCC); });
+		$('a[href*=action=bi_admin&s=unapproved-comments]').each(function(i,e){ updateCC($(e), unapprovedCC); });
 	}
 	function getEnteredIP(e){ return e+'&bi_ip='+$("#blogit_ip").val(); };
 	function objectRemove(o, data){
 		$(o).closest('"[id^=bi_ID]"').fadeOut(500, function(){ $(this).remove(); });
 		BlogIt.fn.showMsg(data);
-		if (data.data && data.data=='false')  updateCommentCount(false);  //data.data contains the comment approval status
+		if (data.data)  (data.data=='false' ?updateCommentCount(0, -1) :updateCommentCount(-1, 0));  //data.data contains the comment approval status
 	};
 	//dialog functions
 	function dialogWait(clear){
@@ -138,7 +140,8 @@ BlogIt.fn = function($){
 			_unapprove = ( $(o).html()==BlogIt.fn.xl("unapprove") );
 			o.href = (_unapprove ?o.href.replace("bi_cua", "bi_ca") :o.href.replace("bi_ca", "bi_cua"));
 			$(o).html(BlogIt.fn.xl( (_unapprove ?"approve" :"unapprove") ));
-			updateCommentCount(_unapprove);
+			if (_unapprove)  updateCommentCount(-1,1)
+			else  updateCommentCount(1,-1);
 		},
 		//opens a dialog with content from PmWiki
 		loadDialog: function(e,name,mode){
@@ -172,7 +175,7 @@ BlogIt.fn = function($){
 					if (result.valid){
 						var $container;
 						if (eventTarget){  //eventTarget is null for user clicking Post button (mode=='add')
-							$container = $(eventTarget.target).closest(BlogIt.pm['skin-classes']);  //use closest since going from target up the DOM
+							$container = $(eventTarget.target).closest(BlogIt.fn.concatJSON(BlogIt.pm['skin-classes'], 1));  //use closest since going from target up the DOM
 							$(this).prepend('<input type="hidden" value="' +$container.attr('class') +'" name="bi_style">')  //trigger multi-entry mode
 						}
 						dialogWait();
@@ -199,7 +202,10 @@ BlogIt.fn = function($){
 			if (mode=='reply'||mode=='add')  $('#blogit-comment-list .blogit-comment-list').append($new);  //adding a new comment
 			else $(eventTarget.target).closest('"[id^=bi_ID]"').replaceWith($new);  //update existing comment
 			flash($new, data);
-			if (mode=='add' && data.result!='error')  frm[0].reset();
+			if ((mode=='add'||mode=='reply') && data.result!='error'){
+				if (mode=='add')  frm[0].reset();
+				if (data.data)  updateCommentCount(data.data[0], data.data[1]);  //data.data[0] contains approved comment increment; [1] contains unapproved comment increment
+			}
 		},
 		commentRules: function(frm){
 			$((frm?frm+' ':'')+"#comment-author").require();
@@ -236,6 +242,11 @@ BlogIt.fn = function($){
 			ajax["url"] = ( typeof ajax.url == "function" ?ajax.url(e.target.href) :(ajax.url || e.target.href) );
 			ajax["context"] = ajax.context || e.target;
 			$.ajax(ajax);
+		},
+		concatJSON: function(json){
+			var t='';
+			for (k in json)  t+=','+json[k];
+			return (t>'' ?t.replace(/^[,|\s]+/,"") :t);
 		}
 	};
 }(jQuery);
