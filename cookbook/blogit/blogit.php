@@ -241,7 +241,7 @@ $MarkupExpr['bi_url'] = 'bi_URL($args)';
 # ----------------------------------------
 # - HandleActions Functions
 # ----------------------------------------
-function bi_HandleBrowse($pagename, $auth = 'read'){
+function bi_HandleBrowse($pagename, $auth = 'read'){  #display of blogit forms is handled by page browse; when user clicks Submit, then pmforms takes over
 global $bi_ResetPmFormField,$bi_OriginalFn,$bi_GroupFooterFmt,$bi_EntryType,$bi_CommentGroup,$action,$_REQUEST,$Now,$bi_Name,
 	$HandleActions,$GroupPrintHeaderFmt,$GroupPrintFooterFmt,$GroupHeaderFmt,$GroupFooterFmt,$bi_Group,$FmtPV,$CategoryGroup,$AsSpacedFunction;
 

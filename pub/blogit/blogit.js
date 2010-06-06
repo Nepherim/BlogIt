@@ -57,8 +57,9 @@ BlogIt.fn = function($){
 	});
 	function updateCommentCount(approvedCC, unapprovedCC){
 		function updateCC(e, c){
-			var cc = e.text().match(/\d+/).join('');  //parse out the number from the link text (assume the only number there is the comment count)
-			e.html( e.html().replace(cc, (parseInt(cc)+c)) );
+			var e_txt = e.text();
+			var cc = e_txt.match(/\d+/).join('');  //parse out the number from the link text (assume the only number there is the comment count)
+			e.html( e.html().replace(e_txt, e_txt.replace(cc, (parseInt(cc)+c))) );  //ensure only numbers in link text are replaced (ie, not port numers)
 		}
 		$('.'+BlogIt.pm['skin-classes']['approved-comment-count']).each(function(i,e){ updateCC($(e), approvedCC); });
 		$('a[href*=action=bi_admin&s=unapproved-comments]').each(function(i,e){ updateCC($(e), unapprovedCC); });
@@ -167,6 +168,7 @@ BlogIt.fn = function($){
 			frm
 				.prepend('<input type="hidden" value="ajax" name="bi_mode">')  //trigger ajax mode
 				.bind("submit",function(e){
+					var oldCommentApproved = $("a[href*=action\=bi_cua&bi_mode\=ajax]", $(eventTarget.target).closest('"[id^=bi_ID]"')).length>0;
 					e.preventDefault();
 					$.validity.start();
 					rulesFn('#dialog');  //BlogIt.fn.blogRules
@@ -182,7 +184,7 @@ BlogIt.fn = function($){
 							data: $(this).serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 							success: function(data){  //after PmForms finishes processing, update page with new content
 								dialogClose(data);
-								if (data.out)  submitFn(data, eventTarget, mode, frm, eventTarget, $container);
+								if (data.out)  submitFn(data, eventTarget, mode, frm, eventTarget, $container, oldCommentApproved);
 								else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl("No data returned.")), result:(data.result || 'error')});
 							}
 						});
@@ -190,20 +192,28 @@ BlogIt.fn = function($){
 				});
 		},
 //Routines called from ajaxForm
-		blogSubmit: function(data, eventTarget, mode, frm, eventTarget, $container){  //e, mode, frm not used in this routine
+		blogSubmit: function(data, eventTarget, mode, frm, eventTarget, $container, oldCommentApproved){  //e, mode, frm not used in this routine
 			//can't use closest since no eventTarget on DOM passed back from server; use bi_seek (filter/find) to start from top of DOM, work down
 			var $new=$(data.out).bi_seek('.'+$container.attr('class').replace(/ +/g, '.'));  //class is "class1 class2", bi_seek (find/filter) needs ".class1.class2"
 			$container.replaceWith($new);  //update existing blog entry
 			flash($new, data);
 		},
-		commentSubmit: function(data, eventTarget, mode, frm, eventTarget, $container){  //eventTarget is null for user clicking Post button (mode=='add')
+		commentSubmit: function(data, eventTarget, mode, frm, eventTarget, $container, oldCommentApproved){  //eventTarget is null for user clicking Post button (mode=='add')
 			var $new=$(data.out).bi_seek('[id^=bi_ID]');
 			if (mode=='reply'||mode=='add')  $('#blogit-comment-list .blogit-comment-list').append($new);  //adding a new comment
 			else $(eventTarget.target).closest('"[id^=bi_ID]"').replaceWith($new);  //update existing comment
 			flash($new, data);
-			if ((mode=='add'||mode=='reply') && data.result!='error'){
-				if (mode=='add')  frm[0].reset();
-				if (data.data)  updateCommentCount(data.data[0], data.data[1]);  //data.data[0] contains approved comment increment; [1] contains unapproved comment increment
+			if (data.result!='error'){
+				if (mode=='add'||mode=='reply'){
+					if (mode=='add')  frm[0].reset();
+					if (data.data)  updateCommentCount(data.data[0], data.data[1]);  //data.data[0] contains approved comment increment; [1] contains unapproved comment increment
+				}else if (mode=='edit'){
+					var newCommentApproved = $("a[href*=action\=bi_cua&bi_mode\=ajax]",$new).length>0;
+					if (newCommentApproved!=oldCommentApproved){
+						if (newCommentApproved)  updateCommentCount(1,-1)
+						else updateCommentCount(-1,1);
+					}
+				}
 			}
 		},
 		commentRules: function(frm){
