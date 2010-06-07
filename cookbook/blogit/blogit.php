@@ -122,7 +122,7 @@ $WikiStyleApply['link'] = 'a';  #allows A to be labelled with class attributes
 # - Authentication
 SDV($AuthFunction,'PmWikiAuth');
 $bi_OriginalFn['AuthFunction']=$AuthFunction;
-$AuthFunction = 'bi_BlogItAuth';
+$AuthFunction = 'bi_BlogItAuth';  //TODO: Use $AuthUserFunctions instead?
 # Cannot be done as part of handler due to scoping issues when include done in function
 if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths['convert']);
 
@@ -686,11 +686,21 @@ global $CategoryGroup,$bi_TagSeparator;
 	if ($user_tags) $fieldTags = explode($bi_TagSeparator, preg_replace('/'.trim($bi_TagSeparator).'\s*/', $bi_TagSeparator, $user_tags));
 	# Concatenate the tag-field tags, with those in the body,
 	$allTags = array_unique(array_merge((array)$fieldTags, (array)$bodyTags));
+	if (empty($allTags))  return '';
 	sort($allTags);
 
 	# generate a new separated string.
 	if ($mode=='display')  return ($allTags ?'[['.$CategoryGroup.'.'.implode('|+]]'.$bi_TagSeparator.'[['.$CategoryGroup.'.', $allTags).'|+]]' :'');
 	else  return ($allTags ?'[[!'.implode(']]'.$bi_TagSeparator.'[[!', $allTags).']]' :'');
+/* TODO:
+	# generate a new separated string.
+	if ($mode=='display'){
+#		foreach ($allTags as $k=>$v)  $allTags[$k] = $CategoryGroup.'/'.$v;
+		return '[['.$CategoryGroup.'/'.implode('|+]]'.$bi_TagSeparator.'[['.$CategoryGroup.'/', $allTags).'|+]]';
+#		foreach ($allTags as $k=>$v)  $allTags[$k] = MakeLink($bi_Pagename, $CategoryGroup.'.'.$v,$v);
+#		return Keep(implode($bi_TagSeparator, $allTags));
+	}else  return '[[!'.implode(']]'.$bi_TagSeparator.'[[!', $allTags).']]';
+*/
 }
 function bi_GetPmMarkup($body, $tags, $title){  #wrapper for bi_SaveTags, also used in blogit_upgrade.php
 	return bi_SaveTags($body, $tags) .'(:title ' .$title .':)';
