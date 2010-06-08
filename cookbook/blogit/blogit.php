@@ -381,8 +381,7 @@ global $bi_EntryType,$WikiDir,$LastModFile,$_GET;
 		&& (bi_Auth( ($bi_EntryType=='comment' ?'comment-edit' :'blog-edit') .' ' .$src) && RetrieveAuthPage($src,'read',false, READPAGE_CURRENT)) ){
 		$WikiDir->delete($src);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
-		#'data' contains the comment approval status, allowing update of Unapproved Comment count when deleting unapproved comments.
-		$result = array('msg'=>XL('Delete successful.'), 'result'=>'success', 'data'=>($bi_EntryType=='comment' ?PageTextVar($src,'commentapproved') :''));
+		$result = array('msg'=>XL('Delete successful.'), 'result'=>'success');
 	}
 	bi_Redirect($_GET['bi_mode'], $result);
 }
@@ -591,13 +590,13 @@ global $PCache,$bi_Pagename;
 				unset($PCache[$bi_Pagename][$key]);
 	}
 }
-function bi_SendAjax($markup, $msg='', $data=''){
+function bi_SendAjax($markup, $msg=''){
 global $bi_Pagename;
 bi_debugLog('bi_SendAjax: '.$markup);
 	bi_ClearCache();  #Otherwise we retrieve the old values.
 
 	bi_echo_json_encode(array(  #admin list uses a different format for listing comments
-		'out'=>MarkupToHTML($bi_Pagename, $markup), 'result'=>'success', 'msg'=>XL($msg), 'data'=>$data
+		'out'=>MarkupToHTML($bi_Pagename, $markup), 'result'=>'success', 'msg'=>XL($msg)
 	));
 }
 function bi_AjaxRedirect($result=''){
@@ -615,9 +614,7 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
 		if ($_REQUEST['target']=='blogit-comments'){
 			bi_SendAjax('(:includesection "' .($targetClass==$bi_SkinClasses['comment-block-admin'] ?'#unapproved-comments' :'#comments-pagelist')
 				.' commentid=' .$bi_CommentPage.' entrycomments=readonly":)',
-				($bi_CommentPage==$bi_Pagename ?'Successfully updated comment.' :'Successfully added new comment.'),
-				#pass back an array containing the increment/decrement for approved/unapproved comment counts
-				($bi_CommentPage==$bi_Pagename ?array(0,0) :(PageTextVar($bi_CommentPage,'commentapproved')=='true' ?array(1,0) :array(0,1)) )
+				($bi_CommentPage==$bi_Pagename ?'Successfully updated comment.' :'Successfully added new comment.')
 			);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
 			bi_SendAjax((isset($targetClass)  #might have clicked from many places. We only care about a few.

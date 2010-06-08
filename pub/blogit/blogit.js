@@ -55,6 +55,8 @@ BlogIt.fn = function($){
 			)});
 		}
 	});
+	function isComment(e){ return e.hasClass(BlogIt.pm['skin-classes']['comment-block']); }
+	function isCommentApproved(e){ return $("a[href*=action\=bi_cua&bi_mode\=ajax]", e).length > 0; }
 	function updateCommentCount(approvedCC, unapprovedCC){
 		function updateCC(e, c){
 			var e_txt = e.text();
@@ -66,9 +68,11 @@ BlogIt.fn = function($){
 	}
 	function getEnteredIP(e){ return e+'&bi_ip='+$("#blogit_ip").val(); };
 	function objectRemove(o, data){
-		$(o).closest('"[id^=bi_ID]"').fadeOut(500, function(){ $(this).remove(); });
+		var $old = $(o).closest('"[id^=bi_ID]"');
+		//if this is a comment, and if the comment was approved deduct approved-count, else deduct unapproved-comment
+		if ( isComment($old) )  (isCommentApproved($old) ?updateCommentCount(-1, 0) :updateCommentCount(0, -1));
+		$old.fadeOut(500, function(){ $(this).remove(); });
 		BlogIt.fn.showMsg(data);
-		if (data.data)  (data.data=='false' ?updateCommentCount(0, -1) :updateCommentCount(-1, 0));  //data.data contains the comment approval status
 	};
 	//dialog functions
 	function dialogWait(clear){
@@ -168,7 +172,6 @@ BlogIt.fn = function($){
 			frm
 				.prepend('<input type="hidden" value="ajax" name="bi_mode">')  //trigger ajax mode
 				.bind("submit",function(e){
-					var oldCommentApproved = $("a[href*=action\=bi_cua&bi_mode\=ajax]", $(eventTarget.target).closest('"[id^=bi_ID]"')).length>0;
 					e.preventDefault();
 					$.validity.start();
 					rulesFn('#dialog');  //BlogIt.fn.blogRules
@@ -184,7 +187,7 @@ BlogIt.fn = function($){
 							data: $(this).serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 							success: function(data){  //after PmForms finishes processing, update page with new content
 								dialogClose(data);
-								if (data.out)  submitFn(data, eventTarget, mode, frm, eventTarget, $container, oldCommentApproved);
+								if (data.out)  submitFn(data, eventTarget, mode, frm, eventTarget, $container);
 								else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl("No data returned.")), result:(data.result || 'error')});
 							}
 						});
@@ -192,29 +195,27 @@ BlogIt.fn = function($){
 				});
 		},
 //Routines called from ajaxForm
-		blogSubmit: function(data, eventTarget, mode, frm, eventTarget, $container, oldCommentApproved){  //e, mode, frm not used in this routine
+		blogSubmit: function(data, eventTarget, mode, frm, eventTarget, $container){  //e, mode, frm not used in this routine
 			//can't use closest since no eventTarget on DOM passed back from server; use bi_seek (filter/find) to start from top of DOM, work down
 			var $new=$(data.out).bi_seek('.'+$container.attr('class').replace(/ +/g, '.'));  //class is "class1 class2", bi_seek (find/filter) needs ".class1.class2"
 			$container.replaceWith($new);  //update existing blog entry
 			flash($new, data);
 		},
-		commentSubmit: function(data, eventTarget, mode, frm, eventTarget, $container, oldCommentApproved){  //eventTarget is null for user clicking Post button (mode=='add')
+		commentSubmit: function(data, eventTarget, mode, frm, eventTarget, $container){  //eventTarget is null for user clicking Post button (mode=='add')
 			var $new=$(data.out).bi_seek('[id^=bi_ID]');
-			if (mode=='reply'||mode=='add')  $('#blogit-comment-list .blogit-comment-list').append($new);  //adding a new comment
-			else $(eventTarget.target).closest('"[id^=bi_ID]"').replaceWith($new);  //update existing comment
-			flash($new, data);
 			if (data.result!='error'){
-				if (mode=='add'||mode=='reply'){
+				var newCommentApproved = isCommentApproved($new);
+				if (mode=='edit'){
+					var $old = $(eventTarget.target).closest('"[id^=bi_ID]"');  //find main wrapper from click point
+					$old.replaceWith($new);  //update existing comment
+					if (newCommentApproved != isCommentApproved($old))  (newCommentApproved ?updateCommentCount(1,-1) :updateCommentCount(-1,1));
+				}else{  //add or reply
 					if (mode=='add')  frm[0].reset();
-					if (data.data)  updateCommentCount(data.data[0], data.data[1]);  //data.data[0] contains approved comment increment; [1] contains unapproved comment increment
-				}else if (mode=='edit'){
-					var newCommentApproved = $("a[href*=action\=bi_cua&bi_mode\=ajax]",$new).length>0;
-					if (newCommentApproved!=oldCommentApproved){
-						if (newCommentApproved)  updateCommentCount(1,-1)
-						else updateCommentCount(-1,1);
-					}
+					$('#blogit-comment-list .blogit-comment-list').append($new);  //adding a new comment
+					(newCommentApproved ?updateCommentCount(1,0) :updateCommentCount(0,1))
 				}
 			}
+			flash($new, data);
 		},
 		commentRules: function(frm){
 			$((frm?frm+' ':'')+"#comment-author").require();
