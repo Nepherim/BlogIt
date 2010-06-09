@@ -34,12 +34,14 @@ SDV($bi_AjaxMsgTimer, 3000);  #Number of milli-seconds that the top ajax message
 #key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
 SDVA($bi_Ajax, array('bi_ce'=>'ajax', 'bi_ca'=>'ajax', 'bi_cua'=>'ajax', 'bi_be'=>'normal-ajax', 'bi_ne'=>'normal-ajax', 'bi_del'=>'ajax'));
 SDVA($bi_SkinClasses, array(  #provide CSS classes as the value, which tells blogit where to find content used for dynamic ajax page updates
-	'blog-entry' => 'blogit-post',  #container for entry in single-entry view, which should include the ajax edit-link
-	'blog-entry-summary' => 'blogit-post-summary',  #surrounds a blog entry in multi-entry view (in #multi-entry-view)
-	'comment-block' => 'blogit-comment-list',  #applied to each block containing a single comment, usually LI elements (in #comment-view-all and #comment-view-admin)
-	'comment-block-admin' => 'blogit-commentblock-admin',  #surrounds the comment list section; just includes the list, not the entry form (in #comment-view-admin)
-	'blog-list-row' => 'blogit-blog-list-row',  #used in the grid displaying draft/approved blog entries. Usually applied to the row for each entry (in #blog-list-view)
-	'approved-comment-count' => 'blogit-comment-count'  #count of comments for an entry
+	'blog-entry' => '.blogit-post',  #container for entry in single-entry view, which should include the ajax edit-link
+	'blog-entry-summary' => '.blogit-post-summary',  #surrounds a blog entry in multi-entry view (in #multi-entry-view)
+	'blog-list-row' => '.blogit-blog-list-row',  #used in the grid displaying draft/approved blog entries. Usually applied to the row for each entry (in #blog-list-view)
+	'approved-comment-count' => '.blogit-comment-count',  #count of comments for an entry
+	'unapproved-comment-count' => '.blogit-unapproved-comment-count',  #count of unapproved comments for an entry
+	'comment' => '.comment',  #MUST be a single css class NOT a css-path. applied to each block containing a single comment, usually LI elements (in #comment-view-all and #comment-view-admin)
+	'comment-admin-list' => '.blogit-comment-admin-list',  #surrounds the unapproved-comment list section (in #comment-view-admin)
+	'comment-list' => '.blogit-comment-list'  #pointer to the entire comment list, excluding headers, etc.
 ));
 SDVA($bi_SkinSettings, array(
 	'ajax_textarea_rows' => '18'  #make sure whole ajax dialog fits on low res monitors
@@ -594,33 +596,22 @@ function bi_SendAjax($markup, $msg=''){
 global $bi_Pagename;
 bi_debugLog('bi_SendAjax: '.$markup);
 	bi_ClearCache();  #Otherwise we retrieve the old values.
-
-	bi_echo_json_encode(array(  #admin list uses a different format for listing comments
-		'out'=>MarkupToHTML($bi_Pagename, $markup), 'result'=>'success', 'msg'=>XL($msg)
-	));
+	bi_echo_json_encode(array('out'=>MarkupToHTML($bi_Pagename, $markup), 'result'=>'success', 'msg'=>XL($msg)));
 }
 function bi_AjaxRedirect($result=''){
 global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action,$bi_Name,$bi_Group,$bi_Pages,$bi_SkinClasses;
-bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_style']);
-	#bi_style contains the class(es) of the containing object of the user click-event trigger for the ajax request; use this to determine context of user action
-	$targetClasses = explode(' ',$_REQUEST['bi_style']);  #might have embedded skin classes, not related to blogit
-	foreach ($bi_SkinClasses as $k => $v){  #find the blogit classes that relate to ajax blocks
-		$i = array_search($v, $targetClasses);
-		if ($i!==false && $i!==null)  break;
-	}
-	if ($i!==false && $i!==null)  $targetClass = $targetClasses[$i];  #assume we can only have one ajax related blogit class per DOM object
-
+bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']);
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 is pmform failed (invalid captcha, etc)
 		if ($_REQUEST['target']=='blogit-comments'){
-			bi_SendAjax('(:includesection "' .($targetClass==$bi_SkinClasses['comment-block-admin'] ?'#unapproved-comments' :'#comments-pagelist')
+			bi_SendAjax('(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['comment-admin-list'] ?'#unapproved-comments' :'#comments-pagelist')
 				.' commentid=' .$bi_CommentPage.' entrycomments=readonly":)',
 				($bi_CommentPage==$bi_Pagename ?'Successfully updated comment.' :'Successfully added new comment.')
 			);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
-			bi_SendAjax((isset($targetClass)  #might have clicked from many places. We only care about a few.
-				?'(:includesection "' .($targetClass==$bi_SkinClasses['blog-entry-summary']
+			bi_SendAjax((isset($_REQUEST['bi_context'])  #might have clicked from many places. We only care about a few.
+				?'(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['blog-entry-summary']
 					?'#blog-summary-pagelist group=' .$bi_Group .' name='.$bi_Name  #main blog summary page
-					:($targetClass==$bi_SkinClasses['blog-list-row']  #blog list from admin page
+					:($_REQUEST['bi_context']==$bi_SkinClasses['blog-list-row']  #blog list from admin page
 						?'#blog-grid group=' .$bi_Group .' name='.$bi_Name
 						:'#single-entry-view')  #single entry blog view
 					).'":)'

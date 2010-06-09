@@ -55,20 +55,26 @@ BlogIt.fn = function($){
 			)});
 		}
 	});
-	function isComment(e){ return e.hasClass(BlogIt.pm['skin-classes']['comment-block']); }
+	function isComment(e){ return e.hasClass( BlogIt.pm['skin-classes']['comment'].replace(/^\./,'') ); }
 	function isCommentApproved(e){ return $("a[href*=action\=bi_cua&bi_mode\=ajax]", e).length > 0; }
 	function updateCommentCount(approvedCC, unapprovedCC){
 		function updateCC(e, c){
-			var e_txt = e.text();
+			var e_txt = e.text().replace(/\n/ig, '');  //remove extraneous \n as it messes up the replacing
 			var cc = e_txt.match(/\d+/).join('');  //parse out the number from the link text (assume the only number there is the comment count)
-			e.html( e.html().replace(e_txt, e_txt.replace(cc, (parseInt(cc)+c))) );  //ensure only numbers in link text are replaced (ie, not port numers)
+			e.text( e_txt.replace(cc, (parseInt(cc)+c)));
 		}
-		$('.'+BlogIt.pm['skin-classes']['approved-comment-count']).each(function(i,e){ updateCC($(e), approvedCC); });
-		$('a[href*=action=bi_admin&s=unapproved-comments]').each(function(i,e){ updateCC($(e), unapprovedCC); });
+		$(BlogIt.pm['skin-classes']['approved-comment-count']).each(function(i,e){ updateCC($(e), approvedCC); });
+		$(BlogIt.pm['skin-classes']['unapproved-comment-count']).each(function(i,e){ updateCC($(e), unapprovedCC); });
+	}
+	function getWrapper(e){ return $(e).closest('"[id^=bi_ID]"'); }
+	function getActionContext(e, c){ return $(e).closest(c.join(',')); }
+	function getSkinClass($e, c){  //return the skin-class of $e
+		for (var i=0; ($e.length>0 && i<c.length); i++)  if ($e.bi_seek(c[i]).length > 0)  return c[i];
+		return '';
 	}
 	function getEnteredIP(e){ return e+'&bi_ip='+$("#blogit_ip").val(); };
-	function objectRemove(o, data){
-		var $old = $(o).closest('"[id^=bi_ID]"');
+	function objectRemove(e, data){
+		var $old = getWrapper(e);
 		//if this is a comment, and if the comment was approved deduct approved-count, else deduct unapproved-comment
 		if ( isComment($old) )  (isCommentApproved($old) ?updateCommentCount(-1, 0) :updateCommentCount(0, -1));
 		$old.fadeOut(500, function(){ $(this).remove(); });
@@ -96,9 +102,9 @@ BlogIt.fn = function($){
 		$d.dialog("open");
 	};
 	//visuals
-	function flash($o, data){
-		var bg = $o.css("background-color");
-		$o.css({backgroundColor:'#BBFFB6'}).delay(500).fadeTo(500, 0.2, function () {
+	function flash($e, data){
+		var bg = $e.css("background-color");
+		$e.css({backgroundColor:'#BBFFB6'}).delay(500).fadeTo(500, 0.2, function () {
 			$(this).fadeTo(500,1).css("background-color", bg);
 		});
 		BlogIt.fn.showMsg(data);
@@ -138,12 +144,12 @@ BlogIt.fn = function($){
 				}
 			},e);
 		},
-		commentStatus: function(o, data){
-			var $o = $(o).closest('"[id^=bi_ID]"');
-			flash($o, data);
-			_unapprove = ( $(o).html()==BlogIt.fn.xl("unapprove") );
-			o.href = (_unapprove ?o.href.replace("bi_cua", "bi_ca") :o.href.replace("bi_ca", "bi_cua"));
-			$(o).html(BlogIt.fn.xl( (_unapprove ?"approve" :"unapprove") ));
+		commentStatus: function(e, data){
+			var $e = getWrapper(e);
+			flash($e, data);
+			_unapprove = ( $(e).html()==BlogIt.fn.xl("unapprove") );
+			e.href = (_unapprove ?e.href.replace("bi_cua", "bi_ca") :e.href.replace("bi_ca", "bi_cua"));
+			$(e).html(BlogIt.fn.xl( (_unapprove ?"approve" :"unapprove") ));
 			if (_unapprove)  updateCommentCount(-1,1)
 			else  updateCommentCount(1,-1);
 		},
@@ -177,41 +183,45 @@ BlogIt.fn = function($){
 					rulesFn('#dialog');  //BlogIt.fn.blogRules
 					var result = $.validity.end();  //if valid then it's okay to proceed with the Ajax
 					if (result.valid){
-						var $container;
+						var $context,skinClass;
 						if (eventTarget){  //eventTarget is null for user clicking Post button (mode=='add')
-							$container = $(eventTarget.target).closest('.'+BlogIt.fn.concatJSON(BlogIt.pm['skin-classes'],',','.'));  //use closest since going from target up the DOM
-							$(this).prepend('<input type="hidden" value="' +$container.attr('class') +'" name="bi_style">')  //trigger multi-entry mode
+							//valid contexts. don't include 'comment-list' as it's the default, and also present on 'comment-admin-list'
+							var vc = [BlogIt.pm['skin-classes']['blog-entry'],BlogIt.pm['skin-classes']['comment-admin-list'],
+								BlogIt.pm['skin-classes']['blog-entry-summary'], BlogIt.pm['skin-classes']['blog-list-row']];
+							$context = getActionContext(eventTarget.target, vc);
+							skinClass = getSkinClass($context, vc);
+							$(this).prepend('<input type="hidden" value="'+skinClass+'" name="bi_context">')  //trigger multi-entry mode
 						}
 						dialogWait();
 						$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action'),  //post with the action defined on the form
 							data: $(this).serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 							success: function(data){  //after PmForms finishes processing, update page with new content
 								dialogClose(data);
-								if (data.out)  submitFn(data, eventTarget, mode, frm, eventTarget, $container);
-								else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl("No data returned.")), result:(data.result || 'error')});
+								if (data.out)  submitFn(data, eventTarget, mode, frm, $context, skinClass);
+								else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || 'error')});
 							}
 						});
 					}
 				});
 		},
 //Routines called from ajaxForm
-		blogSubmit: function(data, eventTarget, mode, frm, eventTarget, $container){  //e, mode, frm not used in this routine
+		blogSubmit: function(data, eventTarget, mode, frm, $context, skinClass){  //eventTarget,mode,frm,$context,skinClass not used in this routine
 			//can't use closest since no eventTarget on DOM passed back from server; use bi_seek (filter/find) to start from top of DOM, work down
-			var $new=$(data.out).bi_seek('.'+$container.attr('class').replace(/ +/g, '.'));  //class is "class1 class2", bi_seek (find/filter) needs ".class1.class2"
-			$container.replaceWith($new);  //update existing blog entry
+			var $new=$(data.out).bi_seek(skinClass);  //class is "class1 class2", bi_seek (find/filter) needs ".class1.class2"
+			$context.replaceWith($new);  //update existing blog entry
 			flash($new, data);
 		},
-		commentSubmit: function(data, eventTarget, mode, frm, eventTarget, $container){  //eventTarget is null for user clicking Post button (mode=='add')
+		commentSubmit: function(data, eventTarget, mode, frm, $context, skinClass){  //eventTarget is null for user clicking Post button (mode=='add')
 			var $new=$(data.out).bi_seek('[id^=bi_ID]');
 			if (data.result!='error'){
 				var newCommentApproved = isCommentApproved($new);
 				if (mode=='edit'){
-					var $old = $(eventTarget.target).closest('"[id^=bi_ID]"');  //find main wrapper from click point
+					var $old = getWrapper(eventTarget.target);  //find main wrapper from click point
 					$old.replaceWith($new);  //update existing comment
 					if (newCommentApproved != isCommentApproved($old))  (newCommentApproved ?updateCommentCount(1,-1) :updateCommentCount(-1,1));
 				}else{  //add or reply
 					if (mode=='add')  frm[0].reset();
-					$('#blogit-comment-list .blogit-comment-list').append($new);  //adding a new comment
+					$(BlogIt.pm['skin-classes']['comment-list']).append($new);  //adding a new comment
 					(newCommentApproved ?updateCommentCount(1,0) :updateCommentCount(0,1))
 				}
 			}
@@ -252,11 +262,6 @@ BlogIt.fn = function($){
 			ajax["url"] = ( typeof ajax.url == "function" ?ajax.url(e.target.href) :(ajax.url || e.target.href) );
 			ajax["context"] = ajax.context || e.target;
 			$.ajax(ajax);
-		},
-		concatJSON: function(json,s,p){  //s=separator; p=element Prefix
-			var t=''; s=s||','; p=p||'';
-			for (k in json)  t+=s+p+json[k];
-			return (t>'' ?t.replace(new RegExp( "^["+s+"|\s]+"), "") :t);
 		}
 	};
 }(jQuery);
