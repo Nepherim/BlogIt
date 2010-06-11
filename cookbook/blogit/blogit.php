@@ -33,12 +33,12 @@ SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));  #Needed if skin is set in group con
 SDV($bi_AjaxMsgTimer, 3000);  #Number of milli-seconds that the top ajax message is displayed for
 #key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
 SDVA($bi_Ajax, array('bi_ce'=>'ajax', 'bi_ca'=>'ajax', 'bi_cua'=>'ajax', 'bi_be'=>'normal-ajax', 'bi_ne'=>'normal-ajax', 'bi_del'=>'ajax'));
-SDVA($bi_SkinClasses, array(  #provide CSS classes as the value, which tells blogit where to find content used for dynamic ajax page updates
-	'blog-entry' => '.blogit-post',  #container for entry in single-entry view, which should include the ajax edit-link
-	'blog-entry-summary' => '.blogit-post-summary',  #surrounds a blog entry in multi-entry view (in #multi-entry-view)
+SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tells blogit where to find content used for dynamic ajax page updates
+	'blog-entry' => '.blogit-post',  #container for entry in single-entry view, which should include the ajax edit-link, but not the Blog title.
+	'blog-entry-summary' => '.blogit-post-summary',  #surrounds a blog entry in multi-entry view (in #multi-entry-view); cannot be the same CSS path used for blog-entry
 	'blog-list-row' => '.blogit-blog-list-row',  #used in the grid displaying draft/approved blog entries. Usually applied to the row for each entry (in #blog-list-view)
-	'approved-comment-count' => '.blogit-comment-count',  #count of comments for an entry
-	'unapproved-comment-count' => '.blogit-unapproved-comment-count',  #count of unapproved comments for an entry
+	'approved-comment-count' => '.blogit-comment-count a',  #count of comments for an entry
+	'unapproved-comment-count' => '.blogit-unapproved-comment-count a',  #count of unapproved comments for an entry
 	'comment' => '.comment',  #MUST be a single css class NOT a css-path. applied to each block containing a single comment, usually LI elements (in #comment-view-all and #comment-view-admin)
 	'comment-admin-list' => '.blogit-comment-admin-list',  #surrounds the unapproved-comment list section (in #comment-view-admin)
 	'comment-list' => '.blogit-comment-list'  #pointer to the entire comment list, excluding headers, etc.
@@ -100,7 +100,7 @@ SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''  #either regexes to include (
 )));
 $bi_Ajax['bi_cr']='ajax'; $bi_Ajax['bi_bip']='ajax';  #comment reply is always ajax
 SDV($PmFormRedirectFunction,'bi_Redirect');
-$bi_Forms=array('blogit-entry','blogit-comments');  //needs to be before cookies
+$bi_Forms=array('blogit-entry','blogit-comments');  #needs to be before cookies
 
 # ----------------------------------------
 # - Usable on Wiki Pages
@@ -124,7 +124,7 @@ $WikiStyleApply['link'] = 'a';  #allows A to be labelled with class attributes
 # - Authentication
 SDV($AuthFunction,'PmWikiAuth');
 $bi_OriginalFn['AuthFunction']=$AuthFunction;
-$AuthFunction = 'bi_BlogItAuth';  //TODO: Use $AuthUserFunctions instead?
+$AuthFunction = 'bi_BlogItAuth';  #TODO: Use $AuthUserFunctions instead?
 # Cannot be done as part of handler due to scoping issues when include done in function
 if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths['convert']);
 
@@ -164,7 +164,7 @@ if ( bi_Auth('*') ){
 	if (isset($bi_EntryType)||in_array($bi_Pagename,$bi_Pages)){
 		# Cookies: Store the previous page (for returning on Cancel, comments approval, etc)
 		$LogoutCookies[] = $bi_Cookie.'back-1'; $LogoutCookies[] = $bi_Cookie.'back-2';
-		if (@$_POST['cancel'] && ($action=='pmform' && in_array($_REQUEST['target'],$bi_Forms)))  bi_Redirect();  //ajax cancel is handled client-side
+		if (@$_POST['cancel'] && ($action=='pmform' && in_array($_REQUEST['target'],$bi_Forms)))  bi_Redirect();  #ajax cancel is handled client-side
 		bi_storeCookie();
 	}
 }
@@ -176,14 +176,14 @@ $PmFormPostPatterns['/\r/'] = '';  #fixes a bug in pmforms where multi-line entr
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
 array_unshift ($PmFormTemplatesFmt,	($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$bi_Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
 $bi_CommentPage=(preg_match($bi_CommentPattern,$bi_Pagename) ?$bi_Pagename :$bi_CommentGroup .'.' .$bi_Group .'-' .$bi_Name .'-' .date('Ymd\THms'));
-SDV($PmForm['blogit-entry'], 'form=#blog-form-control fmt=#blog-post-control' .(@$_REQUEST['bi_mode']=='ajax' ?' successpage=""' :''));  //PmForm does a redirect browse if successpage is set
+SDV($PmForm['blogit-entry'], 'form=#blog-form-control fmt=#blog-post-control' .(@$_REQUEST['bi_mode']=='ajax' ?' successpage=""' :''));  #PmForm does a redirect browse if successpage is set
 #if page is an existing comment (ie, has a comment page name) then use it, otherwise create it
 SDV($PmForm['blogit-comments'], 'saveto="' . $bi_CommentPage.'" ' .'form=#comment-form-control fmt=#comment-post-control');
 
 # ----------------------------------------
 # - Handle Actions
 $bi_OriginalFn['HandleActions'] = $HandleActions;
-$HandleActions['pmform']='bi_HandleProcessForm';  //occurs when a form is submitted
+$HandleActions['pmform']='bi_HandleProcessForm';  #occurs when a form is submitted
 $HandleActions['browse']='bi_HandleBrowse';
 $HandleActions['print']='bi_HandleBrowse';
 SDV($HandleActions['bi_admin'], 'bi_HandleAdmin'); SDV($HandleAuth['bi_admin'], 'blogit-admin');
@@ -285,7 +285,7 @@ bi_debugLog('HandleEdit: '.$action.' - '.$bi_EntryType);
 		else  $GroupHeaderFmt .= '(:includesection "#' .$type .'-edit":)';
 	}
 	if ($type=='blog')  bi_AddMarkup();  #define markup to prevent PTV field being displayed at end of page
-	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];  //no need to goto blogit browse from bi_be
+	$HandleActions['browse']=$bi_OriginalFn['HandleActions']['browse'];  #no need to goto blogit browse from bi_be
 	HandleDispatch($src, 'browse');
 }
 function bi_HandleCommentUnapprove($src, $auth='comment-approve'){  #action=bi_cua
@@ -321,7 +321,7 @@ global $_GET,$GroupHeaderFmt;
 	}
 	HandleDispatch($src, 'browse');
 }
-function bi_HandleProcessForm ($src, $auth='read'){  //$action=pmform
+function bi_HandleProcessForm ($src, $auth='read'){  #$action=pmform
 global $bi_ResetPmFormField,$_POST,$bi_EnablePostDirectives,$ROSPatterns,$CategoryGroup,
 	$bi_Pagename,$bi_DefaultGroup,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$GroupHeaderFmt,$bi_DateZone,
 	$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired;
@@ -329,7 +329,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 	$bi_ResetPmFormField = array();
 	#Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
 	if ( $_POST['target']=='blogit-entry' )  $GroupHeaderFmt .= '(:includesection "#blog-edit":)';
-	if (@$_POST['target']=='blogit-entry' && (@$_POST['save']||@$_POST['bi_mode']=='ajax')){  //jquery doesn't serialize submit buttons
+	if (@$_POST['target']=='blogit-entry' && (@$_POST['save']||@$_POST['bi_mode']=='ajax')){  #jquery doesn't serialize submit buttons
 		bi_decodeUTF8($_POST);  #ajax posts from jquery are always utf8
 		#Allow future posts to create tag -- otherwise may never happen, since user may never edit the post again.
 		if ( $_POST['ptv_entrystatus']!='draft' )  $AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
@@ -443,7 +443,7 @@ global $bi_CommentSideBarLen, $bi_Pagename, $bi_UnstyleFn;
 	preg_match('/^.{0,' .$m .'}\b/', $text, $match);
 	return trim($match[0]);
 }
-function bi_Link($pre, $page, $action, $txt, $post){  //valid actions: ajax, normal, ajax-normal, normal-ajax
+function bi_Link($pre, $page, $action, $txt, $post){  #valid actions: ajax, normal, ajax-normal, normal-ajax
 global $bi_Ajax,$PubDirUrl;
 	$hyphen=strpos($bi_Ajax[$action],'-');
 	return $pre .'%apply=link class=blogit-admin-link%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],0,4)=='ajax' ?'&amp;bi_mode=ajax' :'') .' | ' .$txt .']]%%'
@@ -519,9 +519,7 @@ bi_debugLog('Date: '.$d.' ['.$z.']');
 	if ($bi_DateZone=='US')  return strtotime($d);
 	else  return strtotime(str_replace('/','-',$d));  #TODO: strtotime(preg_replace('!^'.bi_DateFmtRE($f).'$!','$2/$1/$3 $4:$5',$d));
 }
-function bi_IsNull($e){
-	return (!empty($e) && substr($e,0,3)!='{*$' && substr($e,0,2)!='{$' && substr($e,0,3)!='{=$' ?$e :'');
-}
+function bi_IsNull($e){ return (!empty($e) && substr($e,0,3)!='{*$' && substr($e,0,2)!='{$' && substr($e,0,3)!='{=$' ?$e :''); }
 function bi_LT($arg){
 	$arg = ParseArgs($arg);
 	return (@$arg[''][0]<@$arg[''][1]);
@@ -530,9 +528,7 @@ function bi_LT($arg){
 # ----------------------------------------
 # - Markup Expression Functions
 # ----------------------------------------
-function bi_BasePage($pn){
-	return preg_replace($GLOBALS['bi_CommentPattern'],'${1}.${2}',$pn);
-}
+function bi_BasePage($pn){ return preg_replace($GLOBALS['bi_CommentPattern'],'${1}.${2}',$pn); }
 # 0:fullname 1:param 2:val
 function bi_URL($args){
 global $_GET;
@@ -726,12 +722,8 @@ function bi_JXL(){  #create javascript array holding all XL translations of text
 # - General Helper Functions
 # ----------------------------------------
 # Only sets defaults if the array is empty or not set; SDVA *adds* key/values to those set by user
-function bi_SDVSA(&$var,$val){
-	$var = (is_array($var) && !empty($var) ?$var :$val);
-}
-function bi_setFmtPV($a){
-	foreach ($a as $k)  $GLOBALS['FmtPV']['$'.$k]='$GLOBALS["'.$k.'"]';
-}
+function bi_SDVSA(&$var,$val){ $var = (is_array($var) && !empty($var) ?$var :$val); }
+function bi_setFmtPV($a){ foreach ($a as $k)  $GLOBALS['FmtPV']['$'.$k]='$GLOBALS["'.$k.'"]'; }
 # Sets $FmtPV variables named $key_VALUE. $a is an array with the key as the variable name, and values as indecies.
 function bi_setFmtPVA ($a){
 	foreach ($a as $var=>$vals)
