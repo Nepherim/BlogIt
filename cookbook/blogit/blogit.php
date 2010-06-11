@@ -471,7 +471,7 @@ global $bi_AuthorGroup,$bi_Pagename,$bi_CommentsEnabled,$bi_LinkToCommentSite,$b
 		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt))
 			?bi_Link($args['pre_text'], $txt, 'bi_bip', '$[block]', $args['post_text']) :'');
 		case 'tags': return ($txt>'' ?$args['pre_text'].bi_SaveTags('', $txt, 'display').$args['post_text'] :'');
-		case 'commentcount': return ($args['status']!='none' && $bi_CommentsEnabled
+		case 'commentcount': return ($args['status']!='none' && $bi_CommentsEnabled=='true'  #TODO: Since comments are displayed when CommentsEnabled=='false', count should be displayed as well
 			?$args['pre_text'].'[['.$args['group'].'.'.$args['name'].'#blogit-comment-list | '.
 				'(:includesection "#comments-count-pagelist entrygroup=\''.$args['group'].'\' entryname=\''.$args['name'].'\' commentstatus=true":)'.
 				$txt.']]'.$args['post_text']
@@ -544,7 +544,7 @@ global $action, $bi_OriginalFn, $bi_CommentsEnabled, $bi_CommentGroup, $bi_Entry
 	# Set level to read if a non-authenticated user is posting a comment.
 	if ( (($level=='edit') || ($level=='publish'))
 		&& $action=='pmform' && $bi_EntryType == 'blog'
-		&& IsEnabled($bi_CommentsEnabled,1) && preg_match("/^" .$bi_CommentGroup ."\./", $pn) ){
+		&& $bi_CommentsEnabled=='true' && preg_match("/^" .$bi_CommentGroup ."\./", $pn) ){
 		$level = 'read';
 		$authprompt = false;
 	}
