@@ -6,20 +6,20 @@ jQuery(document).ready(function($){
 
 	//show error messages set by pmwiki, in .wikimessage
 	if ($('.wikimessage').length){ $('html,body').animate({scrollTop: $('.wikimessage').offset().top-175}, 1); }
-	BlogIt.fn.showMsg({msg:$('#wikiedit.blogit-blog-form .wikimessage').html(), result:'error'});
-	BlogIt.fn.showMsg({msg:$('#wikitext .blogit-comment-form .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
+	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['blog-form']+' .wikimessage').html(), result:'error'});
+	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['comment-form']+' .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
 
 	$('#blogit-cancel').bind('click', function(){  //for blog entry, restore initial data to prevent validation errors from changed field.
-		var $form = ($("#wikiedit").length ?$("#wikiedit.blogit-blog-form form") :$("#wikitext .blogit-comment-form").closest('form'));  //on the read page or edit page
+		var $form = ($("#wikiedit").length ?$(BlogIt.pm['skin-classes']['blog-form']+' form') :$(BlogIt.pm['skin-classes']['comment-form']).closest('form'));  //on the read page or edit page
 		$form[0].reset();  //assume we loaded with valid data.
 		return true;
 	});
-	BlogIt.fn.ajaxForm($("#wikitext .blogit-comment-form").closest('form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, 'add');  //user comments posted via ajax
+	//adds ajax handler, and validation to forms already on the page (ie, comment form)
+	BlogIt.fn.ajaxForm($(BlogIt.pm['skin-classes']['comment-form']).closest('form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, 'add');
 
-	//add form validation
+	//add form validation to non-ajax forms (ie, Edit form in normal mode)
 	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
-	$("#wikiedit.blogit-blog-form form").validity(function() { BlogIt.fn.blogRules(); });
-	$("#wikitext .blogit-comment-form").closest('form').validity(function(){ BlogIt.fn.commentRules(); });
+	$(BlogIt.pm['skin-classes']['blog-form']).validity( BlogIt.fn.blogRules );
 
 	$("a[href*=action\=bi_ca&bi_mode\=ajax],a[href*=action\=bi_cua&bi_mode\=ajax]").live('click', function(e){  //comment un/approve
 		e.preventDefault();
@@ -30,10 +30,10 @@ jQuery(document).ready(function($){
 	$("a[href*=action\=bi_bip]").live('click', function(e){ BlogIt.fn.commentBlockIP(e); });  //block comment IP addresses
 	$("a[href*=action\=bi_ce&bi_mode\=ajax]").live('click', function(e){ BlogIt.fn.loadDialog(e,'comment','edit'); });  //comment edit
 	$("a[href*=action\=bi_cr&bi_mode\=ajax]").live('click', function(e){ BlogIt.fn.loadDialog(e,'comment','reply'); });  //comment reply (admins)
-	$("#wikiedit.blogit-blog-form form :input:not(:submit)").bind('change', function(){  //if any field (not a submit button) changes...
+	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').bind('change', function(){  //if any field (not a submit button) changes...
 		window.onbeforeunload = function(){ return BlogIt.fn.xl('You have unsaved changes.'); }
 	});
-	$('#wikiedit.blogit-blog-form form :input:submit').bind('click', function(){
+	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:submit').bind('click', function(){
 		window.onbeforeunload = null;  //don't trigger on submit buttons.
 	});
 
@@ -90,7 +90,7 @@ BlogIt.fn = function($){
 		if (!data || (data && data.result!='error'))  $("#dialog").dialog("close").empty();
 	};
 	function dialogShow(txt, yes, no, w, ajax, e){
-		var $d = $("#dialog");
+		var $d = $('#dialog');
 		$d.html(txt).dialog('option', 'width', w);
 		var btn={};
 		if (no) btn[BlogIt.fn.xl(no)] = dialogClose;
@@ -99,14 +99,15 @@ BlogIt.fn = function($){
 			dialogClose();
 		};
 		if (yes||no) $d.dialog('option', 'buttons', btn);
-		$d.dialog("open");
+		$d.dialog('open');
 	};
 	//visuals
 	function flash($e, data){
-		var bg = $e.css("background-color");
-		$e.css({backgroundColor:'#BBFFB6'}).delay(500).fadeTo(500, 0.2, function () {
-			$(this).fadeTo(500,1).css("background-color", bg);
-		});
+		var bg = $e.css('background-color');
+		$e.animate(
+			{ backgroundColor: '#BBFFB6'},
+			{ duration: 750, complete: function(){ $(this).animate({ backgroundColor: bg }, {duration:750}) } }
+		);
 		BlogIt.fn.showMsg(data);
 	};
 
@@ -126,7 +127,7 @@ BlogIt.fn = function($){
 	return {
 		deleteDialog: function(e){
 			e.preventDefault();
-			dialogShow(BlogIt.fn.xl("Are you sure you want to delete?"),'Yes','No','300px',
+			dialogShow(BlogIt.fn.xl('Are you sure you want to delete?'),'Yes','No','300px',
 				{success:function(data){ objectRemove(e.target, data); }},e);
 		},
 		commentBlockIP: function(e){
@@ -147,9 +148,9 @@ BlogIt.fn = function($){
 		commentStatus: function(e, data){
 			var $e = getWrapper(e);
 			flash($e, data);
-			_unapprove = ( $(e).html()==BlogIt.fn.xl("unapprove") );
-			e.href = (_unapprove ?e.href.replace("bi_cua", "bi_ca") :e.href.replace("bi_ca", "bi_cua"));
-			$(e).html(BlogIt.fn.xl( (_unapprove ?"approve" :"unapprove") ));
+			_unapprove = ( $(e).html()==BlogIt.fn.xl('unapprove') );
+			e.href = (_unapprove ?e.href.replace('bi_cua', 'bi_ca') :e.href.replace('bi_ca', 'bi_cua'));
+			$(e).html(BlogIt.fn.xl( (_unapprove ?'approve' :'unapprove') ));
 			if (_unapprove)  updateCommentCount(-1,1)
 			else  updateCommentCount(1,-1);
 		},
@@ -163,9 +164,9 @@ BlogIt.fn = function($){
 						var btn={};
 						btn[BlogIt.fn.xl('Cancel')] = dialogClose;
 						btn[BlogIt.fn.xl('Submit')] = function(){ $(this).find('form').submit(); };
-						$("#dialog").html( txt )
+						$('#dialog').html( txt )
 							.dialog('option', 'buttons', btn)
-							.dialog('option', 'width', (name=='blog'?'750px':'430px')).dialog("open");  //load the edit form into a dialog
+							.dialog('option', 'width', (name=='blog'?'750px':'430px')).dialog('open');  //load the edit form into a dialog
 						if (name=='blog')  BlogIt.fn.ajaxForm($('#dialog form'), BlogIt.fn.blogRules, BlogIt.fn.blogSubmit, mode, e);  //blog edit
 						else if (name=='comment')  BlogIt.fn.ajaxForm($('#dialog form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, mode, e);  //comments
 					}
@@ -177,10 +178,10 @@ BlogIt.fn = function($){
 			BlogIt.fn.addTagEvents();
 			frm
 				.prepend('<input type="hidden" value="ajax" name="bi_mode">')  //trigger ajax mode
-				.bind("submit",function(e){
+				.bind('submit',function(e){
 					e.preventDefault();
 					$.validity.start();
-					rulesFn('#dialog');  //BlogIt.fn.blogRules
+					rulesFn(frm);  //calls BlogIt.fn.blogRules or BlogIt.fn.commentRules
 					var result = $.validity.end();  //if valid then it's okay to proceed with the Ajax
 					if (result.valid){
 						var $context,skinClass;
@@ -229,14 +230,14 @@ BlogIt.fn = function($){
 			flash($new, data);
 		},
 		commentRules: function(frm){
-			$((frm?frm+' ':'')+"#comment-author").require();
-			$((frm?frm+' ':'')+"#comment-email").require().match("email");
-			$((frm?frm+' ':'')+"#comment-website").match("url");
+			$('#comment-author',frm).require();
+			$('#comment-email',frm).require().match('email');
+			$('#comment-website',frm).match('url');
 		},
 		blogRules: function(frm){
-			$((frm?frm+' ':'')+"#entrydate").match("entryDate");
-			$((frm?frm+' ':'')+"#entrytitle,"+(frm?frm+' ':'')+"#entryurl")
-				.assert(	($((frm?frm+' ':'')+"#entryurl").val() || $((frm?frm+' ':'')+"#entrytitle").val()),
+			$('#entrydate',frm).match('entryDate');
+			$('#entrytitle,#entryurl',frm)
+				.assert(	($('#entryurl',frm).val() || $('#entrytitle',frm).val()),
 					BlogIt.fn.xl('Either enter a Blog Title or a Pagename')
 				);
 		},
@@ -259,9 +260,9 @@ BlogIt.fn = function($){
 //Utilities
 		xl: function(t){ return ( (BlogIt.xl[t] ?$('<div>'+BlogIt.xl[t]+'</div>').html() :t) ); },
 		ajax: function(ajax, e){
-			ajax["dataType"] = ajax.dataType || "json";
-			ajax["url"] = ( typeof ajax.url == "function" ?ajax.url(e.target.href) :(ajax.url || e.target.href) );
-			ajax["context"] = ajax.context || e.target;
+			ajax['dataType'] = ajax.dataType || 'json';
+			ajax['url'] = ( typeof ajax.url == 'function' ?ajax.url(e.target.href) :(ajax.url || e.target.href) );
+			ajax['context'] = ajax.context || e.target;
 			$.ajax(ajax);
 		}
 	};

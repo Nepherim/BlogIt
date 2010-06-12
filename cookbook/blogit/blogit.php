@@ -42,7 +42,9 @@ SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tel
 	'comment' => '.comment',  #MUST be a single css class NOT a css-path. applied to each block containing a single comment, usually LI elements (in #comment-view-all and #comment-view-admin)
 	'comment-admin-list' => '.blogit-comment-admin-list',  #surrounds the unapproved-comment list section (in #comment-view-admin)
 	'comment-list' => '.blogit-comment-list',  #pointer to the entire comment list, excluding headers, etc.
-	'comment-list-wrapper' => '#blogit-comment-list'  #pointer to a wrapper around the comment-list; used for the first comment, where 'comment-list' may not exist. Should not include headers.
+	'comment-list-wrapper' => '#blogit-comment-list',  #pointer to a wrapper around the comment-list; used for the first comment, where 'comment-list' may not exist. Should not include headers.
+	'blog-form' => '#wikiedit.blogit-blog-form',  #pointer to the wrapper containing the blog-entry FORM object
+	'comment-form' => '#wikitext .blogit-comment-form'  #pointer to the wrapper containing the comment-entry FORM object
 ));
 SDVA($bi_SkinSettings, array(
 	'ajax_textarea_rows' => '18'  #make sure whole ajax dialog fits on low res monitors
