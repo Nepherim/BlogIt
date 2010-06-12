@@ -212,7 +212,8 @@ BlogIt.fn = function($){
 			flash($new, data);
 		},
 		commentSubmit: function(data, eventTarget, mode, frm, $context, skinClass){  //eventTarget is null for user clicking Post button (mode=='add')
-			var $new=$(data.out).bi_seek('[id^=bi_ID]');
+			var firstComment = $(BlogIt.pm['skin-classes']['comment-list']).length==0;
+			var $new = (firstComment ?$(data.out).bi_seek('[id^=bi_ID]').parent() :$(data.out).bi_seek('[id^=bi_ID]'));
 			if (data.result!='error'){
 				var newCommentApproved = isCommentApproved($new);
 				if (mode=='edit'){
@@ -221,7 +222,7 @@ BlogIt.fn = function($){
 					if (newCommentApproved != isCommentApproved($old))  (newCommentApproved ?updateCommentCount(1,-1) :updateCommentCount(-1,1));
 				}else{  //add or reply
 					if (mode=='add')  frm[0].reset();
-					$(BlogIt.pm['skin-classes']['comment-list']).append($new);  //adding a new comment
+					$(BlogIt.pm['skin-classes'][(firstComment ?'comment-list-wrapper' :'comment-list')]).append($new);  //adding a new comment
 					(newCommentApproved ?updateCommentCount(1,0) :updateCommentCount(0,1))
 				}
 			}
