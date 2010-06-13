@@ -1,5 +1,23 @@
+.blogit-admin-link{
+	border: none !important;
+	padding: 0 0 0 2px !important;
+	display: inline !important;
+	}
+.blogit-admin-link img{
+	border: none !important;
+	margin: 0 0 1px !important;
+	padding: 0 !important;
+	background-color: transparent !important;
+	}
+.blogit-guibuttons{
+	margin-top: 10px;
+	}
 #dialog{
 	display: none;
+	text-align: left;
+	}
+#dialog .blogit-blog-form{
+	margin-top: 0px !important;
 	}
 label.error{
 	padding-left:12px;
@@ -17,16 +35,17 @@ label.error{
 	text-align:center;
 	font-size:18px;
 	border-bottom:1px solid #bbb;
-}
+	z-index: 2000 !important;
+	}
 #showMessage.notification{
 	background-color: rgb(247, 247, 247);
 	color: red;
-}
+	}
 #showMessage.success{
 	background-color: #BBFFB6;
 	color: #060;
-}
+	}
 #showMessage.error{
 	background-color: #fdd;
 	color: #f00;
-}
+	}

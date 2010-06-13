@@ -40,7 +40,7 @@ $bi_ConvertRules = array(
 			'entrytitle'=> array('default'=> '(@$org["title"] ?str_replace("$", "&#036;", $org["title"]) :$AsSpacedFunction($name))'),
 			'entrystatus'=> array('default'=> 'draft'),
 			'entrycomments'=> array('default'=> 'open'),
-			'entrytags'=> array('default'=>'bi_SaveTags($org["text"], "", $GLOBALS["bi_TagSeparator"])'),
+			'entrytags'=> array('default'=>'bi_SaveTags($org["text"], "")'),
 			'entrybody'=> array('default'=>'$org["text"]', 'format'=>'[[#blogit_entrybody]]$1[[#blogit_entrybodyend]]')
 		))
 	);
