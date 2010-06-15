@@ -25,7 +25,7 @@ SDV($bi_DisplayFuture, 'false');
 SDVA($bi_BlogList, array('blog1'));  #Ensure 'blog1' key remains; you can add keys for other blogs.
 SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
 #cheap hack: strtotime assumes dates with '/' are US 'mm/dd/yyyy' , so need to know when Eu fmt is used
-SDV($bi_DateZone, (substr($XL['blogit']['%d-%m-%Y %H:%M'],0,6) == '%d/%m/' ?'EU' :'US'));
+SDV($bi_DateZone, (substr(XL('%d-%m-%Y %H:%M'),0,6) == '%d/%m/' ?'EU' :'US'));
 
 # ----------------------------------------
 # - Skin settings
@@ -158,9 +158,16 @@ $HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
 # Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_-\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';
 $bi_Pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
+
+#TODO: Move to event handlers
 $bi_EntryType = PageTextVar($bi_Pagename,'entrytype');  #PageTextVar MUST be after PageTextVarPatterns declaration, otherwise on single-entry read, body is NULL.
 bi_debugLog('entryType: '.$bi_EntryType);
-list($bi_Group, $bi_Name) = explode('.', $bi_Pagename);
+/* TODO
+preg_match('!^(.*)(\.|/)(.*)!', $bi_Pagename, $m);
+$bi_Group=$m[1];
+$bi_Name=$m[3];
+*/
+list($bi_Group, $bi_Name) = explode('.', $bi_Pagename);  #TODO: Move to PmForms setup
 if ($bi_Pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"'.htmlentities(stripmagic($_GET['blogid'])).'"';
 if ( bi_Auth('*') ){
 	$EnablePostCaptchaRequired = 0;
@@ -174,6 +181,7 @@ if ( bi_Auth('*') ){
 
 # ----------------------------------------
 # - PmForms Setup
+# TODO: Only do PmForms setup if required by markup on page, ie HandlePmForm?
 include_once($bi_Paths['pmform']);
 $PmFormPostPatterns['/\r/'] = '';  #fixes a bug in pmforms where multi-line entries/comments are stored across multiple lines in the base page
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
@@ -518,8 +526,8 @@ function bi_IsDate($d, $f='%d-%m-%Y %H:%M'){  #accepts a date, and a date format
 }
 function bi_strtotime($d, $z='US'){
 bi_debugLog('Date: '.$d.' ['.$z.']');
-	if (preg_match('!\d{5,}!',$_POST['ptv_entrydate']))  return $d;
-	if ($bi_DateZone=='US')  return strtotime($d);
+	if (preg_match('!\d{5,}!',$d))  return $d;
+	if ($z=='US')  return strtotime($d);
 	else  return strtotime(str_replace('/','-',$d));  #TODO: strtotime(preg_replace('!^'.bi_DateFmtRE($f).'$!','$2/$1/$3 $4:$5',$d));
 }
 function bi_IsNull($e){ return (!empty($e) && substr($e,0,3)!='{*$' && substr($e,0,2)!='{$' && substr($e,0,3)!='{=$' ?$e :''); }
