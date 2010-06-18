@@ -224,7 +224,7 @@ Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
 	'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
 	"blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
-	"PRR(bi_includeSection(\$pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
+	"PRR(bi_includeSection(\$bi_Pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
 $SaveAttrPatterns['/\\(:includesection\\s.*?:\\)/i'] = ' ';  #prevents include sections becoming part of page targets list
 if (IsEnabled($EnableGUIButtons) && @$_REQUEST['bi_mode']!='ajax'){
 	if ($action=='bi_be' || $action=='bi_ne' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry'))
@@ -254,7 +254,8 @@ $MarkupExpr['bi_url'] = 'bi_URL($args)';
 # ----------------------------------------
 # - HandleActions Functions
 # ----------------------------------------
-function bi_HandleBrowse($pagename, $auth = 'read'){  #display of blogit forms is handled by page browse; when user clicks Submit, then pmforms takes over
+# Display of blogit forms is handled by page browse; when user clicks Submit, then pmforms takes over
+function bi_HandleBrowse($src, $auth = 'read'){
 global $bi_ResetPmFormField,$bi_OriginalFn,$bi_GroupFooterFmt,$bi_EntryType,$bi_CommentGroup,$action,$_REQUEST,$Now,$bi_Name,
 	$HandleActions,$GroupPrintHeaderFmt,$GroupPrintFooterFmt,$GroupHeaderFmt,$GroupFooterFmt,$bi_Group,$FmtPV,$CategoryGroup,$AsSpacedFunction;
 
@@ -270,7 +271,7 @@ bi_debugLog('HandleBrowse: '.$action.'['.$_REQUEST['bi_mode'].'] '.$_REQUEST['ta
 			}
 		$GroupHeaderFmt .= '(:includesection "#comment-edit":)';
 	}elseif ($bi_EntryType == 'blog' && $action=='browse'){
-		$bi_EntryStatus = PageTextVar($pagename,'entrystatus');
+		$bi_EntryStatus = PageTextVar($src,'entrystatus');
 		$bi_AuthEditAdmin = bi_Auth('blog-edit,blog-new,blogit-admin');
 		if ( ($bi_EntryStatus!='draft' && (!bi_FuturePost($Now) || $bi_AuthEditAdmin) ) || ($bi_EntryStatus=='draft' && $bi_AuthEditAdmin) )
 			$GroupHeaderFmt .= '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
@@ -284,15 +285,15 @@ bi_debugLog('HandleBrowse: '.$action.'['.$_REQUEST['bi_mode'].'] '.$_REQUEST['ta
 		$GroupPrintFooterFmt .= $GroupFooterFmt;  #Needed if trying to print tag list.
 	}
 	bi_AddMarkup();  #If PmForms fails validation, and redirects to a browse, we need to define markup, since it isn't done as part of PmForm handling
-	$bi_OriginalFn['HandleActions'][($action=='print' ?'print': 'browse')]($pagename, $auth);  #don't restore the original browse, since PmForm might do a handle browse redirect
+	$bi_OriginalFn['HandleActions'][($action=='print' ?'print': 'browse')]($src, $auth);  #don't restore the original browse, since PmForm might do a handle browse redirect
 }
 # Return the comment form DOM if ajax request, or set the GroupHeader to the comment/blog form
 function bi_HandleEdit($src, $auth='blog-edit'){  #action=(bi_be|bi_ne|bi_ce|bi_cr)
-global $action,$_REQUEST,$bi_Pagename,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt,$bi_Pages;
+global $action,$_REQUEST,$HandleActions,$bi_OriginalFn,$bi_EntryType,$GroupHeaderFmt,$bi_Pages;
 bi_debugLog('HandleEdit: '.$action.' - '.$bi_EntryType);
-	$type=($action=='bi_be'||($action=='bi_ne'&&$bi_Pagename==$bi_Pages['admin']) ?'blog' :'comment');
+	$type=( ($action=='bi_be' && $bi_EntryType=='blog') || ($action=='bi_ne'&&$src==$bi_Pages['admin']) ?'blog' :'comment');
 	if ( ($bi_EntryType==$type || $action=='bi_ne' || $action=='bi_cr') && bi_Auth($auth) ){
-		if ($_REQUEST['bi_mode']=='ajax')  bi_AjaxRedirect(array('out'=>MarkupToHTML($bi_Pagename, '(:includesection "#' .$type .'-edit":)'), 'result'=>'success'));
+		if ($_REQUEST['bi_mode']=='ajax')  bi_AjaxRedirect(array('out'=>MarkupToHTML($src, '(:includesection "#' .$type .'-edit":)'), 'result'=>'success'));
 		else  $GroupHeaderFmt .= '(:includesection "#' .$type .'-edit":)';
 	}
 	if ($type=='blog')  bi_AddMarkup();  #define markup to prevent PTV field being displayed at end of page
@@ -334,7 +335,7 @@ global $_GET,$GroupHeaderFmt;
 }
 function bi_HandleProcessForm ($src, $auth='read'){  #$action=pmform
 global $bi_ResetPmFormField,$_POST,$bi_EnablePostDirectives,$ROSPatterns,$CategoryGroup,
-	$bi_Pagename,$bi_DefaultGroup,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$GroupHeaderFmt,$bi_DateZone,
+	$bi_DefaultGroup,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$GroupHeaderFmt,$bi_DateZone,
 	$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired;
 bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 	$bi_ResetPmFormField = array();
@@ -368,7 +369,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		$_POST['ptv_entrytype'] = 'blog';  #Prevent spoofing.
 		$_POST['ptv_entrytitle'] = (empty($title) ?$pg :$_POST['ptv_entrytitle']);  #use either the url or the original title (not the clean title)
 		$_POST['ptv_entryurl'] = (empty($title)&&empty($pg) ?$_POST['ptv_entryurl']
-			:MakePageName($bi_Pagename, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .(empty($pg) ?$title :$pg) ));
+			:MakePageName($src, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .(empty($pg) ?$title :$pg) ));
 		$_POST['ptv_entrytags'] = implode(', ', array_unique(explode(', ',$_POST['ptv_entrytags'])));  #remove duplicates
 		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_entryauthor'];
@@ -379,8 +380,8 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_commenttext'] = rtrim($_POST['ptv_commenttext'],"\n\r\x0B")."\n";  #ensures markup is closed correctly (eg, links at end of comment)
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
-		$ce=preg_match($bi_CommentPattern,$bi_Pagename) && bi_Auth('comment-edit');  #editing an existing comment?
-		$_POST['ptv_commentapproved'] = ($ce ?$_POST['ptv_commentapproved'] :(bi_Auth('comment-approve,blogit-admin '.$bi_Pagename) ?'true' :$bi_DefaultCommentStatus));
+		$ce=preg_match($bi_CommentPattern,$src) && bi_Auth('comment-edit');  #editing an existing comment?
+		$_POST['ptv_commentapproved'] = ($ce ?$_POST['ptv_commentapproved'] :(bi_Auth('comment-approve,blogit-admin '.$src) ?'true' :$bi_DefaultCommentStatus));
 		$_POST['ptv_commentdate'] = ($ce ?$_POST['ptv_commentdate'] :$Now);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_commentauthor'];
 	}
@@ -585,6 +586,7 @@ global $AuthList,$bi_Auth,$bi_Pagename,$EnableAuthUser,$bi_Pages,$bi_OriginalFn,
 # ----------------------------------------
 # - Internal Functions
 # ----------------------------------------
+# Generates a list of all categories in use, for Ajax tag suggest
 function bi_CategoryList(){
 global $CategoryGroup;
 	$c = ListPages('/^' .$CategoryGroup .'\./');
@@ -629,12 +631,12 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']);
 }
 # Direct back to the refering page or $src
 function bi_Redirect($src='', $result=''){
-global $bi_Pagename,$_REQUEST;
+global $_REQUEST;
 bi_debugLog('Redirect');
 	if ($src=='ajax' || $_REQUEST['bi_mode']=='ajax')  { bi_AjaxRedirect($result); }  #don't redirect ajax requests, just send back json object
 	$history=bi_GetHistory();
 	#use $src if provided, or history is empty; use pagename if $src and history are empty; use history if no $src and history exists.
-	$r = ($src>''||empty($history) ?FmtPageName('$PageUrl', bi_BasePage(($src>'' ?$src :$bi_Pagename))) :$history);
+	$r = ($src>''||empty($history) ?FmtPageName('$PageUrl', bi_BasePage(($src>'' ?$src :$src))) :$history);
 bi_debugLog('Redirecting: '.$r);
 	bi_storeCookie($r);
 
