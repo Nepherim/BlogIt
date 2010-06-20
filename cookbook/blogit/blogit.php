@@ -34,7 +34,7 @@ SDV($bi_AjaxMsgTimer, 3000);  #Number of milli-seconds that the top ajax message
 #key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
 SDVA($bi_Ajax, array('bi_ce'=>'ajax', 'bi_ca'=>'ajax', 'bi_cua'=>'ajax', 'bi_be'=>'normal-ajax', 'bi_ne'=>'normal-ajax', 'bi_del'=>'ajax'));
 SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tells blogit where to find content used for dynamic ajax page updates
-	'blog-entry' => '.blogit-post',  #container for entry in single-entry view, which should include the ajax edit-link, but not the Blog title.
+	'blog-entry' => '.blogit-post',  #container for entry in single-entry view, which should include the ajax edit-link.
 	'blog-entry-summary' => '.blogit-post-summary',  #surrounds a blog entry in multi-entry view (in #multi-entry-view); cannot be the same CSS path used for blog-entry
 	'blog-list-row' => '.blogit-blog-list-row',  #used in the grid displaying draft/approved blog entries. Usually applied to the row for each entry (in #blog-list-view)
 	'approved-comment-count' => '.blogit-comment-count a',  #count of comments for an entry
@@ -269,7 +269,6 @@ bi_debugLog('HandleBrowse: '.$action.'['.$_REQUEST['bi_mode'].'] '.$_REQUEST['ta
 				$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
 				$FmtPV['$bi_Default_'.$k]='"'.$v.'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
 			}
-		$GroupHeaderFmt .= '(:includesection "#comment-edit":)';
 	}elseif ($bi_EntryType == 'blog' && $action=='browse'){
 		$bi_EntryStatus = PageTextVar($src,'entrystatus');
 		$bi_AuthEditAdmin = bi_Auth('blog-edit,blog-new,blogit-admin');
@@ -340,8 +339,8 @@ global $bi_ResetPmFormField,$_POST,$bi_EnablePostDirectives,$ROSPatterns,$Catego
 bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 	$bi_ResetPmFormField = array();
 	#Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
-	if ( $_POST['target']=='blogit-entry' )  $GroupHeaderFmt .= '(:includesection "#blog-edit":)';
-	if (@$_POST['target']=='blogit-entry' && (@$_POST['save']||@$_POST['bi_mode']=='ajax')){  #jquery doesn't serialize submit buttons
+	if ($_POST['target']=='blogit-entry')  $GroupHeaderFmt .= '(:includesection "#blog-edit":)';
+	if ($_POST['target']=='blogit-entry' && (@$_POST['save']||@$_POST['bi_mode']=='ajax')){  #jquery doesn't serialize submit buttons
 		bi_decodeUTF8($_POST);  #ajax posts from jquery are always utf8
 		#Allow future posts to create tag -- otherwise may never happen, since user may never edit the post again.
 		if ( $_POST['ptv_entrystatus']!='draft' )  $AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
@@ -518,6 +517,7 @@ global $bi_DateFmtRE;
 	return preg_replace(array_keys($bi_DateFmtRE), array_values($bi_DateFmtRE),$f);
 }
 function bi_IsDate($d, $f='%d-%m-%Y %H:%M'){  #accepts a date, and a date format (not a regular expression)
+bi_debugLog('IsDate: '.$d.' ['.$f.']');
 	if (empty($d))  return true;  #false causes two date invalid messages.
 	$f=XL($f);
 	if (preg_match('!\d{5,}!',$d))  $d=strftime($f,$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
@@ -610,7 +610,7 @@ bi_debugLog('bi_SendAjax: '.$markup);
 function bi_AjaxRedirect($result=''){
 global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action,$bi_Name,$bi_Group,$bi_Pages,$bi_SkinClasses;
 bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']);
-	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 is pmform failed (invalid captcha, etc)
+	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 if pmform failed (invalid captcha, etc)
 		if ($_REQUEST['target']=='blogit-comments'){
 			bi_SendAjax('(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['comment-admin-list'] ?'#unapproved-comments' :'#comments-pagelist')
 				.' commentid=' .$bi_CommentPage.' entrycomments=readonly":)',
@@ -761,9 +761,9 @@ global $Charset;
 #jQuery will always POST with UTF8, even if charset parameter is set, since it uses encodeURIComponent() ref: http://stackoverflow.com/questions/657871/another-jquery-encoding-problem-on-ie
 function bi_decodeUTF8(&$a,$p='ptv_'){
 global $Charset,$_POST;
-	if ($_POST['bi_mode']!='ajax' && strtoupper($Charset)!='UTF-8')  return;  #Conversion only required is submitted from jquery ajax request
-	foreach ($a as $k=>$v)  if (substr($k,0,strlen($p))==$p)
-		$a[$k]=iconv('UTF-8',$Charset,$v); #TODO: stripslashes(nl2br($v)); #mb_convert_encoding($v,$Charset,'UTF-8');
+	if ($_POST['bi_mode']=='ajax' && strtoupper($Charset)!='UTF-8')  #Conversion only required is submitted from jquery ajax request
+		foreach ($a as $k=>$v)  if (substr($k,0,strlen($p))==$p)
+			$a[$k]=iconv('UTF-8',$Charset,$v); #TODO: stripslashes(nl2br($v)); #mb_convert_encoding($v,$Charset,'UTF-8');
 }
 #json_encode only in PHP5.2+. Rather than overriding json_encode, and supporting two versions. ref http://www.mike-griffiths.co.uk/php-json_encode-alternative/
 function bi_json_encode($a=false){
