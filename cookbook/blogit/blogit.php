@@ -113,6 +113,7 @@ bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','Ca
 bi_setFmtPVA(array('$bi_Pages'=>$bi_Pages));
 bi_setFmtPVA(array('$bi_SkinSettings'=>$bi_SkinSettings));
 $FmtPV['$bi_Mode']='$_REQUEST["bi_mode"]';
+$FmtPV['$bi_BlogGroups']='"'.str_replace('|',',',$bi_BlogGroups).'"';
 
 # ----------------------------------------
 # - PmWiki Config
