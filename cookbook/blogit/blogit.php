@@ -104,6 +104,7 @@ SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''  #either regexes to include (
 $bi_Ajax['bi_cr']='ajax'; $bi_Ajax['bi_bip']='ajax';  #comment reply is always ajax
 SDV($PmFormRedirectFunction,'bi_Redirect');
 $bi_Forms=array('blogit-entry','blogit-comments');  #needs to be before cookies
+$bi_MBEnabled = ($Charset=='UTF-8'&&function_exists(mb_substr));
 
 # ----------------------------------------
 # - Usable on Wiki Pages
@@ -443,16 +444,19 @@ function blogitMU_list($name, $text){
 		$t .= '(:input '. ($i==1 ?'hidden' :'select') .' name=' .$name .' value="' .$k .'" label="' .XL($k) .'" id="' .$var .'":)';
 	return ($i==1?'':$label).$t;
 }
-# options is the length of the string, or use $bi_CommentSideBarLen is empty
-function blogitMU_cleantext($options, $text){
-global $bi_CommentSideBarLen, $bi_Pagename, $bi_UnstyleFn;
-# SteP fixes: allow for unstyling; honor $options when empty($m); break $text on a word boundary
+function blogitMU_cleantext($len, $text){
+global $bi_CommentSideBarLen,$bi_Pagename,$bi_UnstyleFn,$Charset,$bi_MBEnabled;
+# SteP fixes: allow for unstyling; honor $options when empty($m)
+	$text = trim($text);
 	if($bi_UnstyleFn>'')	$text = $bi_UnstyleFn($bi_Pagename, $text);
-	$l = (empty($options) ?$bi_CommentSideBarLen :$options);
-	$m = strpos($text, "\n");
-	$m = ( empty($m) ?$l :min($m, $l) );
-	preg_match('/^.{0,' .$m .'}\b/', $text, $match);
-	return trim($match[0]);
+	$len = (empty($len) ?$bi_CommentSideBarLen :$len);
+	$nl = ($bi_MBEnabled ?mb_strpos($text, "\n") :strpos($text, "\n"));
+	$max = ( empty($nl) ?$len :min($nl, $len) );  #truncate at either a newline, or at max length, which ever is shorter
+	if( ($bi_MBEnabled ?mb_strlen($text,$Charset) :strlen($text)) > $max ){
+		$text = ($bi_MBEnabled ?mb_substr($text,0,$max,$Charset) :substr($text,0,$max));
+		if ( false !== ($i=strrpos($text,' ')) )  $text = substr($text,0,$i);  #substr works on utf8 in this case, since we found a space
+	}
+	return $text;
 }
 function bi_Link($pre, $page, $action, $txt, $post){  #valid actions: ajax, normal, ajax-normal, normal-ajax
 global $bi_Ajax,$PubDirUrl;
@@ -761,7 +765,7 @@ global $Charset;
 #jQuery will always POST with UTF8, even if charset parameter is set, since it uses encodeURIComponent() ref: http://stackoverflow.com/questions/657871/another-jquery-encoding-problem-on-ie
 function bi_decodeUTF8(&$a,$p='ptv_'){
 global $Charset,$_POST;
-	if ($_POST['bi_mode']=='ajax' && strtoupper($Charset)!='UTF-8')  #Conversion only required is submitted from jquery ajax request
+	if ($_POST['bi_mode']=='ajax' && $Charset!='UTF-8')  #Conversion only required is submitted from jquery ajax request
 		foreach ($a as $k=>$v)  if (substr($k,0,strlen($p))==$p)
 			$a[$k]=iconv('UTF-8',$Charset,$v); #TODO: stripslashes(nl2br($v)); #mb_convert_encoding($v,$Charset,'UTF-8');
 }
