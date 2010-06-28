@@ -641,12 +641,12 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']);
 }
 # Direct back to the refering page or $src
 function bi_Redirect($src='', $result=''){
-global $_REQUEST;
+global $_REQUEST,$bi_Pagename;
 bi_debugLog('Redirect');
 	if ($src=='ajax' || $_REQUEST['bi_mode']=='ajax')  { bi_AjaxRedirect($result); }  #don't redirect ajax requests, just send back json object
 	$history=bi_GetHistory();
 	#use $src if provided, or history is empty; use pagename if $src and history are empty; use history if no $src and history exists.
-	$r = ($src>''||empty($history) ?FmtPageName('$PageUrl', bi_BasePage($src>'' ?$src :$src)) :$history);  #TODO: $src conditional!
+	$r = ($src>''||empty($history) ?FmtPageName('$PageUrl', bi_BasePage($src>'' ?$src :$bi_Pagename)) :$history);
 bi_debugLog('Redirecting: '.$r);
 	bi_storeCookie($r);
 
