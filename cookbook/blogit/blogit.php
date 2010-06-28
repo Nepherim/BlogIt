@@ -240,6 +240,7 @@ $Conditions['bi_isdate'] = 'bi_IsDate($condparm)';
 $Conditions['bi_auth'] = 'bi_Auth($condparm)';
 $Conditions['bi_isnull'] = 'bi_IsNull($condparm)==""';
 $Conditions['bi_lt'] = 'bi_LT($condparm)';
+$Conditions['bi_baseptv'] = 'bi_BasePTV($condparm)';
 
 # ----------------------------------------
 # - Markup Expressions
@@ -510,6 +511,11 @@ function bi_includeSection($pagename, $inclspec){
 # ----------------------------------------
 # - Condition Functions
 # ----------------------------------------
+function bi_IsNull($e){ return (!empty($e) && substr($e,0,3)!='{*$' && substr($e,0,2)!='{$' && substr($e,0,3)!='{=$' ?$e :''); }
+function bi_BasePTV($arg){
+	$arg = ParseArgs($arg);
+	return PageTextVar(bi_BasePage($arg[''][0]),'entrystatus') == $arg[''][1];
+}
 function bi_IsPage($pn){
 global $bi_Pagename;
 	$mp = MakePageName($bi_Pagename, $pn);
@@ -536,7 +542,6 @@ bi_debugLog('Date: '.$d.' ['.$z.']');
 	if ($z=='US')  return strtotime($d);
 	else  return strtotime(str_replace('/','-',$d));  #TODO: strtotime(preg_replace('!^'.bi_DateFmtRE($f).'$!','$2/$1/$3 $4:$5',$d));
 }
-function bi_IsNull($e){ return (!empty($e) && substr($e,0,3)!='{*$' && substr($e,0,2)!='{$' && substr($e,0,3)!='{=$' ?$e :''); }
 function bi_LT($arg){
 	$arg = ParseArgs($arg);
 	return (@$arg[''][0]<@$arg[''][1]);
@@ -641,7 +646,7 @@ bi_debugLog('Redirect');
 	if ($src=='ajax' || $_REQUEST['bi_mode']=='ajax')  { bi_AjaxRedirect($result); }  #don't redirect ajax requests, just send back json object
 	$history=bi_GetHistory();
 	#use $src if provided, or history is empty; use pagename if $src and history are empty; use history if no $src and history exists.
-	$r = ($src>''||empty($history) ?FmtPageName('$PageUrl', bi_BasePage(($src>'' ?$src :$src))) :$history);
+	$r = ($src>''||empty($history) ?FmtPageName('$PageUrl', bi_BasePage($src>'' ?$src :$src)) :$history);  #TODO: $src conditional!
 bi_debugLog('Redirecting: '.$r);
 	bi_storeCookie($r);
 
