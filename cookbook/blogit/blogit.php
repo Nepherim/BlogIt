@@ -247,8 +247,7 @@ $Conditions['bi_baseptv'] = 'bi_BasePTV($condparm)';
 # if [0] is null or {$... then returns [1]; if [0] != null then returns ([2] or [0] if [2] is null)
 $MarkupExpr['bi_ifnull'] = '( bi_IsNull($args[0])!="" ?( bi_IsNull($args[2])=="" ?$args[0] :$args[2]) :$args[1])';
 # Calls to bi_encode should NOT be quoted: {(bi_encode {*$Title})} NOT {(bi_encode '{*$Title}')}, as titles with ' will terminate early.
-# $args will contain each 'word' as an array element
-$MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull(implode(\' \', $args)), ENT_QUOTES)';
+$MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull($params), ENT_QUOTES)';  #$params contains the full content of the ME before splitting to $args
 # bi_param "group" "group_val"   Returns: group="group_val" if group_val != ""; else returns ""   0:param name; 1:value
 $MarkupExpr['bi_param'] = '( bi_IsNull($args[1])=="" ?"" :"$args[0]=\"$args[1]\"")';
 $MarkupExpr['bi_base'] = 'bi_BasePage($args[0])';
@@ -261,7 +260,6 @@ $MarkupExpr['bi_url'] = 'bi_URL($args)';
 function bi_HandleBrowse($src, $auth = 'read'){
 global $bi_ResetPmFormField,$bi_OriginalFn,$bi_GroupFooterFmt,$bi_EntryType,$bi_CommentGroup,$action,$_REQUEST,$Now,$bi_Name,
 	$HandleActions,$GroupPrintHeaderFmt,$GroupPrintFooterFmt,$GroupHeaderFmt,$GroupFooterFmt,$bi_Group,$FmtPV,$CategoryGroup,$AsSpacedFunction;
-
 bi_debugLog('HandleBrowse: '.$action.'['.$_REQUEST['bi_mode'].'] '.$_REQUEST['target']);
 	if ($bi_Group == $bi_CommentGroup){ bi_Redirect(); return; }  #After editing/deleting a comment page, and after HandlePmForm() has done a redirect()
 	if ($_REQUEST['bi_mode']=='ajax'){ bi_AjaxRedirect(); return; }
