@@ -622,7 +622,8 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']);
 		if ($_REQUEST['target']=='blogit-comments'){
 			bi_SendAjax('(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['comment-admin-list'] ?'#unapproved-comments' :'#comments-pagelist')
 				.' commentid=' .$bi_CommentPage.' entrycomments=readonly":)',
-				($bi_CommentPage==$bi_Pagename ?'Successfully updated comment.' :'Successfully added new comment.')
+				($bi_CommentPage==$bi_Pagename ?'Successfully updated comment.'
+					:'Successfully added new comment.'.(PageTextVar($bi_CommentPage,'commentapproved')=='false' ?'<br />'. XL('All comments are reviewed before being displayed.') :''))
 			);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
 			bi_SendAjax((isset($_REQUEST['bi_context'])  #might have clicked from many places. We only care about a few.
@@ -724,8 +725,7 @@ global $bi_OriginalFn,$bi_EntryType,$bi_Group,$CategoryGroup,$action;
 }
 function bi_FuturePost($now){
 global $bi_Pagename,$bi_DisplayFuture;
-	$bi_EntryDate = PageTextVar($bi_Pagename,'entrydate');
-	return ($bi_EntryDate>$now || $bi_DisplayFuture=='true');
+	return (PageTextVar($bi_Pagename,'entrydate') > $now || $bi_DisplayFuture=='true');
 }
 function bi_JXL(){  #create javascript array holding all XL translations of text used client-side
 	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:', 'Commenter IP: ',
