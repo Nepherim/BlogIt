@@ -15,7 +15,9 @@ jQuery(document).ready(function($){
 		return true;
 	});
 	//adds ajax handler, and validation to forms already on the page (ie, comment form)
-	BlogIt.fn.ajaxForm($(BlogIt.pm['skin-classes']['comment-form']).closest('form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, 'add');
+//	BlogIt.fn.ajaxForm($(BlogIt.pm['skin-classes']['comment-form']).closest('form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, 'add');
+// TODO: Use commentblock, since 'comment-form' includes the submit/cancel buttons on comment edit 'normal'
+	BlogIt.fn.ajaxForm($('#commentblock form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, 'add');
 
 	//add form validation to non-ajax forms (ie, Edit form in normal mode)
 	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
