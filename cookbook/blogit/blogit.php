@@ -17,7 +17,7 @@ SDV($bi_BlogGroups, $bi_DefaultGroup);  #OPTIONAL: Pipe separated list of Blog g
 SDV($CategoryGroup, 'Tags');  #[1]
 SDV($bi_AuthorGroup, 'Profiles');
 SDV($bi_CommentGroup, 'Comments');
-SDV($bi_CommentsEnabled, 'true');
+SDV($bi_CommentsEnabled, 'open');
 SDV($bi_DefaultCommentStatus, (IsEnabled($EnablePostCaptchaRequired) ?'true' :'false') );  #auto-approve comments only if captcha is enabled
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_EntriesPerPage, 15);
@@ -41,10 +41,10 @@ SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tel
 	'unapproved-comment-count' => '.blogit-unapproved-comment-count a',  #count of unapproved comments for an entry
 	'comment' => '.comment',  #MUST be a single css class NOT a css-path. applied to each block containing a single comment, usually LI elements (in #comment-view-all and #comment-view-admin)
 	'comment-admin-list' => '.blogit-comment-admin-list',  #surrounds the unapproved-comment list section (in #comment-view-admin)
-	'comment-list' => '.blogit-comment-list',  #pointer to the entire comment list, excluding headers, etc.
-	'comment-list-wrapper' => '#blogit-comment-list',  #pointer to a wrapper around the comment-list; used for the first comment, where 'comment-list' may not exist. Should not include headers.
+	'comment-list' => '.blogit-comment-list',  #pointer to the entire comment list, excluding headers, and comment form. Contained in #comments-pagelist, usually not changed.
+	'comment-list-wrapper' => '#blogit-comment-list',  #pointer to a wrapper around the comment-list; used for the first comment, where 'comment-list' may not exist. Should not include headers or form.
 	'blog-form' => '#wikiedit.blogit-blog-form',  #pointer to the wrapper containing the blog-entry FORM object
-	'comment-form' => '#wikitext .blogit-comment-form'  #pointer to the wrapper containing the comment-entry FORM object
+	'comment-form' => '#wikitext .blogit-comment-form'  #pointer to the wrapper containing the comment-entry FORM object (both ajax and normal entry)
 ));
 SDVA($bi_SkinSettings, array(
 	'ajax_textarea_rows' => '18'  #make sure whole ajax dialog fits on low res monitors
@@ -61,9 +61,10 @@ SDV($bi_EnablePostDirectives, true);  #Set to true to allow posting of directive
 SDV($bi_StatAction, $TotalCounterAction);  #set by TotalCounter cookbook
 SDV($bi_Cookie, $CookiePrefix.'blogit-');
 SDV($bi_UnstyleFn, '');
+SDV($bi_CharsetFn, 'bi_CharsetFn');  #Possibly replace with fn using mb_convert_encoding($v,$Charset,'UTF-8');
 SDV($HTMLHeaderFmt['blogit-meta-tag'], '<meta name="generator" content="BlogIt ' .$RecipeInfo['BlogIt']['Version'] .'" />');
-bi_SDVSA($bi_StatusType, array('draft', 'publish', 'sticky'));
-bi_SDVSA($bi_CommentType, array('open', 'readonly', 'none'));
+bi_SDVSA($bi_StatusType, array('draft', 'publish', 'sticky'));  #adding element is okay; removing elements may loose functionality
+bi_SDVSA($bi_CommentType, array('open', 'readonly', 'none'));  #adding element is okay; removing elements may loose functionality
 bi_SDVSA($bi_CommentApprovalType, array('true', 'false'));
 SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
@@ -320,8 +321,8 @@ global $_GET,$GroupHeaderFmt;
 	HandleDispatch($src, 'browse');
 }
 function bi_HandleProcessForm ($src, $auth='read'){  #$action=pmform
-global $bi_ResetPmFormField,$_POST,$_REQUEST,$bi_EnablePostDirectives,$ROSPatterns,$CategoryGroup,
-	$bi_DefaultGroup,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$GroupHeaderFmt,$bi_DateZone,$bi_Forms,
+global $bi_ResetPmFormField,$_POST,$_REQUEST,$ROSPatterns,$CategoryGroup,
+	$bi_DefaultGroup,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$GroupHeaderFmt,$bi_DateZone,$bi_Forms,$bi_EnablePostDirectives,$PmFormPostPatterns,
 	$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired;
 bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 	if ($_POST['cancel'] && in_array($_REQUEST['target'],$bi_Forms))  bi_Redirect();  #ajax cancel is handled client-side
@@ -334,7 +335,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		if ( $_POST['ptv_entrystatus']!='draft' )  $AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
 
 		# Null out the PostPatterns so that directive markup doesn't get replaced.
-		if ($bi_EnablePostDirectives){ unset($GLOBALS['PmFormPostPatterns']['/\\(:/']); unset($GLOBALS['PmFormPostPatterns']['/:\\)/']); }
+		if ($bi_EnablePostDirectives)  $PmFormPostPatterns=array();
 
 		# Change field delimiters from (:...:...:) to section-tags [[#blogit_XXX]] for tags and body
 		$ROSPatterns['/\(:entrybody:(.*?)(:\))$$/s'] = '[[#blogit_entrybody]]$1[[#blogit_entrybodyend]]';  #entrybody MUST be the last variable.
@@ -362,7 +363,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_entryauthor'];
 
 	#only set defaults if we're not editing the comment
-	}elseif ($bi_CommentsEnabled=='true' && @$_POST['target']=='blogit-comments'){
+	}elseif ($bi_CommentsEnabled=='open' && $_POST['target']=='blogit-comments'){
 		bi_decodeUTF8($_POST);  #ajax posts from jquery are always utf8
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_commenttext'] = rtrim($_POST['ptv_commenttext'],"\n\r\x0B")."\n";  #ensures markup is closed correctly (eg, links at end of comment)
@@ -372,7 +373,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		$_POST['ptv_commentdate'] = ($ce ?$_POST['ptv_commentdate'] :$Now);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_commentauthor'];
 	}
-bi_debugLog('Calling HandlePmForm');
+	bi_debugLog('Calling HandlePmForm');
 	$bi_OriginalFn['HandleActions']['pmform']($src, $auth);  #usually HandlePmForm()
 }
 function bi_HandleDelete($src, $auth='comment-edit'){  #action=bi_del
@@ -429,7 +430,7 @@ function blogitMU_list($name, $text){
 	list($var, $label) = explode('/', $text,2);
 	$i = count($GLOBALS[$var]);
 	foreach ($GLOBALS[$var] as $k)
-		$t .= '(:input '. ($i==1 ?'hidden' :'select') .' name=' .$name .' value="' .$k .'" label="' .XL($k) .'" id="' .$var .'":)';
+		$t .= '(:input '. ($i==1 ?'hidden' :'select') .' name=' .$name .' value="' .$k .'" label="' .XL($k) .'" id="' .$var .'" tabindex=1:)';
 	return ($i==1?'':$label).$t;
 }
 function blogitMU_cleantext($len, $text){
@@ -474,7 +475,7 @@ global $bi_AuthorGroup,$bi_Pagename,$bi_CommentsEnabled,$bi_LinkToCommentSite,$b
 		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt))
 			?bi_Link($args['pre_text'], $txt, 'bi_bip', '$[block]', $args['post_text']) :'');
 		case 'tags': return ($txt>'' ?$args['pre_text'].bi_SaveTags('', $txt, 'display').$args['post_text'] :'');
-		case 'commentcount': return ($args['status']!='none' && $bi_CommentsEnabled=='true'  #TODO: Since comments are displayed when CommentsEnabled=='false', count should be displayed as well
+		case 'commentcount': return ($args['status']!='none' && $bi_CommentsEnabled!='none'
 			?$args['pre_text'].'[['.$args['group'].'.'.$args['name'].'#blogit-comment-list | '.
 				'(:includesection "#comments-count-pagelist entrygroup=\''.$args['group'].'\' entryname=\''.$args['name'].'\' commentstatus=true":)'.
 				$txt.']]'.$args['post_text']
@@ -553,8 +554,8 @@ global $action, $bi_OriginalFn, $bi_CommentsEnabled, $bi_CommentGroup,$bi_Pagena
 	#$bi_Pagename is always the blog page
 	# Set level to read if a non-authenticated user is posting a comment.
 	if ( (($level=='edit') || ($level=='publish'))
-		&& $action=='pmform' && PageTextVar($src,'entrytype') == 'blog'
-		&& $bi_CommentsEnabled=='true' && preg_match("/^" .$bi_CommentGroup ."\./", $pn) ){
+		&& $action=='pmform' && PageTextVar($bi_Pagename,'entrytype') == 'blog'  #TODO!!!!!! not $src, but $bi_Pagename
+		&& $bi_CommentsEnabled!='none' && preg_match("/^" .$bi_CommentGroup ."\./", $pn) ){
 		$level = 'read';
 		$authprompt = false;
 	}
@@ -751,12 +752,13 @@ global $Charset;
 	@header("Content-type: application/json; charset=$Charset");  #force encoding, otherwise jQuery assumes UTF8
 	echo bi_json_encode($a);
 }
+function bi_CharsetFn($val, $src='', $tgt='UTF-8'){ return iconv($tgt, ($src=='' ?$GLOBALS['Charset'] :$src), $val); }
 #jQuery will always POST with UTF8, even if charset parameter is set, since it uses encodeURIComponent() ref: http://stackoverflow.com/questions/657871/another-jquery-encoding-problem-on-ie
 function bi_decodeUTF8(&$a,$p='ptv_'){
-global $Charset,$_POST;
+global $Charset,$_POST,$bi_CharsetFn;
 	if ($_POST['bi_mode']=='ajax' && $Charset!='UTF-8')  #Conversion only required is submitted from jquery ajax request
 		foreach ($a as $k=>$v)  if (substr($k,0,strlen($p))==$p)
-			$a[$k]=iconv('UTF-8',$Charset,$v); #TODO: stripslashes(nl2br($v)); #mb_convert_encoding($v,$Charset,'UTF-8');
+			$a[$k]= $bi_CharsetFn($v);  #TODO: stripslashes(nl2br($v)); #mb_convert_encoding($v,$Charset,'UTF-8');
 }
 #json_encode only in PHP5.2+. Rather than overriding json_encode, and supporting two versions. ref http://www.mike-griffiths.co.uk/php-json_encode-alternative/
 function bi_json_encode($a=false){
