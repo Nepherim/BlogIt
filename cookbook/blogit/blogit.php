@@ -5,7 +5,7 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2010-06-12';
+$RecipeInfo['BlogIt']['Version'] = '2010-07-10';
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
 
 # ----------------------------------------
@@ -106,7 +106,6 @@ SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''  #either regexes to include (
 $bi_Ajax['bi_cr']='ajax'; $bi_Ajax['bi_bip']='ajax';  #comment reply is always ajax
 SDV($PmFormRedirectFunction,'bi_Redirect');
 $bi_Forms=array('blogit-entry','blogit-comments');  #needs to be before cookies
-$bi_MBEnabled = ($Charset=='UTF-8'&&function_exists(mb_substr));
 
 # ----------------------------------------
 # - Usable on Wiki Pages
@@ -435,8 +434,10 @@ function blogitMU_list($name, $text){
 	return ($i==1?'':$label).$t;
 }
 function blogitMU_cleantext($len, $text){
-global $bi_CommentSideBarLen,$bi_Pagename,$bi_UnstyleFn,$Charset,$bi_MBEnabled;
+global $bi_CommentSideBarLen,$bi_Pagename,$bi_UnstyleFn,$Charset;
 # SteP fixes: allow for unstyling; honor $options when empty($m)
+	$bi_MBEnabled = ($Charset=='UTF-8'&&function_exists(mb_substr));
+	bi_debugLog('cleanText: '.($bi_MBEnabled ?'MB Enabled' :'MB NOT enabled'));
 	$text = trim($text);
 	if($bi_UnstyleFn>'')	$text = $bi_UnstyleFn($bi_Pagename, $text);
 	$len = (empty($len) ?$bi_CommentSideBarLen :$len);
