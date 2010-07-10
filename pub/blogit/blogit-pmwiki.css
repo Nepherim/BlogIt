@@ -1,0 +1,21 @@
+fieldset { border: none; }
+#wikiedit .inputbutton { margin:2px; }
+.blogit-clear { clear: both; }
+.blogit-listmore { text-align:right; }
+.page-navigation, .blogit-page-navigation { clear: both; margin: 1.2em 0; padding: 20px 0; }
+.blogit-older-entries { float: right; }
+.blogit-newer-entries { float: left; }
+.blogit-older-entries, .blogit-newer-entries { padding-right: 5px; font-size: 1.3em; font-weight: bold; }
+.blogit-post-summary { margin-top: 2em; }
+.blogit-post-summary > h2 { margin-bottom:0.3em; }
+.blogit-post-summary, .entry { clear: both; }
+.blogit-meta-data-head > h5 { margin-top:0; font-weight: normal; font-style: italic; }
+.blogit-meta-data-footer, #commentblock h2 { margin-top: 1em; }
+.blogit-readmore { display: block; margin-top: 1.7em; padding-bottom: .5em; font-weight: bold; }
+.blogit-post { margin-top: -12px; margin-bottom:1.2em; }
+.blogit-post-body { margin-top: 1em; margin-bottom: 1.5em; }
+.blogit-tags, .blogit-comment-count { margin-right: 1.2em; display: inline; }
+.blogit-comment-list li { margin-top: 1em; }
+.blogit-submit-row { padding-top: 10px; }
+.blogit-submit-row img { vertical-align: bottom; padding-bottom: 1px; }
+.blogit-yearly-archive .blogit-entry-date { font-size:.8em; padding-left:20px; font-style:italic; }

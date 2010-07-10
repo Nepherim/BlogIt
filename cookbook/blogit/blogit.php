@@ -30,6 +30,7 @@ SDV($bi_DateZone, (substr(XL('%d-%m-%Y %H:%M'),0,6) == '%d/%m/' ?'EU' :'US'));
 # ----------------------------------------
 # - Skin settings
 SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));  #Needed if skin is set in group config, which is processed after main config
+SDV($PageCSSListFmt['pub/blogit/blogit-pmwiki.css'],'$PubDirUrl/blogit/blogit-pmwiki.css');  #Auto-load BlogIt PmWiki css file
 SDV($bi_AjaxMsgTimer, 3000);  #Number of milli-seconds that the top ajax message is displayed for
 #key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
 SDVA($bi_Ajax, array('bi_ce'=>'ajax', 'bi_ca'=>'ajax', 'bi_cua'=>'ajax', 'bi_be'=>'normal-ajax', 'bi_ne'=>'normal-ajax', 'bi_del'=>'ajax'));
@@ -758,7 +759,7 @@ function bi_decodeUTF8(&$a,$p='ptv_'){
 global $Charset,$_POST,$bi_CharsetFn;
 	if ($_POST['bi_mode']=='ajax' && $Charset!='UTF-8')  #Conversion only required is submitted from jquery ajax request
 		foreach ($a as $k=>$v)  if (substr($k,0,strlen($p))==$p)
-			$a[$k]= $bi_CharsetFn($v);  #TODO: stripslashes(nl2br($v)); #mb_convert_encoding($v,$Charset,'UTF-8');
+			$a[$k]= $bi_CharsetFn($v);
 }
 #json_encode only in PHP5.2+. Rather than overriding json_encode, and supporting two versions. ref http://www.mike-griffiths.co.uk/php-json_encode-alternative/
 function bi_json_encode($a=false){
