@@ -1,4 +1,4 @@
-// blogit.js 2010-06-12
+// blogit.js 2010-07-10
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	$("<div/>").attr({id:"dialog"}).appendTo("body");
@@ -14,8 +14,8 @@ jQuery(document).ready(function($){
 		$form[0].reset();  //assume we loaded with valid data.
 		return true;
 	});
-	//adds ajax handler, and validation to forms already on the page (ie, comment form)
-	BlogIt.fn.ajaxForm($(BlogIt.pm['skin-classes']['comment-form']).closest('form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, 'add');
+	//adds ajax handler, and validation to forms already on the page (ie, comment form); need to exclude cancel/submit buttons on 'normal' comment edit
+	BlogIt.fn.ajaxForm($(BlogIt.pm['skin-classes']['comment-list-wrapper']+' + form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, 'add');
 
 	//add form validation to non-ajax forms (ie, Edit form in normal mode)
 	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
@@ -173,12 +173,13 @@ BlogIt.fn = function($){
 				}
 			});
 		},
-		//defines the actions to perform when clicking Submit/Cancel from dialogs
+		//defines the actions to perform when clicking Submit/Cancel from dialogs, and comment form on entry form
 		ajaxForm: function(frm, rulesFn, submitFn, mode, eventTarget){
 			BlogIt.fn.addTagEvents();
 			frm
-				.prepend('<input type="hidden" value="ajax" name="bi_mode">')  //trigger ajax mode
+				.prepend('<input type="hidden" name="bi_mode">')  //trigger ajax mode
 				.bind('submit',function(e){
+					$('[name=bi_mode]', frm).attr('value','ajax');  //IE8 resets value to null after one comment submit, since it's in the returned ajax.
 					e.preventDefault();
 					$.validity.start();
 					rulesFn(frm);  //calls BlogIt.fn.blogRules or BlogIt.fn.commentRules
