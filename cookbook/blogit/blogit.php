@@ -145,13 +145,13 @@ SDV($HTMLHeaderFmt['jquery-ui.css'], '<link rel="stylesheet" href="' .$PubDirUrl
 SDV($HTMLHeaderFmt['jquery.validity.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.validity.css" type="text/css" />');
 SDV($HTMLHeaderFmt['jquery.autocomplete.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.autocomplete.css" type="text/css" />');
 SDV($HTMLHeaderFmt['blogit.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />');
-SDV($HTMLHeaderFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>');
-SDV($HTMLHeaderFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.js"></script>');
-SDV($HTMLHeaderFmt['jquery.validity.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.min.js"></script>');
-SDV($HTMLHeaderFmt['jquery.showmessage.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.min.js"></script>');
-SDV($HTMLHeaderFmt['jquery.autocomplete.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.autocomplete.min.js"></script>');
-$HTMLHeaderFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
-$HTMLHeaderFmt['blogit-core']='<script type="text/javascript">
+SDV($HTMLFooterFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>');
+SDV($HTMLFooterFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.js"></script>');
+SDV($HTMLFooterFmt['jquery.validity.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.min.js"></script>');
+SDV($HTMLFooterFmt['jquery.showmessage.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.min.js"></script>');
+SDV($HTMLFooterFmt['jquery.autocomplete.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.autocomplete.min.js"></script>');
+$HTMLFooterFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
+$HTMLFooterFmt['blogit-core']='<script type="text/javascript">
 	BlogIt.pm["pubdirurl"]="'.$PubDirUrl.'/blogit";
 	BlogIt.pm["categories"]="' .bi_CategoryList() .'";
 	BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE(XL('%d-%m-%Y %H:%M')).'$/;'."\n".
