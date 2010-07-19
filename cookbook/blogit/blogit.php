@@ -81,7 +81,9 @@ SDVA($bi_MakePageNamePatterns, array(
 SDVA($bi_FixPageTitlePatterns, array(
 	'/[.\\/#]/' => ''	#remove dots, forward and backslashes in page titles as MakePageName returns '' when these characters are present
 ));
-SDVA($bi_Paths,array('pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/scripts/guiedit.php", 'convert'=>"$FarmD/cookbook/blogit/blogit_upgrade.php"));
+SDVA($bi_Paths,array(
+	'pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/scripts/guiedit.php",
+	'convert'=>"$FarmD/cookbook/blogit/blogit_upgrade.php", 'feeds'=>"$FarmD/scripts/feeds.php"));
 
 # ----------------------------------------
 # - Internal Use Only
@@ -143,25 +145,53 @@ if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths
 
 # ----------------------------------------
 # - Javascript - [1]
-SDV($HTMLHeaderFmt['jquery-ui.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui/ui-lightness/jquery-ui.custom.css" type="text/css" />');
-SDV($HTMLHeaderFmt['jquery.validity.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.validity.css" type="text/css" />');
-SDV($HTMLHeaderFmt['jquery.autocomplete.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.autocomplete.css" type="text/css" />');
-SDV($HTMLHeaderFmt['blogit.css'], '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />');
-SDV($HTMLFooterFmt['jquery.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>');
-SDV($HTMLFooterFmt['jquery-ui.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.js"></script>');
-SDV($HTMLFooterFmt['jquery.validity.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.min.js"></script>');
-SDV($HTMLFooterFmt['jquery.showmessage.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.min.js"></script>');
-SDV($HTMLFooterFmt['jquery.autocomplete.js'], '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.autocomplete.min.js"></script>');
-$HTMLFooterFmt['blogit.js']='<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>';
-$HTMLFooterFmt['blogit-core']='<script type="text/javascript">
-	BlogIt.pm["pubdirurl"]="'.$PubDirUrl.'/blogit";
-	BlogIt.pm["categories"]="' .bi_CategoryList() .'";
-	BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE(XL('%d-%m-%Y %H:%M')).'$/;'."\n".
-	'BlogIt.pm["skin-classes"]='. bi_json_encode($bi_SkinClasses) .';'."\n".
-	'BlogIt.pm["charset"]="'.$Charset.'";'."\n".
-	'BlogIt.pm["ajax-message-timer"]='.$bi_AjaxMsgTimer.';'."\n".
-	bi_JXL()."\n".
-'</script>';
+SDVA($HTMLHeaderFmt, array(
+	'jquery-ui.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui/ui-lightness/jquery-ui.custom.css" type="text/css" />',
+	'jquery.validity.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.validity.css" type="text/css" />',
+	'jquery.autocomplete.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.autocomplete.css" type="text/css" />',
+	'blogit.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />'));
+SDVA($HTMLFooterFmt, array(
+	'jquery.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>',
+	'jquery-ui.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.js"></script>',
+	'jquery.validity.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.min.js"></script>',
+	'jquery.showmessage.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.min.js"></script>',
+	'jquery.autocomplete.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.autocomplete.min.js"></script>',
+	'blogit.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>',
+	'blogit-core' => '<script type="text/javascript">
+			BlogIt.pm["pubdirurl"]="'.$PubDirUrl.'/blogit";
+			BlogIt.pm["categories"]="' .bi_CategoryList() .'";
+			BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE(XL('%d-%m-%Y %H:%M')).'$/;'."\n".
+			'BlogIt.pm["skin-classes"]='. bi_json_encode($bi_SkinClasses) .';'."\n".
+			'BlogIt.pm["charset"]="'.$Charset.'";'."\n".
+			'BlogIt.pm["ajax-message-timer"]='.$bi_AjaxMsgTimer.';'."\n".
+			bi_JXL()."\n".
+		'</script>'));
+
+# ----------------------------------------
+# - RSS Config
+$HTMLHeaderFmt['feedlinks'] =
+	'<link rel="alternate" type="application/rss+xml" title="$WikiTitle" href="$ScriptUrl?n=' .$bi_Pages['admin'] .'?action=rss" />'; #TODO: Add blogid
+if ($action == 'rss' && $bi_Pagename==$bi_Pages['admin']){  #add url parameter of $:blogid=xxx to restrict to a specific blog
+	if (!$bi_DisplayFuture)  SDV($_REQUEST['if'], 'date ..@{$Now} @{$:entrydate}');
+	SDVA($_REQUEST, array(
+		'order' => '-$:entrydate',
+		'group' => '*',
+		'count' => '10',
+		'$:entrytype' => 'blog',
+		'$:entrystatus' => '-draft'));
+	SDVA($FeedFmt['rss']['feed'], array(  #Set feed options
+	  'title' => $WikiTitle,
+	  'description' => $WikiTag,
+	  'link' => '{$PageUrl}?action=rss'));
+	SDVA($FeedFmt['rss']['item'], array(  #Set each item's options
+	  'author' => 'bi_GetPageVar',
+	  'link' => '{$PageUrl}?when=$ItemISOTime',
+	  'title' => '{$Group} / {$Title}',
+	  'dc:date' => 'bi_GetPageVar',
+	  'pubDate' => 'bi_GetPageVar',
+	  'description' => 'bi_FeedText'));
+	include_once($bi_Paths['feeds']);
+}
 
 # ----------------------------------------
 # - PmForms Setup -- most config is needed just to display forms (ie, comment form)
@@ -733,6 +763,19 @@ function bi_JXL(){  #create javascript array holding all XL translations of text
 		'email'=>'This field must be formatted as an email.', 'url'=>'This field must be formatted as a URL.');
 	foreach ($a as $k=>$v)  $t1 .= ($v!=XL($v) ?$k .':"' .XL($v) ."\",\n" :'');
 	return ($t1>'' ?$t .'jQuery.extend(jQuery.validity.messages, {' .substr($t1,0,-2).'});' :$t);
+}
+
+# ----------------------------------------
+# - RSS Feed Functions
+function bi_GetPageVar($pagename, &$page, $tag){
+global $TimeISOZFmt,$RSSTimeFmt;
+	return "<$tag>" .($tag=='dc:date' ?gmstrftime($TimeISOZFmt, PageTextVar($pagename, 'entrydate'))
+		:($tag=='pubDate' ?gmdate($RSSTimeFmt, PageTextVar($pagename, 'entrydate'))
+		:($tag=='author' ?PageTextVar($pagename, 'entryauthor') :'')))
+		."</$tag>\n";
+}
+function bi_FeedText($pagename, &$page, $tag){
+	return '<' .$tag .'><![CDATA[' .MarkupToHTML($pagename, '{'.$pagename.'$:entrybody}') .']]></' .$tag .'>';
 }
 
 # ----------------------------------------
