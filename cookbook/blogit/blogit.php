@@ -237,7 +237,7 @@ Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
 	'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
 	"blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
 Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
-	"PRR(bi_includeSection(\$bi_Pagename, PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
+	"PRR(bi_includeSection(\$GLOBALS['bi_Pagename'], PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
 $SaveAttrPatterns['/\\(:includesection\\s.*?:\\)/i'] = ' ';  #prevents include sections becoming part of page targets list
 if (IsEnabled($EnableGUIButtons) && @$_REQUEST['bi_mode']!='ajax'){
 	if ($action=='bi_be' || $action=='bi_ne' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry'))
@@ -472,19 +472,9 @@ function blogitMU_list($name, $text){
 }
 function blogitMU_cleantext($len, $text){
 global $bi_CommentSideBarLen,$bi_Pagename,$bi_UnstyleFn,$Charset;
-# SteP fixes: allow for unstyling; honor $options when empty($m)
-	$bi_MBEnabled = ($Charset=='UTF-8'&&function_exists(mb_substr));
-	bi_debugLog('cleanText: '.($bi_MBEnabled ?'MB Enabled' :'MB NOT enabled'));
-	$text = trim($text);
-	if($bi_UnstyleFn>'')	$text = $bi_UnstyleFn($bi_Pagename, $text);
-	$len = (empty($len) ?$bi_CommentSideBarLen :$len);
-	$nl = ($bi_MBEnabled ?mb_strpos($text, "\n") :strpos($text, "\n"));
-	$max = ( empty($nl) ?$len :min($nl, $len) );  #truncate at either a newline, or at max length, which ever is shorter
-	if( ($bi_MBEnabled ?mb_strlen($text,$Charset) :strlen($text)) > $max ){
-		$text = ($bi_MBEnabled ?mb_substr($text,0,$max,$Charset) :substr($text,0,$max));
-		if ( false !== ($i=strrpos($text,' ')) )  $text = substr($text,0,$i);  #substr works on utf8 in this case, since we found a space
-	}
-	return $text;
+# SteP fixes: allow for unstyling; honor $options when empty($m); correct multibytpe preg_replace
+	if($bi_UnstyleFn>'')	 $text = $bi_UnstyleFn($bi_Pagename, $text);
+	return trim( preg_replace('/(^.{0,' .(empty($len) ?$bi_CommentSideBarLen :$len) .'}\b|\n).*/' .($Charset=='UTF-8' ?'u' :''),'${1}', $text) );
 }
 function bi_Link($pre, $page, $action, $txt, $post){  #valid actions: ajax, normal, ajax-normal, normal-ajax
 global $bi_Ajax,$PubDirUrl;
