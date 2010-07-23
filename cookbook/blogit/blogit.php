@@ -643,7 +643,8 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']);
 			bi_SendAjax('(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['comment-admin-list'] ?'#unapproved-comments' :'#comments-pagelist')
 				.' commentid=' .$bi_CommentPage.' entrycomments=readonly":)',
 				($bi_CommentPage==$bi_Pagename ?'Successfully updated comment.'
-					:'Successfully added new comment.'.(PageTextVar($bi_CommentPage,'commentapproved')=='false' ?'<br />'. XL('All comments are reviewed before being displayed.') :''))
+					:XL('Successfully added new comment.').
+					(PageTextVar($bi_CommentPage,'commentapproved')=='false' ?'<br />'. XL('All comments are reviewed before being displayed.') :''))
 			);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
 			bi_SendAjax((isset($_REQUEST['bi_context'])  #might have clicked from many places. We only care about a few.
