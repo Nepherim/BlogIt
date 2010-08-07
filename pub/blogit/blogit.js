@@ -103,10 +103,14 @@ BlogIt.fn = function($){
 	};
 	//visuals
 	function flash($e, data){
-		var bg = $e.css('background-color');
+		var bg = $e.parent().css('background-color');
 		$e.animate(
 			{ backgroundColor: '#BBFFB6'},
-			{ duration: 750, complete: function(){ $(this).animate({ backgroundColor: bg }, {duration:750}) } }
+			{ duration: 750, complete: function(){
+				$(this).animate(
+					{ backgroundColor: bg },
+					{ duration:750, complete: function(){ $(this).css('background-color',bg) } }
+			)}}
 		);
 		BlogIt.fn.showMsg(data);
 	};
