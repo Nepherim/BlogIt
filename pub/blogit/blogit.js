@@ -248,12 +248,36 @@ BlogIt.fn = function($){
 		},
 		addTagEvents: function(){
 			//Add autocomplete. :not only adds autocomplete if not already added.
-			$('#entrytags:not(.ac_input)').autocomplete(BlogIt.pm.categories.split(','), { multiple:true })
+			function split(val) { return val.split(/,\s*/);	}
+			function extractLast(term) { return split(term).pop(); }
+
+			$("#entrytags:not(.ac_input)").autocomplete({
+				minLength: 0,
+				source: function(request, response) {
+					// delegate back to autocomplete, but extract the last term
+					response($.ui.autocomplete.filter(BlogIt.pm.categories.split(','), extractLast(request.term)));
+				},
+				focus: function() {
+					// prevent value inserted on focus
+					return false;
+				},
+				select: function(event, ui) {
+					var terms = split( this.value );
+					// remove the current input
+					terms.pop();
+					// add the selected item
+					terms.push( ui.item.value );
+					// add placeholder to get the comma-and-space at the end
+					terms.push("");
+					this.value = terms.join(", ");
+					return false;
+				}
+			});
 			$('#entrytags').live('blur', function(e){ $this=$(this); $this.val($this.val().replace(/[,|\s]+$/,"")); });
 		},
 //Visuals
 		showMsg: function(data){
-			if (data.msg)  $.showMessage({
+			if (data.msg)  $('body').showMessage({
 				'thisMessage':[BlogIt.fn.xl(data.msg)],
 				'className': data.result,
 				'opacity': 95,
