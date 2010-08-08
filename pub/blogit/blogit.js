@@ -109,7 +109,7 @@ BlogIt.fn = function($){
 			{ duration: 750, complete: function(){
 				$(this).animate(
 					{ backgroundColor: bg },
-					{ duration:750, complete: function(){ $(this).css('background-color',bg) } }
+					{ duration:750, complete: function(){ $(this).css('background-color','') } }
 			)}}
 		);
 		BlogIt.fn.showMsg(data);
@@ -155,6 +155,7 @@ BlogIt.fn = function($){
 			_unapprove = ( $(e).html()==BlogIt.fn.xl('unapprove') );
 			e.href = (_unapprove ?e.href.replace('bi_cua', 'bi_ca') :e.href.replace('bi_ca', 'bi_cua'));
 			$(e).html(BlogIt.fn.xl( (_unapprove ?'approve' :'unapprove') ));
+			$e.removeClass('blogit-comment-' +(!_unapprove ?'un' :'') +'approved').addClass('blogit-comment-' +(_unapprove ?'un' :'') +'approved')
 			if (_unapprove)  updateCommentCount(-1,1)
 			else  updateCommentCount(1,-1);
 		},

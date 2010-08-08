@@ -20,9 +20,10 @@ SDV($bi_CommentGroup, 'Comments');
 SDV($bi_CommentsEnabled, 'open');
 SDV($bi_DefaultCommentStatus, (IsEnabled($EnablePostCaptchaRequired) ?'true' :'false') );  #auto-approve comments only if captcha is enabled
 SDV($bi_LinkToCommentSite, 'true');
-SDV($bi_EntriesPerPage, 15);
+SDV($bi_EntriesPerPage, 10);
 SDV($bi_DisplayFuture, 'false');
-SDV($bi_EnableRSS, 'true');
+SDV($bi_RSSEnabled, 'true');
+SDV($bi_RSSPerPage, $bi_EntriesPerPage);
 SDVA($bi_BlogList, array('blog1'));  #Ensure 'blog1' key remains; you can add keys for other blogs.
 SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
 #cheap hack: strtotime assumes dates with '/' are US 'mm/dd/yyyy' , so need to know when Eu fmt is used
@@ -170,14 +171,14 @@ SDVA($HTMLFooterFmt, array(
 
 # ----------------------------------------
 # - RSS Config
-if ($bi_EnableRSS == 'true')  $HTMLHeaderFmt['feedlinks'] =
+if ($bi_RSSEnabled == 'true')  $HTMLHeaderFmt['feedlinks'] =
 	'<link rel="alternate" type="application/rss+xml" title="$WikiTitle" href="$ScriptUrl?n=' .$bi_Pages['rss'] .'?action=rss" />'; #TODO: Add blogid
-if ($bi_EnableRSS == 'true' && $action == 'rss' && $bi_Pagename==$bi_Pages['rss']){  #add url parameter of $:blogid=xxx to restrict to a specific blog
-	if (!$bi_DisplayFuture)  SDV($_REQUEST['if'], 'date ..@{$Now} @{$:entrydate}');
+if ($bi_RSSEnabled == 'true' && $action == 'rss' && $bi_Pagename==$bi_Pages['rss']){  #add url parameter of $:blogid=xxx to restrict to a specific blog
+	if ($bi_DisplayFuture == 'false')  SDV($_REQUEST['if'], 'date ..@{$Now} @{$:entrydate}');
 	SDVA($_REQUEST, array(
 		'order' => '-$:entrydate',
 		'group' => '*',
-		'count' => '10',
+		'count' => $bi_RSSPerPage,
 		'$:entrytype' => 'blog',
 		'$:entrystatus' => '-draft'));
 	SDVA($FeedFmt['rss']['feed'], array(  #Set feed options

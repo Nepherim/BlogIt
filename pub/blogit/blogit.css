@@ -1,5 +1,6 @@
-.comment-unapproved{
-	background-color: #C3D9FF;
+.blogit-comment-unapproved{
+	background-color: #D3D3D3;
+	color: #808080;
 	}
 .blogit-admin-link{
 	border: none !important;
