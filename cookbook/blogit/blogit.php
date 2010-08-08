@@ -22,6 +22,7 @@ SDV($bi_DefaultCommentStatus, (IsEnabled($EnablePostCaptchaRequired) ?'true' :'f
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_EntriesPerPage, 15);
 SDV($bi_DisplayFuture, 'false');
+SDV($bi_EnableRSS, 'true');
 SDVA($bi_BlogList, array('blog1'));  #Ensure 'blog1' key remains; you can add keys for other blogs.
 SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
 #cheap hack: strtotime assumes dates with '/' are US 'mm/dd/yyyy' , so need to know when Eu fmt is used
@@ -53,7 +54,10 @@ SDVA($bi_SkinSettings, array(
 
 # ----------------------------------------
 # - Advanced user settings
-SDVA($bi_Pages, array('auth' => $bi_DefaultGroup .'.' .$DefaultName));  #edit/admin users need edit access to this page if not using AuthUser (page does not even need to exist)
+SDVA($bi_Pages, array(
+	'auth' => $bi_DefaultGroup .'.' .$DefaultName,  #edit/admin users need edit access to this page if not using AuthUser (page does not need to exist)
+	'rss' => $SiteGroup .'.BlogIt-Admin'  #when action=rss and this page is visited, output rss feed
+));
 SDV($bi_GroupFooterFmt, '(:includesection "#tag-pagelist":)(:nl:)');  #use to show all pages in a specific category when browsing a Tag group
 SDV($bi_CommentSideBarLen, 60);
 SDV($bi_TagSeparator, ', ');
@@ -166,9 +170,9 @@ SDVA($HTMLFooterFmt, array(
 
 # ----------------------------------------
 # - RSS Config
-$HTMLHeaderFmt['feedlinks'] =
-	'<link rel="alternate" type="application/rss+xml" title="$WikiTitle" href="$ScriptUrl?n=' .$bi_Pages['admin'] .'?action=rss" />'; #TODO: Add blogid
-if ($action == 'rss' && $bi_Pagename==$bi_Pages['admin']){  #add url parameter of $:blogid=xxx to restrict to a specific blog
+if ($bi_EnableRSS == 'true')  $HTMLHeaderFmt['feedlinks'] =
+	'<link rel="alternate" type="application/rss+xml" title="$WikiTitle" href="$ScriptUrl?n=' .$bi_Pages['rss'] .'?action=rss" />'; #TODO: Add blogid
+if ($bi_EnableRSS == 'true' && $action == 'rss' && $bi_Pagename==$bi_Pages['rss']){  #add url parameter of $:blogid=xxx to restrict to a specific blog
 	if (!$bi_DisplayFuture)  SDV($_REQUEST['if'], 'date ..@{$Now} @{$:entrydate}');
 	SDVA($_REQUEST, array(
 		'order' => '-$:entrydate',
