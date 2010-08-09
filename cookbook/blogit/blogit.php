@@ -414,7 +414,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		if (isset($bi_Hooks['comment']) && isset($bi_Hooks['comment']['post-save']))  $bi_Hooks['comment']['post-save']($src,$auth);
 	}
 	bi_debugLog('Calling HandlePmForm');
-	$bi_OriginalFn['HandleActions']['pmform']($src, $auth);  #usually HandlePmForm()
+	$bi_OriginalFn['HandleActions']['pmform']($src, $auth);  #usually HandlePmForm(), and then off to bi_Redirect()
 }
 function bi_HandleDelete($src, $auth='comment-edit'){  #action=bi_del
 global $WikiDir,$LastModFile,$_GET;
@@ -632,11 +632,11 @@ global $PCache,$bi_Pagename;
 				unset($PCache[$bi_Pagename][$key]);
 	}
 }
-function bi_SendAjax($markup, $msg=''){
+function bi_SendAjax($markup, $msg='', $dom=''){
 global $bi_Pagename;
 bi_debugLog('bi_SendAjax: '.$markup);
 	bi_ClearCache();  #otherwise we retrieve the old values.
-	bi_echo_json_encode(array('out'=>MarkupToHTML($bi_Pagename, $markup), 'result'=>'success', 'msg'=>XL($msg)));
+	bi_echo_json_encode(array('out'=>MarkupToHTML($bi_Pagename, $markup), 'result'=>'success', 'msg'=>XL($msg), 'dom'=>$dom));
 }
 function bi_AjaxRedirect($result=''){
 global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action,$bi_Name,$bi_Group,$bi_Pages,$bi_SkinClasses;
@@ -645,9 +645,11 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']);
 		if ($_REQUEST['target']=='blogit-comments'){
 			bi_SendAjax('(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['comment-admin-list'] ?'#unapproved-comments' :'#comments-pagelist')
 				.' commentid=' .$bi_CommentPage.' entrycomments=readonly":)',
-				($bi_CommentPage==$bi_Pagename ?'Successfully updated comment.'
-					:XL('Successfully added new comment.').
-					(PageTextVar($bi_CommentPage,'commentapproved')=='false' ?'<br />'. XL('All comments are reviewed before being displayed.') :''))
+				($bi_CommentPage==$bi_Pagename
+					?'Successfully updated comment.'
+					:XL('Successfully added new comment.')
+						.(PageTextVar($bi_CommentPage,'commentapproved')=='false' ?'<br />' .XL('All comments are reviewed before being displayed.') :'')),
+				MarkupToHTML($bi_Pagename, '{$Captcha} (:input captcha tabindex=1:)')
 			);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
 			bi_SendAjax((isset($_REQUEST['bi_context'])  #might have clicked from many places. We only care about a few.
@@ -656,7 +658,7 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']);
 					:($_REQUEST['bi_context']==$bi_SkinClasses['blog-list-row']  #blog list from admin page
 						?'#blog-grid group=' .$bi_Group .' name='.$bi_Name
 						:'#single-entry-view')  #single entry blog view
-					).'":)'
+					) .'":)'
 				:''), 'Successfully '. ($action=='bi_ne'||($action=='pmform' && $bi_Pagename==$bi_Pages['admin']) ?'added' :'updated') .' blog entry.');
 		}else  bi_echo_json_encode($result);
 	}else  bi_echo_json_encode(array('result'=>'error','msg'=>FmtPageName(utf8_encode(implode($MessagesFmt)), $bi_Pagename)) );
@@ -672,9 +674,7 @@ global $_POST,$bi_Forms,$_REQUEST,$bi_Pagename,$action,$_COOKIE,$bi_Cookie;
 	bi_debugLog('Redirecting: '.$r);
 	header("Location: $r");
 	header("Content-type: text/html");
-	echo "<html><head>
-	<meta http-equiv='Refresh' Content='URL=$r' />
-	<title>Redirect</title></head><body></body></html>";
+	echo "<html><head><meta http-equiv='Refresh' Content='URL=$r' /><title>Redirect</title></head><body></body></html>";
 	exit;
 }
 function bi_storeCookie($url=''){
