@@ -133,12 +133,11 @@ $AsSpacedFunction = 'AsSpacedHyphens';  #[1]
 $LinkCategoryFmt = "<a class='categorylink' rel='tag' href='\$LinkUrl'>\$LinkText</a>"; #[1]
 $WikiStyleApply['row'] = 'tr';  #allows TR to be labelled with ID attributes
 $WikiStyleApply['link'] = 'a';  #allows A to be labelled with class attributes
-if ( bi_Auth('*') )  $EnablePostCaptchaRequired = 0;  #disable captcha for any BlogIt user
 
 # ----------------------------------------
 # - Authentication
 SDV($AuthFunction,'PmWikiAuth');
-$bi_OriginalFn['AuthFunction']=$AuthFunction;
+$bi_OriginalFn['AuthFunction']=$AuthFunction;  #must occur before calling bi_Auth()
 $AuthFunction = 'bi_BlogItAuth';  #TODO: Use $AuthUserFunctions instead?
 # Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_-\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';  #[1]
@@ -146,6 +145,7 @@ $bi_Pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) 
 if ($bi_Pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"'.htmlentities(stripmagic($_GET['blogid'])).'"';
 # Cannot be done as part of handler due to scoping issues when include done in function
 if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths['convert']);
+if ( bi_Auth('*') )  $EnablePostCaptchaRequired = 0;  #disable captcha for any BlogIt user
 
 # ----------------------------------------
 # - Javascript - [1]
@@ -606,7 +606,7 @@ global $AuthList,$bi_Auth,$bi_Pagename,$EnableAuthUser,$bi_Pages,$bi_OriginalFn,
 			:(isset($pn)) ?$pn :$bi_Pagename;
 	foreach ($bi_actions as $a){
 		foreach ($bi_Auth as $role => $action_list){
-			if ( $a=='*' || in_array($a, $action_list) ){  #Is the action assigned to a role?
+			if ( $a=='*' || in_array($a, $action_list) ){  #is the action assigned to a role?
 				if ( (IsEnabled($EnableAuthUser) && $AuthList['@'.$role] > 0)  #the user is assigned to this role
 					|| (!IsEnabled($EnableAuthUser) && $bi_OriginalFn['AuthFunction']($pn, $role, false, READPAGE_CURRENT)) )  #the user has these role privs on this page
 					return true;
@@ -635,7 +635,7 @@ global $PCache,$bi_Pagename;
 function bi_SendAjax($markup, $msg=''){
 global $bi_Pagename;
 bi_debugLog('bi_SendAjax: '.$markup);
-	bi_ClearCache();  #Otherwise we retrieve the old values.
+	bi_ClearCache();  #otherwise we retrieve the old values.
 	bi_echo_json_encode(array('out'=>MarkupToHTML($bi_Pagename, $markup), 'result'=>'success', 'msg'=>XL($msg)));
 }
 function bi_AjaxRedirect($result=''){
