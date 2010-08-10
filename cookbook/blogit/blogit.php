@@ -387,7 +387,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		# NB: If page subsequently fails to post (due to incorrect p/w or captcha) then entrydate is already in unix time format.
 		$_POST['ptv_entrydate'] = (empty($_POST['ptv_entrydate']) ?$Now :$_POST['ptv_entrydate']);
 		if (bi_IsDate($_POST['ptv_entrydate']))  $_POST['ptv_entrydate'] = bi_strtotime($_POST['ptv_entrydate'], $bi_DateZone);
-		else  $bi_ResetPmFormField['ptv_entrydate'] =  $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
+		else  $bi_ResetPmFormField['ptv_entrydate'] = $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
 
 		# Determine page name from title, replacing ' ' with '-' for seo.
 		bi_setMakePageNamePatterns();

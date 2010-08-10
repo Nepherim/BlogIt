@@ -19,7 +19,7 @@ jQuery(document).ready(function($){
 
 	//add form validation to non-ajax forms (ie, Edit form in normal mode)
 	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
-	$(BlogIt.pm['skin-classes']['blog-form']).validity( BlogIt.fn.blogRules );
+	$(BlogIt.pm['skin-classes']['blog-form']+' form').validity( BlogIt.fn.blogRules );
 
 	$("a[href*=action\=bi_ca&bi_mode\=ajax],a[href*=action\=bi_cua&bi_mode\=ajax]").live('click', function(e){  //comment un/approve
 		e.preventDefault();
@@ -244,9 +244,11 @@ BlogIt.fn = function($){
 			$('#comment-website',frm).match('url');
 		},
 		blogRules: function(frm){
+			frm = frm || BlogIt.pm['skin-classes']['blog-form']+' form';
 			$('#entrydate',frm).match('entryDate');
+			var url_val = $('#entryurl',frm).val();
 			$('#entrytitle,#entryurl',frm)
-				.assert(	($('#entryurl',frm).val() || $('#entrytitle',frm).val()),
+				.assert(	( (url_val && !url_val.match(/^.*?\.$/)) || $('#entrytitle',frm).val()),
 					BlogIt.fn.xl('Either enter a Blog Title or a Pagename')
 				);
 		},
