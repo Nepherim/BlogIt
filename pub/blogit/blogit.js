@@ -231,8 +231,8 @@ BlogIt.fn = function($){
 					if (mode=='add')  frm[0].reset();
 					$(BlogIt.pm['skin-classes'][(firstComment ?'comment-list-wrapper' :'comment-list')]).append($new);  //adding a new comment
 					//recreate a new capcha code to prevent multiple submits
-					$('.blogit-submit-row img[src*=action\=captchaimage]').replaceWith($("img[src*=action\=captchaimage]", data.dom));
-					$('.blogit-submit-row input[name=captchakey]').replaceWith($('input[name=captchakey]', data.dom));
+					$(BlogIt.pm['skin-classes']['comment-submit']+' img[src*=action\=captchaimage]').replaceWith($("img[src*=action\=captchaimage]", data.dom));
+					$(BlogIt.pm['skin-classes']['comment-submit']+' input[name=captchakey]').replaceWith($('input[name=captchakey]', data.dom));
 					(newCommentApproved ?updateCommentCount(1,0) :updateCommentCount(0,1))
 				}
 			}
