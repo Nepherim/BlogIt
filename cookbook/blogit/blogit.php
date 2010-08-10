@@ -73,8 +73,7 @@ SDV($HTMLHeaderFmt['blogit-meta-tag'], '<meta name="generator" content="BlogIt '
 bi_SDVSA($bi_StatusType, array('draft', 'publish', 'sticky'));  #adding element is okay; removing elements may loose functionality
 bi_SDVSA($bi_CommentType, array('open', 'readonly', 'none'));  #adding element is okay; removing elements may loose functionality
 bi_SDVSA($bi_CommentApprovalType, array('true', 'false'));
-#Use format: 'comment|blog'=>array('pre-entry'=>'function name', 'pre-save'=>'function name', 'post-save'=>'function name')
-bi_SDVSA($bi_Hooks, array());
+bi_SDVSA($bi_Hooks, array());  #processing hooks, pointers to a function(). Format: $bi_Hooks[$type][$stage][] $type=blog,comment $stage=pre-entry, pre-save, post-save
 SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',  #strip single-quotes
@@ -312,7 +311,7 @@ global $action,$_REQUEST,$HandleActions,$bi_OriginalFn,$GroupHeaderFmt,$bi_Pages
 	bi_debugLog('HandleEdit: '.$action.' - '.$entrytype);
 	$type=( ($action=='bi_be' && $entrytype=='blog') || ($action=='bi_ne'&&$src==$bi_Pages['admin']) ?'blog' :'comment');
 	if ( ($entrytype==$type || $action=='bi_ne' || $action=='bi_cr') && bi_Auth($auth) ){
-		if (isset($bi_Hooks[$type]) && isset($bi_Hooks[$type]['pre-entry']))  $bi_Hooks[$type]['pre-entry']($src,$auth);
+		bi_ProcessHooks($type, 'pre-entry', $src, $auth);
 		if ($_REQUEST['bi_mode']=='ajax'){
 			bi_AjaxRedirect(array('out'=>MarkupToHTML($src, '(:includesection "#' .$type .'-edit":)'), 'result'=>'success'));
 		}else{
@@ -368,7 +367,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 	if ($_POST['target']=='blogit-entry')  $GroupHeaderFmt .= '(:includesection "#blog-edit":)';
 	if ($_POST['target']=='blogit-entry' && (@$_POST['save']||@$_POST['bi_mode']=='ajax')){  #jquery doesn't serialize submit buttons
 		bi_decodeUTF8($_POST);  #ajax posts from jquery are always utf8
-		if (isset($bi_Hooks['blog']) && isset($bi_Hooks['blog']['pre-save']))  $bi_Hooks['blog']['pre-save']($src,$auth);
+		bi_ProcessHooks('blog', 'pre-save', $src, $auth);
 		#Allow future posts to create tag -- otherwise may never happen, since user may never edit the post again.
 		if ( $_POST['ptv_entrystatus']!='draft' )  $AutoCreate['/^' .$CategoryGroup .'\./'] = array('ctime' => $Now);
 
@@ -399,12 +398,12 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		$_POST['ptv_entrytags'] = implode(', ', array_unique(explode(', ',$_POST['ptv_entrytags'])));  #remove duplicates
 		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_entryauthor'];
-		if (isset($bi_Hooks['blog']) && isset($bi_Hooks['blog']['post-save']))  $bi_Hooks['blog']['post-save']($src,$auth);
+		bi_ProcessHooks('blog', 'post-save', $src, $auth);
 
 	#only set defaults if we're not editing the comment
 	}elseif ($bi_CommentsEnabled=='open' && $_POST['target']=='blogit-comments'){
 		bi_decodeUTF8($_POST);  #ajax posts from jquery are always utf8
-		if (isset($bi_Hooks['comment']) && isset($bi_Hooks['comment']['pre-save']))  $bi_Hooks['comment']['pre-save']($src,$auth);
+		bi_ProcessHooks('comment', 'pre-save', $src, $auth);
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_commenttext'] = rtrim($_POST['ptv_commenttext'],"\n\r\x0B")."\n";  #ensures markup is closed correctly (eg, links at end of comment)
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
@@ -412,7 +411,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		$_POST['ptv_commentapproved'] = ($ce ?$_POST['ptv_commentapproved'] :(bi_Auth('comment-approve,blogit-admin '.$src) ?'true' :$bi_DefaultCommentStatus));
 		$_POST['ptv_commentdate'] = ($ce ?$_POST['ptv_commentdate'] :$Now);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_commentauthor'];
-		if (isset($bi_Hooks['comment']) && isset($bi_Hooks['comment']['post-save']))  $bi_Hooks['comment']['post-save']($src,$auth);
+		bi_ProcessHooks('comment', 'post-save', $src, $auth);
 	}
 	bi_debugLog('Calling HandlePmForm');
 	$bi_OriginalFn['HandleActions']['pmform']($src, $auth);  #usually HandlePmForm(), and then off to bi_Redirect()
@@ -757,6 +756,11 @@ function bi_JXL(){  #create javascript array holding all XL translations of text
 		'email'=>'This field must be formatted as an email.', 'url'=>'This field must be formatted as a URL.');
 	foreach ($a as $k=>$v)  $t1 .= ($v!=XL($v) ?$k .':"' .XL($v) ."\",\n" :'');
 	return ($t1>'' ?$t .'jQuery.extend(jQuery.validity.messages, {' .substr($t1,0,-2).'});' :$t);
+}
+# Functions processed for different entry $types (blog, comment), at different $stages (pre-entry, pre-save, post-save)
+function bi_ProcessHooks($type, $stage, $src, $auth){
+global $bi_Hooks;
+	foreach((array)$bi_Hooks[$type][$stage] as $fn)  $fn($src, $auth);
 }
 
 # ----------------------------------------
