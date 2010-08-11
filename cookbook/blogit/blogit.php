@@ -413,7 +413,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_commentauthor'];
 		bi_ProcessHooks('comment', 'post-save', $src, $auth);
 	}
-	bi_debugLog('Calling HandlePmForm');
+	bi_debugLog('Calling HandlePmForm: '.$_POST['ptv_entrydate']);
 	$bi_OriginalFn['HandleActions']['pmform']($src, $auth);  #usually HandlePmForm(), and then off to bi_Redirect()
 }
 function bi_HandleDelete($src, $auth='comment-edit'){  #action=bi_del
@@ -547,17 +547,17 @@ global $bi_DateFmtRE;
 	return preg_replace(array_keys($bi_DateFmtRE), array_values($bi_DateFmtRE),$f);
 }
 function bi_IsDate($d, $f='%d-%m-%Y %H:%M'){  #accepts a date, and a date format (not a regular expression)
-bi_debugLog('IsDate: '.$d.' ['.$f.']');
+	$f=XL($f);  bi_debugLog('IsDate: '.$d.' ['.$f.']');
 	if (empty($d))  return true;  #false causes two date invalid messages.
-	$f=XL($f);
-	if (preg_match('!\d{5,}!',$d))  $d=strftime($f,$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
+	if (preg_match('|\d{5,}|',$d))  $d=strftime($f,$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
 	return (preg_match('!^'.bi_DateFmtRE($f).'$!',$d,$x)  #does %d match the regular expression version of $f? if it does m/d/y are in $x
-		&& (checkdate($x[2],$x[1],$x[3]) || checkdate($x[1],$x[2],$x[3]) || checkdate($x[3],$x[1],$x[2]))
+		&& (checkdate($x[2],$x[1],$x[3]) || checkdate($x[1],$x[2],$x[3]) || checkdate($x[3],$x[2],$x[1]) || checkdate($x[3],$x[1],$x[2]))
 		?true :false);
 }
+# Convert from human readable date format to Unix datestamp
 function bi_strtotime($d, $z='US'){
 bi_debugLog('Date: '.$d.' ['.$z.']');
-	if (preg_match('!\d{5,}!',$d))  return $d;
+	if (preg_match('|\d{5,}|',$d))  return $d;
 	if ($z=='US')  return strtotime($d);
 	else  return strtotime(str_replace('/','-',$d));  #TODO: strtotime(preg_replace('!^'.bi_DateFmtRE($f).'$!','$2/$1/$3 $4:$5',$d));
 }
