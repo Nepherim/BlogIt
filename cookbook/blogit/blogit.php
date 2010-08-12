@@ -252,7 +252,7 @@ if (IsEnabled($EnableGUIButtons) && @$_REQUEST['bi_mode']!='ajax'){
 $Conditions['bi_ispage'] = 'bi_IsPage($condparm)';
 $Conditions['bi_isdate'] = 'bi_IsDate($condparm)';
 $Conditions['bi_auth'] = 'bi_Auth($condparm)';
-$Conditions['bi_isnull'] = 'bi_IsNull($condparm)==""';
+$Conditions['bi_isnull'] = 'bi_IsNull($condparm)==\'\'';
 $Conditions['bi_lt'] = 'bi_LT($condparm)';
 $Conditions['bi_baseptv'] = 'bi_BasePTV($condparm)';
 
@@ -530,7 +530,10 @@ function bi_includeSection($pagename, $inclspec){
 # ----------------------------------------
 # - Condition Functions
 # ----------------------------------------
-function bi_IsNull($e){ return (!empty($e) && substr($e,0,3)!='{*$' && substr($e,0,2)!='{$' && substr($e,0,3)!='{=$' ?$e :''); }
+function bi_IsNull($e){
+	$e = trim($e,'\'\" ');
+	return (!empty($e) && substr($e,0,3)!='{*$' && substr($e,0,2)!='{$' && substr($e,0,3)!='{=$' ?$e :'');
+}
 function bi_BasePTV($arg){
 	$arg = ParseArgs($arg);
 	return PageTextVar(bi_BasePage($arg[''][0]),'entrystatus') == $arg[''][1];
@@ -551,7 +554,7 @@ function bi_IsDate($d, $f='%d-%m-%Y %H:%M'){  #accepts a date, and a date format
 	if (empty($d))  return true;  #false causes two date invalid messages.
 	if (preg_match('|\d{5,}|',$d))  $d=strftime($f,$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
 	return (preg_match('!^'.bi_DateFmtRE($f).'$!',$d,$x)  #does %d match the regular expression version of $f? if it does m/d/y are in $x
-		&& (checkdate($x[2],$x[1],$x[3]) || checkdate($x[1],$x[2],$x[3]) || checkdate($x[3],$x[2],$x[1]) || checkdate($x[3],$x[1],$x[2]))
+		&& (checkdate($x[2],$x[1],$x[3]) || checkdate($x[1],$x[2],$x[3]) || checkdate($x[3],$x[2],$x[1]) || checkdate($x[3],$x[1],$x[2]))  #TODO: checkdate format == $f
 		?true :false);
 }
 # Convert from human readable date format to Unix datestamp
