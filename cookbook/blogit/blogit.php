@@ -26,8 +26,7 @@ SDV($bi_RSSEnabled, 'true');
 SDV($bi_RSSPerPage, $bi_EntriesPerPage);
 SDVA($bi_BlogList, array('blog1'));  #Ensure 'blog1' key remains; you can add keys for other blogs.
 SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
-#cheap hack: strtotime assumes dates with '/' are US 'mm/dd/yyyy' , so need to know when Eu fmt is used
-SDV($bi_DateZone, (substr(XL('%d-%m-%Y %H:%M'),0,6) == '%d/%m/' ?'EU' :'US'));
+SDV($bi_DateStyle, 'dmy');  #if you change the date entry format, then indicate the dmy sequencing (dmy, mdy, ymd)
 
 # ----------------------------------------
 # - Skin settings
@@ -101,8 +100,9 @@ SDV($FPLTemplatePageFmt, array(
 	'{$FullName}', ($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$bi_Skin :''), '{$SiteGroup}.BlogIt-CoreTemplate',
 	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'));
 SDV($bi_CommentPattern, '/^' .$bi_CommentGroup .'[\/\.](.*?)-(.*?)-(\d{8}T\d{6}){1}\z/');
+SDVA($bi_DateSequences, array('ymd'=>'$2/$3/$1 $4:$5', 'dmy'=>'$2/$1/$3 $4:$5','mdy'=>'$1/$2/$3 $4:$5'));  #used to convert date fmt into std "[m/d/y] H:M"
 SDVA($bi_DateFmtRE,array('/\//'=>'\/','/%d|%e/'=>'(0?[1-9]|[12][0-9]|3[01])', '/%m/'=>'(0?[1-9]|1[012])', '/%g|%G|%y|%Y/'=>'(19\d\d|20\d\d)',
-	'/%H|%I|%l/'=>'([0-1]?\d|2[0-3])', '/%M/'=>'([0-5]\d)'));
+	'/%H|%I|%l/'=>'([0-1]?\d|2[0-3])', '/%M/'=>'([0-5]\d)'));  #additional RE/date combinations can be added, but ordering of separator, day, month, year, hour, min must remain
 SDVA($SearchPatterns['blogit-comments'], array('comments' => $bi_CommentPattern));  #Used in pagelists
 SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''  #either regexes to include ('/'), regexes to exclude ('!'):
 	?array('blogit' => '/^(' .$bi_BlogGroups .')\./')
@@ -358,7 +358,7 @@ global $_GET,$GroupHeaderFmt;
 }
 function bi_HandleProcessForm ($src, $auth='read'){  #$action=pmform
 global $bi_ResetPmFormField,$_POST,$_REQUEST,$ROSPatterns,$CategoryGroup,
-	$bi_DefaultGroup,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$GroupHeaderFmt,$bi_DateZone,$bi_Forms,$bi_EnablePostDirectives,$PmFormPostPatterns,
+	$bi_DefaultGroup,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$GroupHeaderFmt,$bi_Forms,$bi_EnablePostDirectives,$PmFormPostPatterns,
 	$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired,$bi_Hooks;
 bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 	if ($_POST['cancel'] && in_array($_REQUEST['target'],$bi_Forms))  bi_Redirect();  #ajax cancel is handled client-side
@@ -386,7 +386,7 @@ bi_debugLog('HandleProcessForm: '.$_POST['bi_mode']);
 		# If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
 		# NB: If page subsequently fails to post (due to incorrect p/w or captcha) then entrydate is already in unix time format.
 		$_POST['ptv_entrydate'] = (empty($_POST['ptv_entrydate']) ?$Now :$_POST['ptv_entrydate']);
-		if (bi_IsDate($_POST['ptv_entrydate']))  $_POST['ptv_entrydate'] = bi_strtotime($_POST['ptv_entrydate'], $bi_DateZone);
+		if (bi_IsDate($_POST['ptv_entrydate']))  $_POST['ptv_entrydate'] = bi_strtotime($_POST['ptv_entrydate']);
 		else  $bi_ResetPmFormField['ptv_entrydate'] = $_POST['ptv_entrydate'];  #if set, this is used in data-form to override unix timestamp value
 
 		# Determine page name from title, replacing ' ' with '-' for seo.
@@ -545,28 +545,36 @@ global $bi_Pagename;
 	if ($mp==$bi_Pagename)  return false;
 	return PageExists($mp);
 }
+function bi_LT($arg){
+	$arg = ParseArgs($arg);
+	return (@$arg[''][0]<@$arg[''][1]);
+}
+function bi_IsDate($d, $f='%d-%m-%Y %H:%M', $z=''){  #accepts a date, and a date format (not a regular expression)
+	$f=XL($f);
+	if (empty($z))  $z=$GLOBALS['bi_DateStyle']; bi_debugLog("IsDate: $d [$f | $z]");
+	if (empty($d))  return true;  #false causes two date invalid messages.
+	if (preg_match('|\d{5,}|',$d))  $d=strftime($f,$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
+	$std = bi_StdDateFormat($d, $f, $z);
+	list($mon,$day,$yr) = explode('/', substr($std,0,strpos($std, ' ')), 3);  #remove time portion, ASSUME date and time are separated by space
+	return (preg_match('!^'.bi_DateFmtRE($f).'$!',$d) && checkdate($mon, $day, $yr) ?true :false);  #does %d match the regular expression version of $f, and chech the date
+}
+
+# ----------------------------------------
+# - Date Helper Functions
 function bi_DateFmtRE($f='%d-%m-%Y %H:%M'){  #converts a date format into a regular expression
 global $bi_DateFmtRE;
 	return preg_replace(array_keys($bi_DateFmtRE), array_values($bi_DateFmtRE),$f);
 }
-function bi_IsDate($d, $f='%d-%m-%Y %H:%M'){  #accepts a date, and a date format (not a regular expression)
-	$f=XL($f);  bi_debugLog('IsDate: '.$d.' ['.$f.']');
-	if (empty($d))  return true;  #false causes two date invalid messages.
-	if (preg_match('|\d{5,}|',$d))  $d=strftime($f,$d);  #Convert Unix timestamp to a std format (must not include regular expressions)
-	return (preg_match('!^'.bi_DateFmtRE($f).'$!',$d,$x)  #does %d match the regular expression version of $f? if it does m/d/y are in $x
-		&& (checkdate($x[2],$x[1],$x[3]) || checkdate($x[1],$x[2],$x[3]) || checkdate($x[3],$x[2],$x[1]) || checkdate($x[3],$x[1],$x[2]))  #TODO: checkdate format == $f
-		?true :false);
+function bi_StdDateFormat($d, $f='%d-%m-%Y %H:%M', $z='mdy'){  #converts date format into a standard US m/d/y format usable by PHP functions
+global $bi_DateSequences;
+	return preg_replace('!^'.bi_DateFmtRE($f).'$!', $bi_DateSequences[$z], $d);
 }
-# Convert from human readable date format to Unix datestamp
-function bi_strtotime($d, $z='US'){
-bi_debugLog('Date: '.$d.' ['.$z.']');
-	if (preg_match('|\d{5,}|',$d))  return $d;
-	if ($z=='US')  return strtotime($d);
-	else  return strtotime(str_replace('/','-',$d));  #TODO: strtotime(preg_replace('!^'.bi_DateFmtRE($f).'$!','$2/$1/$3 $4:$5',$d));
-}
-function bi_LT($arg){
-	$arg = ParseArgs($arg);
-	return (@$arg[''][0]<@$arg[''][1]);
+function bi_strtotime($d, $f='%d-%m-%Y %H:%M', $z=''){  #[assumes valid date] convert from human readable date format to Unix datestamp (strtotime assumes format based on separators)
+	$f = XL($f);
+	if (empty($z))  $z=$GLOBALS['bi_DateStyle'];
+	bi_debugLog('Date: '.$d.' ['.$z.']');
+	if (preg_match('|\d{5,}|',$d))  return $d;  #already have a Unix datestamp?
+	return strtotime(bi_StdDateFormat($d, $f, $z));  #convert to std format so strtotime doesn't assume format based on separators
 }
 
 # ----------------------------------------
