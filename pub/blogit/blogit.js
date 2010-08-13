@@ -1,4 +1,4 @@
-// blogit.js 2010-07-10
+// blogit.js 2010-08-12 1.6.0
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	$("<div/>").attr({id:"dialog"}).appendTo("body");
@@ -19,7 +19,7 @@ jQuery(document).ready(function($){
 
 	//add form validation to non-ajax forms (ie, Edit form in normal mode)
 	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
-	$(BlogIt.pm['skin-classes']['blog-form']).validity( BlogIt.fn.blogRules );
+	$(BlogIt.pm['skin-classes']['blog-form']+' form').validity( BlogIt.fn.blogRules );
 
 	$("a[href*=action\=bi_ca&bi_mode\=ajax],a[href*=action\=bi_cua&bi_mode\=ajax]").live('click', function(e){  //comment un/approve
 		e.preventDefault();
@@ -103,10 +103,14 @@ BlogIt.fn = function($){
 	};
 	//visuals
 	function flash($e, data){
-		var bg = $e.css('background-color');
+		var bg = $e.parent().css('background-color');
 		$e.animate(
 			{ backgroundColor: '#BBFFB6'},
-			{ duration: 750, complete: function(){ $(this).animate({ backgroundColor: bg }, {duration:750}) } }
+			{ duration: 750, complete: function(){
+				$(this).animate(
+					{ backgroundColor: bg },
+					{ duration:750, complete: function(){ $(this).css('background-color','') } }
+			)}}
 		);
 		BlogIt.fn.showMsg(data);
 	};
@@ -151,6 +155,7 @@ BlogIt.fn = function($){
 			_unapprove = ( $(e).html()==BlogIt.fn.xl('unapprove') );
 			e.href = (_unapprove ?e.href.replace('bi_cua', 'bi_ca') :e.href.replace('bi_ca', 'bi_cua'));
 			$(e).html(BlogIt.fn.xl( (_unapprove ?'approve' :'unapprove') ));
+			$e.removeClass('blogit-comment-' +(!_unapprove ?'un' :'') +'approved').addClass('blogit-comment-' +(_unapprove ?'un' :'') +'approved')
 			if (_unapprove)  updateCommentCount(-1,1)
 			else  updateCommentCount(1,-1);
 		},
@@ -225,6 +230,9 @@ BlogIt.fn = function($){
 				}else{  //add or reply
 					if (mode=='add')  frm[0].reset();
 					$(BlogIt.pm['skin-classes'][(firstComment ?'comment-list-wrapper' :'comment-list')]).append($new);  //adding a new comment
+					//recreate a new capcha code to prevent multiple submits
+					$(BlogIt.pm['skin-classes']['comment-submit']+' img[src*=action\=captchaimage]').replaceWith($("img[src*=action\=captchaimage]", data.dom));
+					$(BlogIt.pm['skin-classes']['comment-submit']+' input[name=captchakey]').replaceWith($('input[name=captchakey]', data.dom));
 					(newCommentApproved ?updateCommentCount(1,0) :updateCommentCount(0,1))
 				}
 			}
@@ -236,20 +244,46 @@ BlogIt.fn = function($){
 			$('#comment-website',frm).match('url');
 		},
 		blogRules: function(frm){
+			frm = frm || BlogIt.pm['skin-classes']['blog-form']+' form';
 			$('#entrydate',frm).match('entryDate');
+			var url_val = $('#entryurl',frm).val();
 			$('#entrytitle,#entryurl',frm)
-				.assert(	($('#entryurl',frm).val() || $('#entrytitle',frm).val()),
+				.assert(	( (url_val && !url_val.match(/^.*?\.$/)) || $('#entrytitle',frm).val()),
 					BlogIt.fn.xl('Either enter a Blog Title or a Pagename')
 				);
 		},
 		addTagEvents: function(){
 			//Add autocomplete. :not only adds autocomplete if not already added.
-			$('#entrytags:not(.ac_input)').autocomplete(BlogIt.pm.categories.split(','), { multiple:true })
+			function split(val) { return val.split(/,\s*/);	}
+			function extractLast(term) { return split(term).pop(); }
+
+			$("#entrytags:not(.ac_input)").autocomplete({
+				minLength: 0,
+				source: function(request, response) {
+					// delegate back to autocomplete, but extract the last term
+					response($.ui.autocomplete.filter(BlogIt.pm.categories.split(','), extractLast(request.term)));
+				},
+				focus: function() {
+					// prevent value inserted on focus
+					return false;
+				},
+				select: function(event, ui) {
+					var terms = split( this.value );
+					// remove the current input
+					terms.pop();
+					// add the selected item
+					terms.push( ui.item.value );
+					// add placeholder to get the comma-and-space at the end
+					terms.push("");
+					this.value = terms.join(", ");
+					return false;
+				}
+			});
 			$('#entrytags').live('blur', function(e){ $this=$(this); $this.val($this.val().replace(/[,|\s]+$/,"")); });
 		},
 //Visuals
 		showMsg: function(data){
-			if (data.msg)  $.showMessage({
+			if (data.msg)  $('body').showMessage({
 				'thisMessage':[BlogIt.fn.xl(data.msg)],
 				'className': data.result,
 				'opacity': 95,

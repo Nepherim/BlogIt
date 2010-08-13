@@ -62,7 +62,7 @@ global $_GET,$RecipeInfo,$bi_ConvertRules;
 #mode=upgrade|convert|revert
 #blogid=string
 function bi_Convert($src, $auth='admin', $dataset, $pagelist, $mode) {
-global $bi_ConvertRules,$bi_BlogGroups,$bi_TagSeparator,$_GET,$AsSpacedFunction,$SearchPatterns;
+global $bi_ConvertRules,$bi_TagSeparator,$_GET,$SearchPatterns;
 	$datarules = $bi_ConvertRules[$dataset];
 	$pagelist=MatchPageNames($pagelist,$SearchPatterns['default']);
 
