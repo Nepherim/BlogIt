@@ -5,7 +5,7 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2011-04-04';  #1.7.0
+$RecipeInfo['BlogIt']['Version'] = '2011-07-04';  #1.7.0
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
 
 # ----------------------------------------
