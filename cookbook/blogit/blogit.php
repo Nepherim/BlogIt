@@ -5,7 +5,7 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2010-08-12';  #1.6.0
+$RecipeInfo['BlogIt']['Version'] = '2011-04-04';  #1.7.0
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
 
 # ----------------------------------------
@@ -118,9 +118,8 @@ $bi_Forms = array('blogit-entry','blogit-comments');  #needs to be before cookie
 
 # ----------------------------------------
 # - Usable on Wiki Pages
-#TODO: Clean input on action
 bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','CategoryGroup','Now','bi_CommentGroup',
-	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_StatAction','action'));
+	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_StatAction'));
 bi_setFmtPVA(array('$bi_Pages'=>$bi_Pages));
 bi_setFmtPVA(array('$bi_SkinSettings'=>$bi_SkinSettings));
 $FmtPV['$bi_Mode'] = bi_Clean('mode',$_REQUEST['bi_mode']);
@@ -287,7 +286,6 @@ global $bi_ResetPmFormField,$bi_OriginalFn,$bi_GroupFooterFmt,$bi_CommentGroup,$
 		if (isset($bi_ResetPmFormField))
 			foreach ($bi_ResetPmFormField  as $k => $v) {
 				$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
-				#TODO: Clean input
 				$FmtPV['$bi_Default_'.$k]='"'.bi_Clean('alpha',$v).'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
 			}
 	}elseif ($entrytype == 'blog' && $action=='browse'){
@@ -808,7 +806,6 @@ function bi_Clean($m, $v){
 }
 # Only sets defaults if the array is empty or not set; SDVA *adds* key/values to those set by user
 function bi_SDVSA(&$var, $val){ $var = (is_array($var) && !empty($var) ?$var :$val); }
-#TODO: Clean input
 function bi_setFmtPV($a){ foreach ($a as $k)  $GLOBALS['FmtPV']['$'.$k]='$GLOBALS["'.$k.'"]'; }
 # Sets $FmtPV variables named $key_VALUE. $a is an array with the key as the variable name, and values as indecies.
 function bi_setFmtPVA ($a){
