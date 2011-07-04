@@ -118,6 +118,7 @@ $bi_Forms = array('blogit-entry','blogit-comments');  #needs to be before cookie
 
 # ----------------------------------------
 # - Usable on Wiki Pages
+#TODO: Clean input on action
 bi_setFmtPV(array('bi_BlogIt_Enabled','bi_DefaultGroup','bi_CommentsEnabled','CategoryGroup','Now','bi_CommentGroup',
 	'EnablePostCaptchaRequired','bi_DisplayFuture','bi_EntriesPerPage','bi_StatAction','action'));
 bi_setFmtPVA(array('$bi_Pages'=>$bi_Pages));
@@ -142,8 +143,8 @@ $AuthFunction = 'bi_BlogItAuth';  #TODO: Use $AuthUserFunctions instead?
 # Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_-\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';  #[1]
 $bi_Pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
-#TODO: Clean input
-if ($bi_Pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"'.htmlentities(stripmagic($_GET['blogid'])).'"';
+
+if ($bi_Pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"' .preg_replace("/\\W+/", "", $_GET['blogid']) .'"';
 # Cannot be done as part of handler due to scoping issues when include done in function
 if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths['convert']);
 if ( bi_Auth('*') )  $EnablePostCaptchaRequired = 0;  #disable captcha for any BlogIt user
@@ -227,11 +228,12 @@ SDV($HandleActions['bi_upgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['bi_upgra
 
 # ----------------------------------------
 # - Pagination
-#TODO: Clean input
-$FmtPV['$bi_PageNext'] = (isset($_GET['page']) ?$_GET['page']+1 :2);
-$FmtPV['$bi_PagePrev'] = (isset($_GET['page']) && ($_GET['page']>0) ?$_GET['page']-1 :0);
-$FmtPV['$bi_EntryStart'] = (($FmtPV['$bi_PageNext']-2) * (isset($_GET['count']) ?$_GET['count'] :$bi_EntriesPerPage)) + 1;
-$FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + (isset($_GET['count']) ?$_GET['count'] :$bi_EntriesPerPage) - 1;
+$bi_CurrentPage = intval(isset($_GET['page']) ?$_GET['page'] :1);
+$bi_EntryCount = (intval($_GET['count'])>0 ?intval($_GET['count']) :$bi_EntriesPerPage);
+$FmtPV['$bi_PageNext'] = $bi_CurrentPage+1;
+$FmtPV['$bi_PagePrev'] = ($bi_CurrentPage>0 ?$bi_CurrentPage-1 :0);
+$FmtPV['$bi_EntryStart'] = (($bi_CurrentPage-1)*$bi_EntryCount)+1;
+$FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + $bi_EntryCount-1;
 
 # ----------------------------------------
 # - Markup
@@ -285,6 +287,7 @@ global $bi_ResetPmFormField,$bi_OriginalFn,$bi_GroupFooterFmt,$bi_CommentGroup,$
 		if (isset($bi_ResetPmFormField))
 			foreach ($bi_ResetPmFormField  as $k => $v) {
 				$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
+				#TODO: Clean input
 				$FmtPV['$bi_Default_'.$k]='"'.$v.'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
 			}
 	}elseif ($entrytype == 'blog' && $action=='browse'){
@@ -599,7 +602,7 @@ global $action, $bi_OriginalFn, $bi_CommentsEnabled, $bi_CommentGroup,$bi_Pagena
 	#$bi_Pagename is always the blog page
 	# Set level to read if a non-authenticated user is posting a comment.
 	if ( (($level=='edit') || ($level=='publish'))
-		&& $action=='pmform' && PageTextVar($bi_Pagename,'entrytype') == 'blog'  #TODO!!!!!! not $src, but $bi_Pagename
+		&& $action=='pmform' && PageTextVar($bi_Pagename,'entrytype') == 'blog'
 		&& $bi_CommentsEnabled!='none' && preg_match("/^" .$bi_CommentGroup ."\./", $pn) ){
 		$level = 'read';
 		$authprompt = false;
@@ -796,6 +799,7 @@ function bi_FeedText($pagename, &$page, $tag){
 # ----------------------------------------
 # Only sets defaults if the array is empty or not set; SDVA *adds* key/values to those set by user
 function bi_SDVSA(&$var,$val){ $var = (is_array($var) && !empty($var) ?$var :$val); }
+#TODO: Clean input
 function bi_setFmtPV($a){ foreach ($a as $k)  $GLOBALS['FmtPV']['$'.$k]='$GLOBALS["'.$k.'"]'; }
 # Sets $FmtPV variables named $key_VALUE. $a is an array with the key as the variable name, and values as indecies.
 function bi_setFmtPVA ($a){
