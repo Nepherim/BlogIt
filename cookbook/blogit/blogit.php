@@ -5,7 +5,7 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '2011-07-04';  #1.7.0
+$RecipeInfo['BlogIt']['Version'] = '20160230';  #1.8.0
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
 
 # ----------------------------------------
@@ -78,10 +78,18 @@ SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',  #strip single-quotes
 	"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,  #convert everything else to hyphen
 	"/(^\\" .$bi_TitleSeparator ."+)|(\\" .$bi_TitleSeparator ."+\$)/" => '',  #trim hyphens front and back
-	"/\\" .$bi_TitleSeparator ."{2,}/" => $bi_TitleSeparator,  #trim duplicate hyphens
-	($Charset=='UTF-8' ?"/^([\\xc0-\\xdf].)/e" :'//') => ($Charset=='UTF-8' ?"utf8toupper('$1')" :''),  #uppercase first letter
-	"/^([a-z])/e" => "strtoupper('$1')"
+	"/\\" .$bi_TitleSeparator ."{2,}/" => $bi_TitleSeparator  #trim duplicate hyphens
 ));
+if (function_exists('Markup_e'))
+	SDVA($bi_MakePageNamePatterns, array(
+		($Charset=='UTF-8' ?"/^([\\xc0-\\xdf].)/" :'//') => ($Charset=='UTF-8' ?PCCF("return utf8toupper(\$m[1]);") :''),  #uppercase first letter
+		"/^([a-z])/" => PCCF("return strtoupper(\$m[1]);")
+	));
+else
+	SDVA($bi_MakePageNamePatterns, array(
+		($Charset=='UTF-8' ?"/^([\\xc0-\\xdf].)/e" :'//') => ($Charset=='UTF-8' ?"utf8toupper('$1')" :''),  #uppercase first letter
+		"/^([a-z])/e" => "strtoupper('$1')"
+	));
 SDVA($bi_FixPageTitlePatterns, array(
 	'/[.\\/#]/' => ''	#remove dots, forward and backslashes in page titles as MakePageName returns '' when these characters are present
 ));
@@ -140,7 +148,8 @@ SDV($AuthFunction,'PmWikiAuth');
 $bi_OriginalFn['AuthFunction']=$AuthFunction;  #must occur before calling bi_Auth()
 $AuthFunction = 'bi_BlogItAuth';  #TODO: Use $AuthUserFunctions instead?
 # Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
-$PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_-\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';  #[1]
+# TODO: Reccomendation from John Rankin to change to (\w[-_\w]*) -- need to determine impact.
+$PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_\w-]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';  #[1]
 $bi_Pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
 
 if ($bi_Pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"' .bi_Clean('word', $_GET['blogid']) .'"';
@@ -236,14 +245,30 @@ $FmtPV['$bi_EntryEnd']   = $FmtPV['$bi_EntryStart'] + $bi_EntryCount-1;
 
 # ----------------------------------------
 # - Markup
-Markup('blogit', 'fulltext', '/\(:blogit (list|cleantext)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
-	"blogitMU_$1(PSS('$2'), PSS('$3'))");
-Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
-	'(date|intro|author|tags|edit|newentry|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentreply|commentblock|commenttext|commentid)'.
-	'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
-	"blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
-Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
-	"PRR(bi_includeSection(\$GLOBALS['bi_Pagename'], PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
+function bi_blogitMU_Handler($m){
+	$func = 'blogitMU_'.$m[1];
+	return $func($m[2], $m[3]);
+}
+if(function_exists('Markup_e')) {  #PmWiki 2.2.58+ / PHP5
+	Markup_e('blogit', 'fulltext', '/\(:blogit (list|cleantext)\s?(.*?):\)(.*?)\(:blogitend:\)/si',
+		"bi_blogitMU_Handler(\$m)");  #need to use an interim handler
+	Markup_e('blogit-skin', 'fulltext', '/\(:blogit-skin '.
+		'(date|intro|author|tags|edit|newentry|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentreply|commentblock|commenttext|commentid)'.
+		'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/si',
+		"blogitSkinMU(\$m[1], \$m[2], \$m[3])");
+	Markup_e('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/i',
+		"PRR(bi_includeSection(\$GLOBALS['bi_Pagename'], \$m[1].' '.\$GLOBALS['bi_TemplateList']))");
+} else {  #PmWiki 2.2.58-, pre PHP5
+	Markup('blogit', 'fulltext', '/\(:blogit (list|cleantext)\s?(.*?):\)(.*?)\(:blogitend:\)/esi',
+		"blogitMU_$1(PSS('$2'), PSS('$3'))");
+	Markup('blogit-skin', 'fulltext', '/\(:blogit-skin '.
+		'(date|intro|author|tags|edit|newentry|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentreply|commentblock|commenttext|commentid)'.
+		'\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi',
+		"blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
+	Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei',
+		"PRR(bi_includeSection(\$GLOBALS['bi_Pagename'], PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
+}
+
 $SaveAttrPatterns['/\\(:includesection\\s.*?:\\)/i'] = ' ';  #prevents include sections becoming part of page targets list
 if (IsEnabled($EnableGUIButtons) && $FmtPV['$bi_Mode']!='ajax'){
 	if ($action=='bi_be' || $action=='bi_ne' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry'))
@@ -387,6 +412,7 @@ global $bi_ResetPmFormField,$_POST,$_REQUEST,$ROSPatterns,$CategoryGroup,
 		# url will be inherited from title, and will include a group from the url or the default group. If title is blank it is derived from url.
 		if (!strpos($_POST['ptv_entryurl'], '.'))  $pg = $_POST['ptv_entryurl'];
 		else  list($gr, $pg) = explode('.',$_POST['ptv_entryurl']);
+
 		$title = preg_replace( array_keys( $bi_FixPageTitlePatterns ), array_values( $bi_FixPageTitlePatterns ), $_POST['ptv_entrytitle'] );
 
 		# If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
@@ -721,7 +747,7 @@ global $PageTextVarPatterns;
 function bi_SaveTags($body, $user_tags, $mode='save') {
 global $CategoryGroup,$bi_TagSeparator;
 	# Read tags from body, strip [[!...]]
-	if ($body)  $bodyTags = (preg_match_all('/\[\[\!(.*?)\]\]/e', $body, $match) ?$match[1] :array());  #array of tags contained in [[!...]] markup.
+	if ($body)  $bodyTags = (preg_match_all('/\[\[\!(.*?)\]\]/', $body, $match) ?$match[1] :array());  #array of tags contained in [[!...]] markup.
 
 	# Make sure tag-field entries are in standard separated format, and place in array
 	if ($user_tags)  $fieldTags = explode($bi_TagSeparator, preg_replace('/'.trim($bi_TagSeparator).'\s*/', $bi_TagSeparator, $user_tags));
