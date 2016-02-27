@@ -1,4 +1,5 @@
-// blogit.js 2010-08-12 1.6.0
+// blogit.js 2016-02-26 1.6.0
+//TODO: Required still?
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	$("<div/>").attr({id:"dialog"}).appendTo("body");
@@ -21,22 +22,23 @@ jQuery(document).ready(function($){
 	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
 	$(BlogIt.pm['skin-classes']['blog-form']+' form').validity( BlogIt.fn.blogRules );
 
-	$("a[href*=action\=bi_ca&bi_mode\=ajax],a[href*=action\=bi_cua&bi_mode\=ajax]").live('click', function(e){  //comment un/approve
+// TODO: replace document with containing object
+	$(document).on("click", 'a[href*="action\=bi_ca&bi_mode\=ajax"],a[href*="action\=bi_cua&bi_mode\=ajax"]', function(e){  //comment un/approve
 		e.preventDefault();
 		BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.commentStatus(e.target, data); }}, e);
 	});
-	$("a[href*=action\=bi_be&bi_mode\=ajax],a[href*=action\=bi_ne&bi_mode\=ajax]").live('click', function(e){ BlogIt.fn.loadDialog(e,'blog'); });  //blog edit
-	$("a[href*=action\=bi_del&bi_mode\=ajax]").live('click', function(e){ BlogIt.fn.deleteDialog(e); });  //delete comments and blogs
-	$("a[href*=action\=bi_bip]").live('click', function(e){ BlogIt.fn.commentBlockIP(e); });  //block comment IP addresses
-	$("a[href*=action\=bi_ce&bi_mode\=ajax]").live('click', function(e){ BlogIt.fn.loadDialog(e,'comment','edit'); });  //comment edit
-	$("a[href*=action\=bi_cr&bi_mode\=ajax]").live('click', function(e){ BlogIt.fn.loadDialog(e,'comment','reply'); });  //comment reply (admins)
+	$(document).on("click", 'a[href*="action\=bi_be&bi_mode\=ajax],a[href*=action\=bi_ne&bi_mode\=ajax"]', function(e){ BlogIt.fn.loadDialog(e,'blog'); });  //blog edit
+	$(document).on("click", 'a[href*="action\=bi_del&bi_mode\=ajax"]', function(e){ BlogIt.fn.deleteDialog(e); });  //delete comments and blogs
+	$(document).on("click", 'a[href*="action\=bi_bip"]', function(e){ BlogIt.fn.commentBlockIP(e); });  //block comment IP addresses
+	$(document).on("click", 'a[href*="action\=bi_ce&bi_mode\=ajax"]', function(e){ BlogIt.fn.loadDialog(e,'comment','edit'); });  //comment edit
+	$(document).on("click", 'a[href*="action\=bi_cr&bi_mode\=ajax"]', function(e){ BlogIt.fn.loadDialog(e,'comment','reply'); });  //comment reply (admins)
 	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').bind('change', function(){  //if any field (not a submit button) changes...
-		window.onbeforeunload = function(){ return BlogIt.fn.xl('You have unsaved changes.'); }
+		$(window).on('beforeunload', function(){return BlogIt.fn.xl('You have unsaved changes.');});
+
 	});
 	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:submit').bind('click', function(){
-		window.onbeforeunload = null;  //don't trigger on submit buttons.
+		$(window).on('beforeunload', null);
 	});
-
 	BlogIt.fn.addTagEvents();
 });
 
@@ -56,7 +58,7 @@ BlogIt.fn = function($){
 		}
 	});
 	function isComment(e){ return e.hasClass( BlogIt.pm['skin-classes']['comment'].replace(/^\./,'') ); }
-	function isCommentApproved(e){ return $("a[href*=action\=bi_cua&bi_mode\=ajax]", e).length > 0; }
+	function isCommentApproved(e){ return $('a[href*="action\=bi_cua&bi_mode\=ajax"]', e).length > 0; }
 	function updateCommentCount(approvedCC, unapprovedCC){
 		function updateCC(e, c){
 			var e_txt = e.text().replace(/\n/ig, '');  //remove extraneous \n as it messes up the replacing
@@ -66,7 +68,7 @@ BlogIt.fn = function($){
 		$(BlogIt.pm['skin-classes']['approved-comment-count']).each(function(i,e){ updateCC($(e), approvedCC); });
 		$(BlogIt.pm['skin-classes']['unapproved-comment-count']).each(function(i,e){ updateCC($(e), unapprovedCC); });
 	}
-	function getWrapper(e){ return $(e).closest('"[id^=bi_ID]"'); }
+	function getWrapper(e){ return $(e).closest('[id^="bi_ID"]'); }
 	function getActionContext(e, c){ return $(e).closest(c.join(',')); }
 	function getSkinClass($e, c){  //return the skin-class of $e
 		for (var i=0; ($e.length>0 && i<c.length); i++)  if ($e.bi_seek(c[i]).length > 0)  return c[i];
@@ -184,7 +186,7 @@ BlogIt.fn = function($){
 			frm
 				.prepend('<input type="hidden" name="bi_mode">')  //trigger ajax mode
 				.bind('submit',function(e){
-					$('[name=bi_mode]', frm).attr('value','ajax');  //IE8 resets value to null after one comment submit, since it's in the returned ajax.
+					$('[name="bi_mode"]', frm).attr('value','ajax');  //IE8 resets value to null after one comment submit, since it's in the returned ajax.
 					e.preventDefault();
 					$.validity.start();
 					rulesFn(frm);  //calls BlogIt.fn.blogRules or BlogIt.fn.commentRules
@@ -220,7 +222,7 @@ BlogIt.fn = function($){
 		},
 		commentSubmit: function(data, eventTarget, mode, frm, $context, skinClass){  //eventTarget is null for user clicking Post button (mode=='add')
 			var firstComment = $(BlogIt.pm['skin-classes']['comment-list']).length==0;
-			var $new = (firstComment ?$(data.out).bi_seek('[id^=bi_ID]').parent() :$(data.out).bi_seek('[id^=bi_ID]'));
+			var $new = (firstComment ?$(data.out).bi_seek('[id^="bi_ID"]').parent() :$(data.out).bi_seek('[id^="bi_ID"]'));
 			if (data.result!='error'){
 				var newCommentApproved = isCommentApproved($new);
 				if (mode=='edit'){
@@ -231,7 +233,7 @@ BlogIt.fn = function($){
 					if (mode=='add')  frm[0].reset();
 					$(BlogIt.pm['skin-classes'][(firstComment ?'comment-list-wrapper' :'comment-list')]).append($new);  //adding a new comment
 					//recreate a new capcha code to prevent multiple submits
-					$(BlogIt.pm['skin-classes']['comment-submit']+' img[src*=action\=captchaimage]').replaceWith($("img[src*=action\=captchaimage]", data.dom));
+					$(BlogIt.pm['skin-classes']['comment-submit']+' img[src*="action\=captchaimage"]').replaceWith($('img[src*="action\=captchaimage"]', data.dom));
 					$(BlogIt.pm['skin-classes']['comment-submit']+' input[name=captchakey]').replaceWith($('input[name=captchakey]', data.dom));
 					(newCommentApproved ?updateCommentCount(1,0) :updateCommentCount(0,1))
 				}
@@ -245,7 +247,9 @@ BlogIt.fn = function($){
 		},
 		blogRules: function(frm){
 			frm = frm || BlogIt.pm['skin-classes']['blog-form']+' form';
-			$('#entrydate',frm).match('entryDate');
+//TODO: Should this be validate.match -- to verify date is in right format?
+			// Use validity match() against entry-date regex
+			$('#entrydate',frm).match('entryDate');  //$.validity.patterns.entryDate
 			var url_val = $('#entryurl',frm).val();
 			$('#entrytitle,#entryurl',frm)
 				.assert(	( (url_val && !url_val.match(/^.*?\.$/)) || $('#entrytitle',frm).val()),
@@ -279,7 +283,7 @@ BlogIt.fn = function($){
 					return false;
 				}
 			});
-			$('#entrytags').live('blur', function(e){ $this=$(this); $this.val($this.val().replace(/[,|\s]+$/,"")); });
+			$(document).on("blur", '#entrytags', function(e){ $this=$(this); $this.val($this.val().replace(/[,|\s]+$/,"")); });
 		},
 //Visuals
 		showMsg: function(data){
