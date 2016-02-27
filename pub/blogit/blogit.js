@@ -27,7 +27,7 @@ jQuery(document).ready(function($){
 		e.preventDefault();
 		BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.commentStatus(e.target, data); }}, e);
 	});
-	$(document).on("click", 'a[href*="action\=bi_be&bi_mode\=ajax],a[href*=action\=bi_ne&bi_mode\=ajax"]', function(e){ BlogIt.fn.loadDialog(e,'blog'); });  //blog edit
+	$(document).on("click", 'a[href*="action\=bi_be&bi_mode\=ajax"],a[href*="action\=bi_ne&bi_mode\=ajax"]', function(e){ BlogIt.fn.loadDialog(e,'blog'); });  //blog edit
 	$(document).on("click", 'a[href*="action\=bi_del&bi_mode\=ajax"]', function(e){ BlogIt.fn.deleteDialog(e); });  //delete comments and blogs
 	$(document).on("click", 'a[href*="action\=bi_bip"]', function(e){ BlogIt.fn.commentBlockIP(e); });  //block comment IP addresses
 	$(document).on("click", 'a[href*="action\=bi_ce&bi_mode\=ajax"]', function(e){ BlogIt.fn.loadDialog(e,'comment','edit'); });  //comment edit
@@ -233,8 +233,8 @@ BlogIt.fn = function($){
 					if (mode=='add')  frm[0].reset();
 					$(BlogIt.pm['skin-classes'][(firstComment ?'comment-list-wrapper' :'comment-list')]).append($new);  //adding a new comment
 					//recreate a new capcha code to prevent multiple submits
-					$(BlogIt.pm['skin-classes']['comment-submit']+' img[src*="action\=captchaimage"]').replaceWith($('img[src*="action\=captchaimage"]', data.dom));
-					$(BlogIt.pm['skin-classes']['comment-submit']+' input[name=captchakey]').replaceWith($('input[name=captchakey]', data.dom));
+					$(BlogIt.pm['skin-classes']['comment-submit']+' img[src*="action\=captchaimage"]').replaceWith($('img[src*="action\=captchaimage"]', data.dom));  //TODO: What is this?
+					$(BlogIt.pm['skin-classes']['comment-submit']+' input[name="captchakey"]').replaceWith($('input[name="captchakey"]', data.dom));
 					(newCommentApproved ?updateCommentCount(1,0) :updateCommentCount(0,1))
 				}
 			}
