@@ -1,28 +1,54 @@
-// blogit.js 2016-02-26 1.6.0
+// blogit.js 2016-02-26 1.7.0
 //TODO: Required still?
 jQuery.noConflict();
 jQuery(document).ready(function($){
-	$("<div/>").attr({id:"dialog"}).appendTo("body");
+	$("<div/>").attr({id:"dialog"}).appendTo("body");  //TODO: WHY required? Should be $('div#dialog').append -- or better yet just $('#dialog'), and then '.' concat with line below
 	$('#dialog').dialog({ resizable: true, modal: true, autoOpen: false, closeOnEscape: false });  //set defaults
 
-	//show error messages set by pmwiki, in .wikimessage
-	if ($('.wikimessage').length){ $('html,body').animate({scrollTop: $('.wikimessage').offset().top-175}, 1); }
+	//show error messages set by pmwiki in .wikimessage
 	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['blog-form']+' .wikimessage').html(), result:'error'});
 	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['comment-form']+' .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
 
-	$('#blogit-cancel').bind('click', function(){  //for blog entry, restore initial data to prevent validation errors from changed field.
-		var $form = ($("#wikiedit").length ?$(BlogIt.pm['skin-classes']['blog-form']+' form') :$(BlogIt.pm['skin-classes']['comment-form']).closest('form'));  //on the read page or edit page
-		$form[0].reset();  //assume we loaded with valid data.
+	//for blog entry, restore initial data to prevent validation errors from changed field.
+	$('#blogit-cancel').bind('click', function(){
+		$(gBlogFrm, $(BlogIt.pm['skin-classes']['comment-form']).closest('form'))[0].reset();  //on the read page or edit page, assume we loaded with valid data
 		return true;
 	});
 	//adds ajax handler, and validation to forms already on the page (ie, comment form); need to exclude cancel/submit buttons on 'normal' comment edit
 	BlogIt.fn.ajaxForm($(BlogIt.pm['skin-classes']['comment-list-wrapper']+' + form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, 'add');
 
 	//add form validation to non-ajax forms (ie, Edit form in normal mode)
-	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
-	$(BlogIt.pm['skin-classes']['blog-form']+' form').validity( BlogIt.fn.blogRules );
+//	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
+//	$(BlogIt.pm['skin-classes']['blog-form']+' form').validity( BlogIt.fn.blogRules );
 
-// TODO: replace document with containing object
+	ValJS.addRule('pagename', {
+		options: {
+			msg: BlogIt.fn.xl('Either enter a Blog Title or a Pagename.')
+		},
+		run: function(v) {
+			frm = BlogIt.pm['skin-classes']['blog-form']+' form';
+			return Boolean($('#entryurl',frm).val() || $('#entrytitle',frm).val());
+		}
+	});
+	$(BlogIt.pm['skin-classes']['blog-form']+' form').valjs({
+		fields: {
+			ptv_entrydate: {
+				'datetime': {'msg': {'error': 'Invalid format ('+ BlogIt.fmt['entry-date']+ ')'}},  //TODO use XL
+				'format'  : BlogIt.fmt['entry-date']
+			},
+			ptv_entryurl: {'pagename': true},
+			ptv_entrytitle: {'pagename': true}
+		}
+	})
+	.on('submitform.valjs', function(e){
+		e.preventDefault();
+		console.log('STOPPED');
+		frm = BlogIt.pm['skin-classes']['blog-form']+' form';
+		console.log (Boolean($('#entryurl',frm).val() || $('#entrytitle',frm).val()));
+		return false;
+	});
+
+	//TODO: replace document with containing object
 	$(document).on("click", 'a[href*="action\=bi_ca&bi_mode\=ajax"],a[href*="action\=bi_cua&bi_mode\=ajax"]', function(e){  //comment un/approve
 		e.preventDefault();
 		BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.commentStatus(e.target, data); }}, e);
@@ -34,7 +60,6 @@ jQuery(document).ready(function($){
 	$(document).on("click", 'a[href*="action\=bi_cr&bi_mode\=ajax"]', function(e){ BlogIt.fn.loadDialog(e,'comment','reply'); });  //comment reply (admins)
 	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').bind('change', function(){  //if any field (not a submit button) changes...
 		$(window).on('beforeunload', function(){return BlogIt.fn.xl('You have unsaved changes.');});
-
 	});
 	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:submit').bind('click', function(){
 		$(window).on('beforeunload', null);
@@ -44,7 +69,7 @@ jQuery(document).ready(function($){
 
 var BlogIt={ fmt:{}, xl:{}, fn:{}, pm:{} };
 BlogIt.fn = function($){
-//private declarations
+	//private declarations
 	var _unapprove;
 	$.ajaxSetup({ timeout: 15000,  //timeout of 15 seconds
 		contentType: "application/x-www-form-urlencoded; charset="+BlogIt.pm['charset'],  //NOTE: jquery will always send with UTF8, regardless of charset specified.
@@ -188,10 +213,11 @@ BlogIt.fn = function($){
 				.bind('submit',function(e){
 					$('[name="bi_mode"]', frm).attr('value','ajax');  //IE8 resets value to null after one comment submit, since it's in the returned ajax.
 					e.preventDefault();
-					$.validity.start();
+//					$.validity.start();
 					rulesFn(frm);  //calls BlogIt.fn.blogRules or BlogIt.fn.commentRules
-					var result = $.validity.end();  //if valid then it's okay to proceed with the Ajax
-					if (result.valid){
+//					var result = $.validity.end();  //if valid then it's okay to proceed with the Ajax
+//					if (result.valid){
+					if (true){  //TODO
 						var $context,skinClass;
 						if (eventTarget){  //eventTarget is null for user clicking Post button (mode=='add')
 							//valid contexts. don't include 'comment-list' as it's the default, and also present on 'comment-admin-list'
@@ -249,12 +275,12 @@ BlogIt.fn = function($){
 			frm = frm || BlogIt.pm['skin-classes']['blog-form']+' form';
 //TODO: Should this be validate.match -- to verify date is in right format?
 			// Use validity match() against entry-date regex
-			$('#entrydate',frm).match('entryDate');  //$.validity.patterns.entryDate
-			var url_val = $('#entryurl',frm).val();
-			$('#entrytitle,#entryurl',frm)
-				.assert(	( (url_val && !url_val.match(/^.*?\.$/)) || $('#entrytitle',frm).val()),
-					BlogIt.fn.xl('Either enter a Blog Title or a Pagename')
-				);
+//			$('#entrydate',frm).match('entryDate');  //$.validity.patterns.entryDate
+//			var url_val = $('#entryurl',frm).val();
+//			$('#entrytitle,#entryurl',frm)
+//				.assert(	( (url_val && !url_val.match(/^.*?\.$/)) || $('#entrytitle',frm).val()),
+//					BlogIt.fn.xl('Either enter a Blog Title or a Pagename')
+//				);
 		},
 		addTagEvents: function(){
 			//Add autocomplete. :not only adds autocomplete if not already added.
