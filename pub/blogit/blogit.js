@@ -1,51 +1,52 @@
 // blogit.js 2016-02-26 1.7.0
-//TODO: Required still?
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	$("<div/>").attr({id:"dialog"}).appendTo("body");  //TODO: WHY required? Should be $('div#dialog').append -- or better yet just $('#dialog'), and then '.' concat with line below
 	$('#dialog').dialog({ resizable: true, modal: true, autoOpen: false, closeOnEscape: false });  //set defaults
 
 	//show error messages set by pmwiki in .wikimessage
+	//TODO: Hide original message in .wikimessage?
 	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['blog-form']+' .wikimessage').html(), result:'error'});
 	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['comment-form']+' .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
 
+//TODO: Check these binds to see if there is a simpler syntax, and whether code is duplicative
 	//for blog entry, restore initial data to prevent validation errors from changed field.
+	//TODO: Is there even a cancel of comments?
+	//TODO: Is this still required with new library?
 	$('#blogit-cancel').bind('click', function(){
-		$(gBlogFrm, $(BlogIt.pm['skin-classes']['comment-form']).closest('form'))[0].reset();  //on the read page or edit page, assume we loaded with valid data
+		$(BlogIt.pm['skin-classes']['blog-form']+ ' form', BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form').reset();  //on the read page or edit page, assume we loaded with valid data
 		return true;
 	});
-	//adds ajax handler, and validation to forms already on the page (ie, comment form); need to exclude cancel/submit buttons on 'normal' comment edit
-	BlogIt.fn.ajaxForm($(BlogIt.pm['skin-classes']['comment-list-wrapper']+' + form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, 'add');
 
 	//add form validation to non-ajax forms (ie, Edit form in normal mode)
-//	$.validity.patterns.entryDate = BlogIt.fmt['entry-date'];
-//	$(BlogIt.pm['skin-classes']['blog-form']+' form').validity( BlogIt.fn.blogRules );
-
-	ValJS.addRule('pagename', {
-		options: {
-			msg: BlogIt.fn.xl('Either enter a Blog Title or a Pagename.')
+	$.validator.setDefaults({
+		debug: true,
+		success: "valid"
+	});
+	$.validator.addMethod(
+		'datetime',
+		function(v, e, fmt){
+			return this.optional(e) ||	RegExp(BlogIt.fmt['entry-date']).test(v);
 		},
-		run: function(v) {
-			frm = BlogIt.pm['skin-classes']['blog-form']+' form';
-			return Boolean($('#entryurl',frm).val() || $('#entrytitle',frm).val());
+		'Must be datetime.'  //TODO: Add format string XL
+	);
+	$(BlogIt.pm['skin-classes']['blog-form']+ ' form').validate({
+		rules: {
+			ptv_entrydate: {datetime: true},
+			ptv_entryurl: {require_from_group: [1, "#entrytitle,#entryurl"]},
+			ptv_entrytitle: {require_from_group: [1, "#entrytitle,#entryurl"]}
 		}
 	});
-	$(BlogIt.pm['skin-classes']['blog-form']+' form').valjs({
-		fields: {
-			ptv_entrydate: {
-				'datetime': {'msg': {'error': 'Invalid format ('+ BlogIt.fmt['entry-date']+ ')'}},  //TODO use XL
-				'format'  : BlogIt.fmt['entry-date']
-			},
-			ptv_entryurl: {'pagename': true},
-			ptv_entrytitle: {'pagename': true}
+	$(BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form').validate({
+		submitHandler: function(form) {
+			//TODO: Optimize parameters in ajaxForm
+			BlogIt.fn.ajaxForm($(BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, 'add');
+		},
+		rules: {
+			ptv_commentauthor: {required: true},
+			ptv_email: {required: true, email: true},
+			ptv_website: {url: true}
 		}
-	})
-	.on('submitform.valjs', function(e){
-		e.preventDefault();
-		console.log('STOPPED');
-		frm = BlogIt.pm['skin-classes']['blog-form']+' form';
-		console.log (Boolean($('#entryurl',frm).val() || $('#entrytitle',frm).val()));
-		return false;
 	});
 
 	//TODO: replace document with containing object
@@ -61,6 +62,7 @@ jQuery(document).ready(function($){
 	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').bind('change', function(){  //if any field (not a submit button) changes...
 		$(window).on('beforeunload', function(){return BlogIt.fn.xl('You have unsaved changes.');});
 	});
+	//TODO: What is this for?
 	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:submit').bind('click', function(){
 		$(window).on('beforeunload', null);
 	});
@@ -205,40 +207,32 @@ BlogIt.fn = function($){
 				}
 			});
 		},
-		//defines the actions to perform when clicking Submit/Cancel from dialogs, and comment form on entry form
+		//defines the ajax actions when clicking Submit/Cancel from dialogs, and Submit from comment entry
 		ajaxForm: function(frm, rulesFn, submitFn, mode, eventTarget){
 			BlogIt.fn.addTagEvents();
-			frm
-				.prepend('<input type="hidden" name="bi_mode">')  //trigger ajax mode
-				.bind('submit',function(e){
-					$('[name="bi_mode"]', frm).attr('value','ajax');  //IE8 resets value to null after one comment submit, since it's in the returned ajax.
-					e.preventDefault();
-//					$.validity.start();
-					rulesFn(frm);  //calls BlogIt.fn.blogRules or BlogIt.fn.commentRules
-//					var result = $.validity.end();  //if valid then it's okay to proceed with the Ajax
-//					if (result.valid){
-					if (true){  //TODO
-						var $context,skinClass;
-						if (eventTarget){  //eventTarget is null for user clicking Post button (mode=='add')
-							//valid contexts. don't include 'comment-list' as it's the default, and also present on 'comment-admin-list'
-							var vc = [BlogIt.pm['skin-classes']['blog-entry'],BlogIt.pm['skin-classes']['comment-admin-list'],
-								BlogIt.pm['skin-classes']['blog-entry-summary'], BlogIt.pm['skin-classes']['blog-list-row']];
-							$context = getActionContext(eventTarget.target, vc);
-							skinClass = getSkinClass($context, vc);
-							$(this).prepend('<input type="hidden" value="'+skinClass+'" name="bi_context">')  //trigger multi-entry mode
-						}
-						dialogWait();
-						$.ajax({type: 'POST', dataType:'json', url:$(this).attr('action'),  //post with the action defined on the form
-							data: $(this).serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
-							success: function(data){  //after PmForms finishes processing, update page with new content
-								dialogClose(data);
-								if (data.out)  submitFn(data, eventTarget, mode, frm, $context, skinClass);
-								else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || 'error')});
-							}
-						});
-					}
-				});
+
+			if (!$('[name="bi_mode"]').length)  frm.prepend('<input type="hidden" name="bi_mode" value="ajax">');  //trigger ajax mode
+			var $context,skinClass;
+			//TODO: What is this for?
+			if (eventTarget){  //eventTarget is null for user clicking Post button (mode=='add')
+				//valid contexts. don't include 'comment-list' as it's the default, and also present on 'comment-admin-list'
+				var vc = [BlogIt.pm['skin-classes']['blog-entry'],BlogIt.pm['skin-classes']['comment-admin-list'],
+					BlogIt.pm['skin-classes']['blog-entry-summary'], BlogIt.pm['skin-classes']['blog-list-row']];
+				$context = getActionContext(eventTarget.target, vc);
+				skinClass = getSkinClass($context, vc);
+				frm.prepend('<input type="hidden" value="'+skinClass+'" name="bi_context">')  //trigger multi-entry mode
+			}
+			dialogWait();
+			$.ajax({type: 'POST', dataType:'json', url:frm.attr('action'),  //post with the action defined on the form
+				data: frm.serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
+				success: function(data){  //after PmForms finishes processing, update page with new content
+					dialogClose(data);
+					if (data.out)  submitFn(data, eventTarget, mode, frm, $context, skinClass);
+					else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || 'error')});
+				}
+			});
 		},
+
 //Routines called from ajaxForm
 		blogSubmit: function(data, eventTarget, mode, frm, $context, skinClass){  //eventTarget,mode,frm,$context,skinClass not used in this routine
 			//can't use closest since no eventTarget on DOM passed back from server; use bi_seek (filter/find) to start from top of DOM, work down
@@ -265,22 +259,6 @@ BlogIt.fn = function($){
 				}
 			}
 			flash($new, data);
-		},
-		commentRules: function(frm){
-			$('#comment-author',frm).require();
-			$('#comment-email',frm).require().match('email');
-			$('#comment-website',frm).match('url');
-		},
-		blogRules: function(frm){
-			frm = frm || BlogIt.pm['skin-classes']['blog-form']+' form';
-//TODO: Should this be validate.match -- to verify date is in right format?
-			// Use validity match() against entry-date regex
-//			$('#entrydate',frm).match('entryDate');  //$.validity.patterns.entryDate
-//			var url_val = $('#entryurl',frm).val();
-//			$('#entrytitle,#entryurl',frm)
-//				.assert(	( (url_val && !url_val.match(/^.*?\.$/)) || $('#entrytitle',frm).val()),
-//					BlogIt.fn.xl('Either enter a Blog Title or a Pagename')
-//				);
 		},
 		addTagEvents: function(){
 			//Add autocomplete. :not only adds autocomplete if not already added.

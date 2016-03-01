@@ -26,7 +26,7 @@ SDV($bi_RSSEnabled, 'true');
 SDV($bi_RSSPerPage, $bi_EntriesPerPage);
 SDVA($bi_BlogList, array('blog1'));  #Ensure 'blog1' key remains; you can add keys for other blogs.
 SDVA($bi_Auth, array('edit'=>array('comment-edit', 'comment-approve', 'blog-edit', 'blog-new', 'sidebar', 'blogit-admin')));  #key: role; value: array of actions
-SDV($bi_DateStyle, 'dmy');  #if you change the date entry format, then indicate the dmy sequencing (dmy, mdy, ymd)
+SDV($bi_DateStyle, 'dmy');  #if you change the date entry format, then indicate the dmy sequencing (dmy, mdy, ymd) TODO: How is this different to BlogIt.fmt["entry-date"]
 
 # ----------------------------------------
 # - Skin settings
@@ -44,8 +44,11 @@ SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tel
 	'comment' => '.comment',  #MUST be a single css class NOT a css-path. applied to each block containing a single comment, usually LI elements (in #comment-view-all and #comment-view-admin)
 	'comment-admin-list' => '.blogit-comment-admin-list',  #surrounds the unapproved-comment list section (in #comment-view-admin)
 	'comment-list' => '.blogit-comment-list',  #pointer to the entire comment list, excluding headers, and comment form. Contained in #comments-pagelist, usually not changed.
+	//TODO: Should be class .blogit-comment-list in order to exclude header
 	'comment-list-wrapper' => '#blogit-comment-list',  #pointer to a wrapper around the comment-list; used for the first comment, where 'comment-list' may not exist. Should not include headers or form.
 	'blog-form' => '#wikiedit.blogit-blog-form',  #pointer to the wrapper containing the blog-entry FORM object
+	//TODO: Should be #wikitext #comments
+	//TODO: No longer used for jq selector to form -- possibly remove?
 	'comment-form' => '#wikitext .blogit-comment-form',  #pointer to the wrapper containing the comment-entry FORM object (both ajax and normal entry)
 	'comment-submit' => '#wikitext .blogit-submit-row'  #pointer to the wrapper containing the captcha and comment Submit
 ));
@@ -109,6 +112,7 @@ SDV($FPLTemplatePageFmt, array(
 	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'));
 SDV($bi_CommentPattern, '/^' .$bi_CommentGroup .'[\/\.](.*?)-(.*?)-(\d{8}T\d{6}){1}\z/');
 SDVA($bi_DateSequences, array('ymd'=>'$2/$3/$1 $4:$5', 'dmy'=>'$2/$1/$3 $4:$5','mdy'=>'$1/$2/$3 $4:$5'));  #used to convert date fmt into std "[m/d/y] H:M"
+//TODO: (?=\d)^(?:(?!(?:10\D(?:0?[5-9]|1[0-4])\D(?:1582))|(?:0?9\D(?:0?[3-9]|1[0-3])\D(?:1752)))((?:0?[13578]|1[02])|(?:0?[469]|11)(?!\/31)(?!-31)(?!\.31)|(?:0?2(?=.?(?:(?:29.(?!000[04]|(?:(?:1[^0-6]|[2468][^048]|[3579][^26])00))(?:(?:(?:\d\d)(?:[02468][048]|[13579][26])(?!\x20BC))|(?:00(?:42|3[0369]|2[147]|1[258]|09)\x20BC))))))|(?:0?2(?=.(?:(?:\d\D)|(?:[01]\d)|(?:2[0-8])))))([-.\/])(0?[1-9]|[12]\d|3[01])\2(?!0000)((?=(?:00(?:4[0-5]|[0-3]?\d)\x20BC)|(?:\d{4}(?!\x20BC)))\d{4}(?:\x20BC)?)(?:$|(?=\x20\d)\x20))?((?:(?:0?[1-9]|1[012])(?::[0-5]\d){0,2}(?:\x20[aApP][mM]))|(?:[01]\d|2[0-3])(?::[0-5]\d){1,2})?$
 SDVA($bi_DateFmtRE,array('/\//'=>'\/','/%d|%e/'=>'(0?[1-9]|[12][0-9]|3[01])', '/%m/'=>'(0?[1-9]|1[012])', '/%g|%G|%y|%Y/'=>'(19\d\d|20\d\d)',
 	'/%H|%I|%l/'=>'([0-1]?\d|2[0-3])', '/%M/'=>'([0-5]\d)'));  #additional RE/date combinations can be added, but ordering of separator, day, month, year, hour, min must remain
 SDVA($SearchPatterns['blogit-comments'], array('comments' => $bi_CommentPattern));  #Used in pagelists
@@ -161,12 +165,10 @@ if ( bi_Auth('*') )  $EnablePostCaptchaRequired = 0;  #disable captcha for any B
 # - Javascript - [1]
 SDVA($HTMLHeaderFmt, array(
 	'jquery-ui.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui/ui-lightness/jquery-ui.custom.css" type="text/css" />',
-	'jquery.validity.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery.validity.css" type="text/css" />',
 	'blogit.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />'));
 SDVA($HTMLFooterFmt, array(
 	'jquery.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>',
 	'jquery-ui.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.min.js"></script>',
-	'jquery.validity.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validity.pack.js"></script>',
 	'jquery.showmessage.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.min.js"></script>',
 	'blogit.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>',
 	'blogit-core' => '<script type="text/javascript">
@@ -826,7 +828,7 @@ function bi_FeedText($pagename, &$page, $tag){
 # ----------------------------------------
 function bi_Clean($m, $v){
 	if ($m=='mode')  return ($v=='ajax' ?'ajax' :'');
-	elseif ($m=='word')  return preg_replace("/\\W+/", "", $v);
+	elseif ($m=='word')  return preg_replace("/\\W+/", "", $v);  //remove all non-alpha-numerics
 	elseif ($m=='alpha')  return str_replace('$', '&#036;', str_replace('\'','&#039;', str_replace('"','&quot;', $v)));
 	else return '';
 }
@@ -834,6 +836,7 @@ function bi_Clean($m, $v){
 function bi_SDVSA(&$var, $val){ $var = (is_array($var) && !empty($var) ?$var :$val); }
 function bi_setFmtPV($a){ foreach ($a as $k)  $GLOBALS['FmtPV']['$'.$k]='$GLOBALS["'.$k.'"]'; }
 # Sets $FmtPV variables named $key_VALUE. $a is an array with the key as the variable name, and values as indecies.
+//TODO: INJECTION?
 function bi_setFmtPVA ($a){
 	foreach ($a as $var=>$vals)
 		foreach ($vals as $k=>$v)
