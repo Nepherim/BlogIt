@@ -1,7 +1,7 @@
 // blogit.js 2016-02-26 1.7.0
 jQuery.noConflict();
 jQuery(document).ready(function($){
-	$("<div/>").attr({id:"dialog"}).appendTo("body");  //TODO: WHY required? Should be $('div#dialog').append -- or better yet just $('#dialog'), and then '.' concat with line below
+	$("<div/>").attr({id:"dialog", class:'blogit-dialog'}).appendTo("body");  //create a div for dialogs
 	$('#dialog').dialog({ resizable: true, modal: true, autoOpen: false, closeOnEscape: false });  //set defaults
 
 	//show error messages set by pmwiki in .wikimessage
@@ -9,20 +9,8 @@ jQuery(document).ready(function($){
 	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['blog-form']+' .wikimessage').html(), result:'error'});
 	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['comment-form']+' .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
 
-//TODO: Check these binds to see if there is a simpler syntax, and whether code is duplicative
-	//for blog entry, restore initial data to prevent validation errors from changed field.
-	//TODO: Is there even a cancel of comments?
-	//TODO: Is this still required with new library?
-	$('#blogit-cancel').bind('click', function(){
-		$(BlogIt.pm['skin-classes']['blog-form']+ ' form', BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form').reset();  //on the read page or edit page, assume we loaded with valid data
-		return true;
-	});
-
-	//add form validation to non-ajax forms (ie, Edit form in normal mode)
-	$.validator.setDefaults({
-		debug: true,
-		success: "valid"
-	});
+	//for blog entry add class to prevent validations preventing cancel action
+	$('#blogit-cancel').addClass('cancel');
 	$.validator.addMethod(
 		'datetime',
 		function(v, e, fmt){
@@ -30,26 +18,8 @@ jQuery(document).ready(function($){
 		},
 		'Must be datetime.'  //TODO: Add format string XL
 	);
-	$(BlogIt.pm['skin-classes']['blog-form']+ ' form').validate({
-		rules: {
-			ptv_entrydate: {datetime: true},
-			ptv_entryurl: {require_from_group: [1, "#entrytitle,#entryurl"]},
-			ptv_entrytitle: {require_from_group: [1, "#entrytitle,#entryurl"]}
-		}
-	});
-	$(BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form').validate({
-		submitHandler: function(form) {
-			//TODO: Optimize parameters in ajaxForm
-			BlogIt.fn.ajaxForm($(BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, 'add');
-		},
-		rules: {
-			ptv_commentauthor: {required: true},
-			ptv_email: {required: true, email: true},
-			ptv_website: {url: true}
-		}
-	});
+	BlogIt.fn.validationRules();
 
-	//TODO: replace document with containing object
 	$(document).on("click", 'a[href*="action\=bi_ca&bi_mode\=ajax"],a[href*="action\=bi_cua&bi_mode\=ajax"]', function(e){  //comment un/approve
 		e.preventDefault();
 		BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.commentStatus(e.target, data); }}, e);
@@ -59,12 +29,8 @@ jQuery(document).ready(function($){
 	$(document).on("click", 'a[href*="action\=bi_bip"]', function(e){ BlogIt.fn.commentBlockIP(e); });  //block comment IP addresses
 	$(document).on("click", 'a[href*="action\=bi_ce&bi_mode\=ajax"]', function(e){ BlogIt.fn.loadDialog(e,'comment','edit'); });  //comment edit
 	$(document).on("click", 'a[href*="action\=bi_cr&bi_mode\=ajax"]', function(e){ BlogIt.fn.loadDialog(e,'comment','reply'); });  //comment reply (admins)
-	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').bind('change', function(){  //if any field (not a submit button) changes...
+	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').on('change', function(){  //if any field (not a submit button) changes...
 		$(window).on('beforeunload', function(){return BlogIt.fn.xl('You have unsaved changes.');});
-	});
-	//TODO: What is this for?
-	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:submit').bind('click', function(){
-		$(window).on('beforeunload', null);
 	});
 	BlogIt.fn.addTagEvents();
 });
@@ -96,7 +62,6 @@ BlogIt.fn = function($){
 		$(BlogIt.pm['skin-classes']['unapproved-comment-count']).each(function(i,e){ updateCC($(e), unapprovedCC); });
 	}
 	function getWrapper(e){ return $(e).closest('[id^="bi_ID"]'); }
-	function getActionContext(e, c){ return $(e).closest(c.join(',')); }
 	function getSkinClass($e, c){  //return the skin-class of $e
 		for (var i=0; ($e.length>0 && i<c.length); i++)  if ($e.bi_seek(c[i]).length > 0)  return c[i];
 		return '';
@@ -119,8 +84,7 @@ BlogIt.fn = function($){
 		if (!data || (data && data.result!='error'))  $("#dialog").dialog("close").empty();
 	};
 	function dialogShow(txt, yes, no, w, ajax, e){
-		var $d = $('#dialog');
-		$d.html(txt).dialog('option', 'width', w);
+		 $('#dialog').html(txt).dialog('option', 'width', w);
 		var btn={};
 		if (no) btn[BlogIt.fn.xl(no)] = dialogClose;
 		if (yes) btn[BlogIt.fn.xl(yes)] = function(){
@@ -128,7 +92,7 @@ BlogIt.fn = function($){
 			dialogClose();
 		};
 		if (yes||no) $d.dialog('option', 'buttons', btn);
-		$d.dialog('open');
+		$('#dialog').dialog('open');
 	};
 	//visuals
 	function flash($e, data){
@@ -160,6 +124,7 @@ BlogIt.fn = function($){
 	return {
 		deleteDialog: function(e){
 			e.preventDefault();
+			//TODO: yes and no with XL()
 			dialogShow(BlogIt.fn.xl('Are you sure you want to delete?'),'Yes','No','300px',
 				{success:function(data){ objectRemove(e.target, data); }},e);
 		},
@@ -170,6 +135,7 @@ BlogIt.fn = function($){
 					if (data.ip){
 						dialogShow(
 							BlogIt.fn.xl('Commenter IP: ')+data.ip+'<br/>'+BlogIt.fn.xl('Enter the IP to block:')+
+							//TODO: submit, Cancel with XL()
 							'<input id="blogit_ip" type="text" value="'+data.ip+'"/>','Submit','Cancel','300px',
 							{	url: function(e){ return getEnteredIP(e); },
 								success: function(data){ BlogIt.fn.showMsg(data); }
@@ -188,69 +154,111 @@ BlogIt.fn = function($){
 			if (_unapprove)  updateCommentCount(-1,1)
 			else  updateCommentCount(1,-1);
 		},
-		//opens a dialog with content from PmWiki
+		//opens a dialog with content from PmWiki, calls validationRules(), and then on submit calls ajaxForm(), which calls updateBlog/updateComment
 		loadDialog: function(e,name,mode){
 			e.preventDefault();
 			$.ajax({dataType:'json', url:e.currentTarget.href,  //get the comment form from pmwiki; not .target, because actual target might be an image wrapped in an anchor
 				success: function(data){
 					if (data.out){  //form returned in data.out
-						var txt=(name=='blog' ?$(data.out).filter('#wikiedit') :data.out);  //only show wikiedit, not the editing reference
 						var btn={};
 						btn[BlogIt.fn.xl('Cancel')] = dialogClose;
-						btn[BlogIt.fn.xl('Submit')] = function(){ $(this).find('form').submit(); };
-						$('#dialog').html( txt )
+						btn[BlogIt.fn.xl('Submit')] = function() { $(this).find('form').submit(); };
+						$('#dialog').html( (name=='blog' ?$(data.out).filter('#wikiedit') :data.out) )  //only show wikiedit, not the editing reference
 							.dialog('option', 'buttons', btn)
 							.dialog('option', 'width', (name=='blog'?'750px':'430px')).dialog('open');  //load the edit form into a dialog
-						if (name=='blog')  BlogIt.fn.ajaxForm($('#dialog form'), BlogIt.fn.blogRules, BlogIt.fn.blogSubmit, mode, e);  //blog edit
-						else if (name=='comment')  BlogIt.fn.ajaxForm($('#dialog form'), BlogIt.fn.commentRules, BlogIt.fn.commentSubmit, mode, e);  //comments
+						BlogIt.fn.validationRules(e,mode);
 					}
 				}
 			});
 		},
-		//defines the ajax actions when clicking Submit/Cancel from dialogs, and Submit from comment entry
-		ajaxForm: function(frm, rulesFn, submitFn, mode, eventTarget){
+		//defines the ajax actions when clicking Submit from dialogs, and Submit from comment entry
+		ajaxForm: function($frm, submitFn, mode, eventTarget){
+			dialogWait();  //only really for blog edit
 			BlogIt.fn.addTagEvents();
 
-			if (!$('[name="bi_mode"]').length)  frm.prepend('<input type="hidden" name="bi_mode" value="ajax">');  //trigger ajax mode
-			var $context,skinClass;
-			//TODO: What is this for?
+			if (!$('[name="bi_mode"]',$frm).length)  $frm.prepend('<input type="hidden" name="bi_mode" value="ajax">');  //trigger ajax mode
+
+			var $context,containerClass;  //$context is a JQ object we're going to replace; skinClass is used in php.bi_AjaxRedirect to determine which includesection template to use
 			if (eventTarget){  //eventTarget is null for user clicking Post button (mode=='add')
-				//valid contexts. don't include 'comment-list' as it's the default, and also present on 'comment-admin-list'
-				var vc = [BlogIt.pm['skin-classes']['blog-entry'],BlogIt.pm['skin-classes']['comment-admin-list'],
-					BlogIt.pm['skin-classes']['blog-entry-summary'], BlogIt.pm['skin-classes']['blog-list-row']];
-				$context = getActionContext(eventTarget.target, vc);
-				skinClass = getSkinClass($context, vc);
-				frm.prepend('<input type="hidden" value="'+skinClass+'" name="bi_context">')  //trigger multi-entry mode
+				//TODO: why not include comment-list?
+				var vc = [BlogIt.pm['skin-classes']['blog-entry'], BlogIt.pm['skin-classes']['comment-admin-list'], BlogIt.pm['skin-classes']['blog-entry-summary'],
+					BlogIt.pm['skin-classes']['blog-list-row'], BlogIt.pm['skin-classes']['comment-list']];
+				$context = $(eventTarget.target).closest(vc.join(','));
+				console.log('context: ');
+				console.log($context);
+				containerClass = '';  //get the skin class of triggering context which is used to find the pmwiki includesection template (php.bi_AjaxRedirect())
+				//element can contain multiple classes. find only the class which is in valid contextx (vc)
+				for (var i=0; ($context.length>0 && i<vc.length); i++)  if ($context.bi_seek(vc[i]).length > 0)  { containerClass=vc[i]; break; }
+				console.log('new way class: .' +$context.attr('class'));
+				console.log('old way class:'+containerClass);
+				$('#dialog form').prepend('<input type="hidden" name="bi_context" value="'+ containerClass+ '">')  //trigger multi-entry mode
 			}
-			dialogWait();
-			$.ajax({type: 'POST', dataType:'json', url:frm.attr('action'),  //post with the action defined on the form
-				data: frm.serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
+
+			$.ajax({type: 'POST', dataType:'json', url:$frm.attr('action'),
+				data: $frm.serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 				success: function(data){  //after PmForms finishes processing, update page with new content
 					dialogClose(data);
-					if (data.out)  submitFn(data, eventTarget, mode, frm, $context, skinClass);
+					console.log('ajax class:'+containerClass);
+					if (data.out)  submitFn(data, mode, $context, containerClass);
 					else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || 'error')});
 				}
 			});
 		},
 
 //Routines called from ajaxForm
-		blogSubmit: function(data, eventTarget, mode, frm, $context, skinClass){  //eventTarget,mode,frm,$context,skinClass not used in this routine
+		validationRules: function(e,mode){
+			$(BlogIt.pm['skin-classes']['blog-form']+ ' form').validate({
+				submitHandler: function(form) {  //Only if the form validates
+					console.log($(form).parents('#dialog').length);
+					if ($(form).parents('#dialog').length){
+						console.log('calling ajax form');
+						BlogIt.fn.ajaxForm($(form), BlogIt.fn.updateBlog, mode,e);
+					}else{
+						$(window).off('beforeunload');
+						console.log('calling normal form');
+						form.submit();
+					}
+				},
+				rules: {
+					ptv_entrydate: {datetime: true},
+					ptv_entryurl: {require_from_group: [1, "#entrytitle,#entryurl"]},
+					ptv_entrytitle: {require_from_group: [1, "#entrytitle,#entryurl"]}
+				}
+			});
+
+			//dialog comment for is not wrapped in class
+			$('#dialog form,'+ BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form').each(function(){
+				$(this).validate({
+					submitHandler: function(form) {
+						console.log('calling comment ajax form');
+						BlogIt.fn.ajaxForm($(form), BlogIt.fn.updateComment, (!mode ?'add' :mode),e);  //mode is undefined when normal comment add, since no onclick handler defined
+					},
+					rules: {
+						ptv_commentauthor: {required: true},
+						ptv_email: {required: true, email: true},
+						ptv_website: {url: true}
+					}
+				});
+			});
+		},
+		updateBlog: function(data, mode, $context, containerClass){
 			//can't use closest since no eventTarget on DOM passed back from server; use bi_seek (filter/find) to start from top of DOM, work down
-			var $new=$(data.out).bi_seek(skinClass);  //class is "class1 class2", bi_seek (find/filter) needs ".class1.class2"
+			//Can't use entire data.out, as pmwiki returns full html objects, which may include <table> tags, not just the <tr>
+			var $new=$(data.out).bi_seek(containerClass);  //class is "class1 class2", bi_seek (find/filter) needs ".class1.class2"
 			$context.replaceWith($new);  //update existing blog entry
 			flash($new, data);
 		},
-		commentSubmit: function(data, eventTarget, mode, frm, $context, skinClass){  //eventTarget is null for user clicking Post button (mode=='add')
+		updateComment: function(data, mode, $context, containerClass){
 			var firstComment = $(BlogIt.pm['skin-classes']['comment-list']).length==0;
+			//TODO: If first then bi_ID won't exist, need to append to main comment block?
 			var $new = (firstComment ?$(data.out).bi_seek('[id^="bi_ID"]').parent() :$(data.out).bi_seek('[id^="bi_ID"]'));
 			if (data.result!='error'){
 				var newCommentApproved = isCommentApproved($new);
 				if (mode=='edit'){
-					var $old = getWrapper(eventTarget.target);  //find main wrapper from click point
-					$old.replaceWith($new);  //update existing comment
-					if (newCommentApproved != isCommentApproved($old))  (newCommentApproved ?updateCommentCount(1,-1) :updateCommentCount(-1,1));
+					$context.bi_seek('[id^="'+ $new.attr('id')+ '"]').replaceWith($new);
+					if (newCommentApproved != isCommentApproved($context))  (newCommentApproved ?updateCommentCount(1,-1) :updateCommentCount(-1,1));
 				}else{  //add or reply
-					if (mode=='add')  frm[0].reset();
+					if (mode=='add')  $(BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form')[0].reset();  //Reset the comment form since we just submitted it
 					$(BlogIt.pm['skin-classes'][(firstComment ?'comment-list-wrapper' :'comment-list')]).append($new);  //adding a new comment
 					//recreate a new capcha code to prevent multiple submits
 					$(BlogIt.pm['skin-classes']['comment-submit']+' img[src*="action\=captchaimage"]').replaceWith($('img[src*="action\=captchaimage"]', data.dom));  //TODO: What is this?

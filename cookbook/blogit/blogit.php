@@ -49,6 +49,7 @@ SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tel
 	'blog-form' => '#wikiedit.blogit-blog-form',  #pointer to the wrapper containing the blog-entry FORM object
 	//TODO: Should be #wikitext #comments
 	//TODO: No longer used for jq selector to form -- possibly remove?
+	//TODO: On ajax comment edit, #wikitext not present
 	'comment-form' => '#wikitext .blogit-comment-form',  #pointer to the wrapper containing the comment-entry FORM object (both ajax and normal entry)
 	'comment-submit' => '#wikitext .blogit-submit-row'  #pointer to the wrapper containing the captcha and comment Submit
 ));
@@ -164,11 +165,13 @@ if ( bi_Auth('*') )  $EnablePostCaptchaRequired = 0;  #disable captcha for any B
 # ----------------------------------------
 # - Javascript - [1]
 SDVA($HTMLHeaderFmt, array(
-	'jquery-ui.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui/ui-lightness/jquery-ui.custom.css" type="text/css" />',
+	'jquery-ui.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui.min.css" type="text/css" />',
 	'blogit.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />'));
 SDVA($HTMLFooterFmt, array(
 	'jquery.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>',
-	'jquery-ui.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.custom.min.js"></script>',
+	'jquery-ui.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.min.js"></script>',
+	'jq.validate' => '<script src="' .$PubDirUrl .'/blogit/jquery.validate.min.js"></script>',
+	'jq.validate-additional' => '<script src="' .$PubDirUrl .'/blogit/additional-methods.min.js"></script>',
 	'jquery.showmessage.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.min.js"></script>',
 	'blogit.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>',
 	'blogit-core' => '<script type="text/javascript">
@@ -687,7 +690,15 @@ function bi_AjaxRedirect($result=''){
 global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action,$bi_Name,$bi_Group,$bi_Pages,$bi_SkinClasses;
 bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']);
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 if pmform failed (invalid captcha, etc)
+		//TODO: Should blogit-comments be hardcoded, or refer to skinclasses?
+		//Translate the class of the html element being updated (bi_context) to the template to be used to generate new data on includesection from pmwiki
 		if ($_REQUEST['target']=='blogit-comments'){
+			//bi_context: includesection template
+			//$bi_SkinClasses['comment-admin-list'] - '.blogit-comment-admin-list': '#unapproved-comments'
+			//otherwise: '#comments-pagelist'
+			//$bi_SkinClasses['blog-entry-summary'] - '.blogit-post-summary': '#blog-summary-pagelist
+			//$bi_SkinClasses['blog-list-row'] - '.blogit-blog-list-row': '#blog-grid
+			// otherwise ('.blogit-post'): '#single-entry-view'
 			bi_SendAjax('(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['comment-admin-list'] ?'#unapproved-comments' :'#comments-pagelist')
 				.' commentid=' .$bi_CommentPage.' entrycomments=readonly":)',
 				($bi_CommentPage==$bi_Pagename
@@ -699,6 +710,7 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
 			bi_SendAjax((isset($_REQUEST['bi_context'])  #might have clicked from many places. We only care about a few.
 				?'(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['blog-entry-summary']
+				//TODO: Should these be hardcoded, or lookup to skinClasses?
 					?'#blog-summary-pagelist group=' .$bi_Group .' name='.$bi_Name  #main blog summary page
 					:($_REQUEST['bi_context']==$bi_SkinClasses['blog-list-row']  #blog list from admin page
 						?'#blog-grid group=' .$bi_Group .' name='.$bi_Name
