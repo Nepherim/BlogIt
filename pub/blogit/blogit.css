@@ -17,13 +17,6 @@
 .blogit-guibuttons{
 	margin-top: 10px;
 	}
-#dialog{
-	display: none;
-	text-align: left;
-	}
-#dialog .blogit-blog-form{
-	margin-top: 0px !important;
-	}
 label.error{
 	padding-left:12px;
 	display: inline;
@@ -33,24 +26,40 @@ label.error{
 	font-weight: bold;
 	}
 
-#showMessage{
-	font-family: Arial, Helvetica, clean, sans-serif;
-	font-size: large;
-	font-weight: bold;
-	text-align:center;
-	font-size:18px;
-	border-bottom:1px solid #bbb;
-	z-index: 2000 !important;
+.jBox-Notice {
+	width: 100%;
 	}
-#showMessage.notification{
-	background-color: rgb(247, 247, 247);
+.jBox-Notice .jBox-container {
+	font-family: Arial, Helvetica, clean, sans-serif;
+	font-weight: bold;
+	text-align: center;
+	font-size: 18px;
+	border-bottom: 1px solid #bbb;
+	text-shadow: none;
+	opacity: .85;
+	}
+.jBox-Notice .jBox-content {
+	padding: 30px 0;
+	}
+.jBox-Notice.notification .jBox-container {
+	background: #fdd;
 	color: red;
 	}
-#showMessage.success{
-	background-color: #BBFFB6;
+.jBox-Notice.success .jBox-container {
+	background: #BBFFB6;
 	color: #060;
 	}
-#showMessage.error{
-	background-color: #fdd;
+.jBox-Notice.error .jBox-container {
+	background: #fdd;
 	color: #f00;
+	}
+.jBox-Notice .jBox-closeButton {
+	top: 3px !important;
+	right: 4px !important;
+	width: 15px !important;
+	height: 15px !important;
+	}
+.jBox-Confirm .jBox-content {
+	text-align: left;
+	padding: 20px 25px;
 	}

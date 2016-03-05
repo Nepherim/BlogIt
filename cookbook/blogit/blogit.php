@@ -166,13 +166,13 @@ if ( bi_Auth('*') )  $EnablePostCaptchaRequired = 0;  #disable captcha for any B
 # - Javascript - [1]
 SDVA($HTMLHeaderFmt, array(
 	'jquery-ui.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui.min.css" type="text/css" />',
+	'jbox.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jbox.css" type="text/css" />',
 	'blogit.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />'));
 SDVA($HTMLFooterFmt, array(
 	'jquery.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>',
 	'jquery-ui.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.min.js"></script>',
 	'jq.validate' => '<script src="' .$PubDirUrl .'/blogit/jquery.validate.min.js"></script>',
-	'jq.validate-additional' => '<script src="' .$PubDirUrl .'/blogit/additional-methods.min.js"></script>',
-	'jquery.showmessage.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.showmessage.min.js"></script>',
+	'jbox.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jbox.min.js"></script>',
 	'blogit.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>',
 	'blogit-core' => '<script type="text/javascript">
 			BlogIt.pm["pubdirurl"]="'.$PubDirUrl.'/blogit";

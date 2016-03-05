@@ -1,9 +1,6 @@
 // blogit.js 2016-02-26 1.7.0
 jQuery.noConflict();
 jQuery(document).ready(function($){
-	$("<div/>").attr({id:"dialog", class:'blogit-dialog'}).appendTo("body");  //create a div for dialogs
-	$('#dialog').dialog({ resizable: true, modal: true, autoOpen: false, closeOnEscape: false });  //set defaults
-
 	//show error messages set by pmwiki in .wikimessage
 	//TODO: Hide original message in .wikimessage?
 	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['blog-form']+' .wikimessage').html(), result:'error'});
@@ -24,6 +21,7 @@ jQuery(document).ready(function($){
 		e.preventDefault();
 		BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.commentStatus(e.target, data); }}, e);
 	});
+	//TODO: Change structure to leverage jBox handlers.
 	$(document).on("click", 'a[href*="action\=bi_be&bi_mode\=ajax"],a[href*="action\=bi_ne&bi_mode\=ajax"]', function(e){ BlogIt.fn.loadDialog(e,'blog'); });  //blog edit
 	$(document).on("click", 'a[href*="action\=bi_del&bi_mode\=ajax"]', function(e){ BlogIt.fn.deleteDialog(e); });  //delete comments and blogs
 	$(document).on("click", 'a[href*="action\=bi_bip"]', function(e){ BlogIt.fn.commentBlockIP(e); });  //block comment IP addresses
@@ -33,6 +31,7 @@ jQuery(document).ready(function($){
 		$(window).on('beforeunload', function(){return BlogIt.fn.xl('You have unsaved changes.');});
 	});
 	BlogIt.fn.addTagEvents();
+	BlogIt.fn.addRequireGroup();
 });
 
 var BlogIt={ fmt:{}, xl:{}, fn:{}, pm:{} };
@@ -50,6 +49,8 @@ BlogIt.fn = function($){
 			)});
 		}
 	});
+	var dialog;  //global dialog reference so we can close from ajaxSubmit()
+
 	function isComment(e){ return e.hasClass( BlogIt.pm['skin-classes']['comment'].replace(/^\./,'') ); }
 	function isCommentApproved(e){ return $('a[href*="action\=bi_cua&bi_mode\=ajax"]', e).length > 0; }
 	function updateCommentCount(approvedCC, unapprovedCC){
@@ -61,6 +62,7 @@ BlogIt.fn = function($){
 		$(BlogIt.pm['skin-classes']['approved-comment-count']).each(function(i,e){ updateCC($(e), approvedCC); });
 		$(BlogIt.pm['skin-classes']['unapproved-comment-count']).each(function(i,e){ updateCC($(e), unapprovedCC); });
 	}
+	//TODO: This or bi_seek?
 	function getWrapper(e){ return $(e).closest('[id^="bi_ID"]'); }
 	function getSkinClass($e, c){  //return the skin-class of $e
 		for (var i=0; ($e.length>0 && i<c.length); i++)  if ($e.bi_seek(c[i]).length > 0)  return c[i];
@@ -76,23 +78,20 @@ BlogIt.fn = function($){
 	};
 	//dialog functions
 	function dialogWait(clear){
-		$("#dialog").siblings(".ui-dialog-titlebar").find(".ui-dialog-title")
-			.css((clear ?{background:""} :{background: "url("+BlogIt.pm.pubdirurl+"/wait.gif) no-repeat left center", width:"18px", height:"18px"}));
-	};
-	function dialogClose(data){
-		dialogWait(true);
-		if (!data || (data && data.result!='error'))  $("#dialog").dialog("close").empty();
+		$('.jBox-title div:not(.jBox-closeButton)').css( clear ?{background:""} :{background: "url( "+ BlogIt.pm.pubdirurl+ "/wait.gif) no-repeat left center", width: "18px", height: "18px"});
 	};
 	function dialogShow(txt, yes, no, w, ajax, e){
-		 $('#dialog').html(txt).dialog('option', 'width', w);
-		var btn={};
-		if (no) btn[BlogIt.fn.xl(no)] = dialogClose;
-		if (yes) btn[BlogIt.fn.xl(yes)] = function(){
-			BlogIt.fn.ajax(ajax, e);
-			dialogClose();
-		};
-		if (yes||no) $d.dialog('option', 'buttons', btn);
-		$('#dialog').dialog('open');
+		var prompt=new jBox('Confirm',{
+			content: txt,
+			_onOpen: function() {  //Override jbox default. Only change is to prevent dialog closing post confirm() so we manually close if form validates.
+				this.submitButton.off('click.jBox-Confirm' + this.id).on('click.jBox-Confirm' + this.id, function() { this.options.confirm ? this.options.confirm() : eval(this.source.data('jBox-Confirm-submit')); }.bind(this));
+			},
+			confirmButton: BlogIt.fn.xl(yes),
+			cancelButton: BlogIt.fn.xl(no),
+			confirm: function(){ BlogIt.fn.ajax(ajax, e); prompt.close(); },
+			onCloseComplete: function () { this.destroy(); },
+			width: w, minWidth: w, maxWidth: w  //needed to override jbox default
+		}).open();
 	};
 	//visuals
 	function flash($e, data){
@@ -109,6 +108,7 @@ BlogIt.fn = function($){
 	};
 
 	//add this to jquery
+	//TODO: Use closest()?
 	$.fn.bi_seek = function(seek){
 		var $found;
 		this.each(function(){
@@ -125,7 +125,7 @@ BlogIt.fn = function($){
 		deleteDialog: function(e){
 			e.preventDefault();
 			//TODO: yes and no with XL()
-			dialogShow(BlogIt.fn.xl('Are you sure you want to delete?'),'Yes','No','300px',
+			dialogShow(BlogIt.fn.xl('Are you sure you want to delete?'),'Yes','No',300,
 				{success:function(data){ objectRemove(e.target, data); }},e);
 		},
 		commentBlockIP: function(e){
@@ -136,7 +136,7 @@ BlogIt.fn = function($){
 						dialogShow(
 							BlogIt.fn.xl('Commenter IP: ')+data.ip+'<br/>'+BlogIt.fn.xl('Enter the IP to block:')+
 							//TODO: submit, Cancel with XL()
-							'<input id="blogit_ip" type="text" value="'+data.ip+'"/>','Submit','Cancel','300px',
+							'<input id="blogit_ip" type="text" value="'+data.ip+'"/>','Submit','Cancel',300,
 							{	url: function(e){ return getEnteredIP(e); },
 								success: function(data){ BlogIt.fn.showMsg(data); }
 							}, e);
@@ -160,12 +160,25 @@ BlogIt.fn = function($){
 			$.ajax({dataType:'json', url:e.currentTarget.href,  //get the comment form from pmwiki; not .target, because actual target might be an image wrapped in an anchor
 				success: function(data){
 					if (data.out){  //form returned in data.out
-						var btn={};
-						btn[BlogIt.fn.xl('Cancel')] = dialogClose;
-						btn[BlogIt.fn.xl('Submit')] = function() { $(this).find('form').submit(); };
-						$('#dialog').html( (name=='blog' ?$(data.out).filter('#wikiedit') :data.out) )  //only show wikiedit, not the editing reference
-							.dialog('option', 'buttons', btn)
-							.dialog('option', 'width', (name=='blog'?'750px':'430px')).dialog('open');  //load the edit form into a dialog
+//TODO: .jBox-Confirm .jBox-content {text-align: left;}
+						dialog = new jBox('Confirm', {
+							title: '&nbsp',
+							content: (name=='blog' ?$(data.out).filter('#wikiedit') :$(data.out)),
+							_onOpen: function() {  //Override jbox default. Only change is to prevent dialog closing post confirm() so we manually close if form validates.
+								this.submitButton.off('click.jBox-Confirm' + this.id).on('click.jBox-Confirm' + this.id, function() { this.options.confirm ? this.options.confirm() : eval(this.source.data('jBox-Confirm-submit')); }.bind(this));
+							},
+							closeButton: 'title',
+							//TODO: XL()
+							confirmButton: 'Submit',
+							cancelButton: 'Cancel',
+							//TODO: Need to make it specific to the #wikiedit in the jbox dialog
+							confirm: function (ev) { $('.jBox-content form').submit(); },
+							onCloseComplete: function () { this.destroy(); },
+							width: (name=='blog'?750:430),
+							minWidth: (name=='blog'?750:430),
+							maxWidth: 10000  //needed to override jbox default
+						})
+						.open();
 						BlogIt.fn.validationRules(e,mode);
 					}
 				}
@@ -173,7 +186,7 @@ BlogIt.fn = function($){
 		},
 		//defines the ajax actions when clicking Submit from dialogs, and Submit from comment entry
 		ajaxForm: function($frm, submitFn, mode, eventTarget){
-			dialogWait();  //only really for blog edit
+			dialogWait();
 			BlogIt.fn.addTagEvents();
 
 			if (!$('[name="bi_mode"]',$frm).length)  $frm.prepend('<input type="hidden" name="bi_mode" value="ajax">');  //trigger ajax mode
@@ -191,13 +204,15 @@ BlogIt.fn = function($){
 				for (var i=0; ($context.length>0 && i<vc.length); i++)  if ($context.bi_seek(vc[i]).length > 0)  { containerClass=vc[i]; break; }
 				console.log('new way class: .' +$context.attr('class'));
 				console.log('old way class:'+containerClass);
-				$('#dialog form').prepend('<input type="hidden" name="bi_context" value="'+ containerClass+ '">')  //trigger multi-entry mode
+				$('.jBox-content form').prepend('<input type="hidden" name="bi_context" value="'+ containerClass+ '">')  //trigger multi-entry mode
 			}
 
 			$.ajax({type: 'POST', dataType:'json', url:$frm.attr('action'),
 				data: $frm.serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 				success: function(data){  //after PmForms finishes processing, update page with new content
-					dialogClose(data);
+					console.log('closing');
+					//TODO: Check needed, or just close?
+					if (!data || (data && data.result!='error'))  dialog.close()
 					console.log('ajax class:'+containerClass);
 					if (data.out)  submitFn(data, mode, $context, containerClass);
 					else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || 'error')});
@@ -207,10 +222,12 @@ BlogIt.fn = function($){
 
 //Routines called from ajaxForm
 		validationRules: function(e,mode){
+			console.log ('form: '+$(BlogIt.pm['skin-classes']['blog-form']+ ' form').length);
 			$(BlogIt.pm['skin-classes']['blog-form']+ ' form').validate({
 				submitHandler: function(form) {  //Only if the form validates
-					console.log($(form).parents('#dialog').length);
-					if ($(form).parents('#dialog').length){
+					console.log('submitHandler');
+					console.log('dialog: '+$(form).parents('.jBox-content').length);
+					if ($(form).parents('.jBox-content').length){
 						console.log('calling ajax form');
 						BlogIt.fn.ajaxForm($(form), BlogIt.fn.updateBlog, mode,e);
 					}else{
@@ -226,8 +243,8 @@ BlogIt.fn = function($){
 				}
 			});
 
-			//dialog comment for is not wrapped in class
-			$('#dialog form,'+ BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form').each(function(){
+			//dialog comment form is not wrapped in class
+			$('jBox-content form,'+ BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form').each(function(){
 				$(this).validate({
 					submitHandler: function(form) {
 						console.log('calling comment ajax form');
@@ -298,14 +315,15 @@ BlogIt.fn = function($){
 			$(document).on("blur", '#entrytags', function(e){ $this=$(this); $this.val($this.val().replace(/[,|\s]+$/,"")); });
 		},
 //Visuals
-		showMsg: function(data){
-			if (data.msg)  $('body').showMessage({
-				'thisMessage':[BlogIt.fn.xl(data.msg)],
-				'className': data.result,
-				'opacity': 95,
-				'displayNavigation':	(data.result=='error' ?true :false),
-				'autoClose': (data.result=='error' ?false :true),
-				'delayTime': BlogIt.pm['ajax-message-timer']
+		showMsg: function(data){  //data{msg, result}
+			if (data.msg)  var message = new jBox('Notice', {
+				content: BlogIt.fn.xl(data.msg),
+				addClass: (data.result=='error' ?'error' :'success'),
+				closeButton:	(data.result=='error' ?true :false),
+				closeOnClick: (data.result=='error' ?'box' :null),
+				closeOnEsc: (data.result=='error' ?true :false),
+				autoClose: (data.result=='error' ?false :BlogIt.pm['ajax-message-timer']),
+				position: {x: 'left', y: 'top'}
 			});
 		},
 //Utilities
@@ -315,6 +333,30 @@ BlogIt.fn = function($){
 			ajax['url'] = ( typeof ajax.url == 'function' ?ajax.url(e.target.href) :(ajax.url || e.target.href) );
 			ajax['context'] = ajax.context || e.target;
 			$.ajax(ajax);
+		},
+		addRequireGroup: function(){
+			//Direct copy from jquery.validate/additional-methods.min.js, so we don't have to include entire file for single function
+			$.validator.addMethod( "require_from_group", function( value, element, options ) {
+				var $fields = $( options[ 1 ], element.form ),
+					$fieldsFirst = $fields.eq( 0 ),
+					validator = $fieldsFirst.data( "valid_req_grp" ) ? $fieldsFirst.data( "valid_req_grp" ) : $.extend( {}, this ),
+					isValid = $fields.filter( function() {
+						return validator.elementValue( this );
+					} ).length >= options[ 0 ];
+
+				// Store the cloned validator for future validation
+				$fieldsFirst.data( "valid_req_grp", validator );
+
+				// If element isn't being validated, run each require_from_group field's validation rules
+				if ( !$( element ).data( "being_validated" ) ) {
+					$fields.data( "being_validated", true );
+					$fields.each( function() {
+						validator.element( this );
+					} );
+					$fields.data( "being_validated", false );
+				}
+				return isValid;
+			}, $.validator.format( "Please fill at least {0} of these fields." ) );  //TODO: XL()
 		}
 	};
 }(jQuery);
