@@ -46,6 +46,7 @@ SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tel
 	'comment-list' => '.blogit-comment-list',  #pointer to the entire comment list, excluding headers, and comment form. Contained in #comments-pagelist, usually not changed.
 	//TODO: Should be class .blogit-comment-list in order to exclude header
 	'comment-list-wrapper' => '#blogit-comment-list',  #pointer to a wrapper around the comment-list; used for the first comment, where 'comment-list' may not exist. Should not include headers or form.
+	//TODO: #wikiedit will only find fist #wikiedit, not second potential ajax form
 	'blog-form' => '#wikiedit.blogit-blog-form',  #pointer to the wrapper containing the blog-entry FORM object
 	//TODO: Should be #wikitext #comments
 	//TODO: No longer used for jq selector to form -- possibly remove?
@@ -165,14 +166,17 @@ if ( bi_Auth('*') )  $EnablePostCaptchaRequired = 0;  #disable captcha for any B
 # ----------------------------------------
 # - Javascript - [1]
 SDVA($HTMLHeaderFmt, array(
-	'jquery-ui.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui.min.css" type="text/css" />',
+//	'jquery-ui.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui.min.css" type="text/css" />',
 	'jbox.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jbox.css" type="text/css" />',
+	'awesomplete.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/awesomplete.css" type="text/css" />',
 	'blogit.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />'));
 SDVA($HTMLFooterFmt, array(
+//TODO: Use replacement string rather than repeating script tags
 	'jquery.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>',
-	'jquery-ui.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.min.js"></script>',
-	'jq.validate' => '<script src="' .$PubDirUrl .'/blogit/jquery.validate.min.js"></script>',
+//	'jquery-ui.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.min.js"></script>',
+	'jq.validate' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validate.min.js"></script>',
 	'jbox.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jbox.min.js"></script>',
+	'awesomplete.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/awesomplete.min.js"></script>',
 	'blogit.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>',
 	'blogit-core' => '<script type="text/javascript">
 			BlogIt.pm["pubdirurl"]="'.$PubDirUrl.'/blogit";
