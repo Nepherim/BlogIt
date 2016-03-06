@@ -44,13 +44,13 @@ SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tel
 	'comment' => '.comment',  #MUST be a single css class NOT a css-path. applied to each block containing a single comment, usually LI elements (in #comment-view-all and #comment-view-admin)
 	'comment-admin-list' => '.blogit-comment-admin-list',  #surrounds the unapproved-comment list section (in #comment-view-admin)
 	'comment-list' => '.blogit-comment-list',  #pointer to the entire comment list, excluding headers, and comment form. Contained in #comments-pagelist, usually not changed.
-	//TODO: Should be class .blogit-comment-list in order to exclude header
 	'comment-list-wrapper' => '#blogit-comment-list',  #pointer to a wrapper around the comment-list; used for the first comment, where 'comment-list' may not exist. Should not include headers or form.
 	//TODO: #wikiedit will only find fist #wikiedit, not second potential ajax form
 	'blog-form' => '#wikiedit.blogit-blog-form',  #pointer to the wrapper containing the blog-entry FORM object
 	//TODO: Should be #wikitext #comments
 	//TODO: No longer used for jq selector to form -- possibly remove?
 	//TODO: On ajax comment edit, #wikitext not present
+	//TODO: Should be #commentblock for normal comment add
 	'comment-form' => '#wikitext .blogit-comment-form',  #pointer to the wrapper containing the comment-entry FORM object (both ajax and normal entry)
 	'comment-submit' => '#wikitext .blogit-submit-row'  #pointer to the wrapper containing the captcha and comment Submit
 ));
@@ -696,13 +696,13 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']);
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 if pmform failed (invalid captcha, etc)
 		//TODO: Should blogit-comments be hardcoded, or refer to skinclasses?
 		//Translate the class of the html element being updated (bi_context) to the template to be used to generate new data on includesection from pmwiki
+		//bi_context: includesection template
+		//$bi_SkinClasses['comment-admin-list'] - '.blogit-comment-admin-list': '#unapproved-comments'
+		//otherwise: '#comments-pagelist'
+		//$bi_SkinClasses['blog-entry-summary'] - '.blogit-post-summary': '#blog-summary-pagelist
+		//$bi_SkinClasses['blog-list-row'] - '.blogit-blog-list-row': '#blog-grid
+		// otherwise ('.blogit-post'): '#single-entry-view'
 		if ($_REQUEST['target']=='blogit-comments'){
-			//bi_context: includesection template
-			//$bi_SkinClasses['comment-admin-list'] - '.blogit-comment-admin-list': '#unapproved-comments'
-			//otherwise: '#comments-pagelist'
-			//$bi_SkinClasses['blog-entry-summary'] - '.blogit-post-summary': '#blog-summary-pagelist
-			//$bi_SkinClasses['blog-list-row'] - '.blogit-blog-list-row': '#blog-grid
-			// otherwise ('.blogit-post'): '#single-entry-view'
 			bi_SendAjax('(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['comment-admin-list'] ?'#unapproved-comments' :'#comments-pagelist')
 				.' commentid=' .$bi_CommentPage.' entrycomments=readonly":)',
 				($bi_CommentPage==$bi_Pagename
