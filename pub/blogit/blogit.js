@@ -140,6 +140,87 @@ BlogIt.fn = function($){
 		return isValid;
 	}, $.validator.format( "Please fill at least {0} of these fields." ) );  //TODO: XL()
 
+	//defines the ajax actions when clicking Submit from dialogs, and Submit from comment entry
+	function ajaxSubmit($frm, submitFn, e){
+		dialogWait();
+		//trigger ajax mode; prevent duplicates which could occur if multiple comments submitted
+		if (!$('[name="bi_mode"]',$frm).length)  $frm.prepend('<input type="hidden" name="bi_mode" value="ajax">');
+
+		//$context is a JQ object we're going to replace; templateClass is used in php.bi_AjaxRedirect to determine which includesection template to use
+		var $context,templateClass,target;
+		if (e){
+			console.log('clicked: '+($(e.target).is('img') ?'img' :'link'));
+			console.log(e.currentTarget);
+			target = ( $(e.target).is('img') ?e.currentTarget :e.target);  //if user clicked img, bubble out to currentTarget to find href link
+			console.log('href: '+target.href);
+			var $closest=closestTemplateObject($(target));
+			//Clicking reply from admin list templateClass is ".blogit-comment-list blogit-comment-admin-list" since container has two classes, use only the first
+			templateClass = ($closest ?'.'+ $closest.attr("class").split(' ')[0] :'');  //no closest when adding new entry from ajax link
+			$('.jBox-content form').prepend('<input type="hidden" name="bi_context" value="'+ templateClass+ '">')  //tell pmwiki which template to use, based on class
+
+			//Find the blog/comment entry that the action relates to, which is either something with an ID of bi_ID, or an element with a template class
+			console.log('target wrapper: ');
+			console.log(getIDWrapper(target));
+			$context = $( getIDWrapper(target) || $closest);
+		} else {
+			console.log('no e');  //e is null for user clicking Post button ('ca')
+		}
+		console.log('templateClass: '+templateClass);
+		console.log ('$context:');
+		console.log ($context);
+		console.log('url: '+$frm.attr('action'));
+		//TODO: Why not fn.ajax
+		$.ajax({type: 'POST', dataType:'json', url:$frm.attr('action'),
+			data: $frm.serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
+			success: function(data){  //after PmForms finishes processing, update page with new content
+				console.log('closing');
+				//TODO: Check needed, or just close?
+				if (!data || (data && data.result!='error'))  if (dialog)  dialog.close();  //TODO: Need more robust check. dialog doesn't exist when submitting comments; why not dialogClose()
+				if (data.out)  submitFn(data, target, $context, templateClass);  //TODO: templateClass not defined from edit comment
+				//TODO: XL('error')
+				else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || 'error')});
+			}
+		});
+	}
+//Routines called from ajaxSubmit
+	function updateBlog(data, target, $context, templateClass){
+		//can't use closest since no e on DOM passed back from server; use bi_seek (filter/find) to start from top of DOM, work down
+		//Can't use entire data.out, as pmwiki returns full html objects, which may include <table> tags, not just the <tr>
+		var $new=$(data.out).bi_seek(templateClass);
+		$context.replaceWith($new);  //update existing blog entry
+		flash($new, data);
+	}
+	function updateComment(data, target, $context, templateClass){  //data.out is the full #blogit-commentblock which includes 'Comment" header, and a single comment
+		console.log('updating comment: '+templateClass);
+		console.log($context);
+		if (data.result!='error'){
+			console.log('no error');
+			var firstComment = $(BlogIt.pm['skin-classes']['comment-list']).length==0;
+			console.log('first comment: '+firstComment);
+			var $new = (firstComment ?$(data.out) :$(data.out).bi_seek('[id^="bi_ID"]'));  //if this is the first comment then include entire data.out
+			var newCommentApproved = $new.hasClass('blogit-comment-approved');
+			if (!target || $(target).is('.bi-link-comment-reply') ){  //comment add (!target) or comment reply
+				if (!target){  //comment add
+					console.log('comment add');
+					$(BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form')[0].reset();  //Reset the comment form adjacent to the wrapper since we just submitted it
+					//recreate a new capcha code to prevent multiple submits
+					$(BlogIt.pm['skin-classes']['comment-submit']+' img[src*="action\=captchaimage"]').replaceWith($('img[src*="action\=captchaimage"]', data.dom));
+					$(BlogIt.pm['skin-classes']['comment-submit']+' input[name="captchakey"]').replaceWith($('input[name="captchakey"]', data.dom));
+					(newCommentApproved ?updateCommentCount(1,0) :updateCommentCount(0,1))
+				}
+				//if first comment append to wrapper, otherwise add to list; if we have a context use it (on admin page where replying to a comment)
+				console.log('closest: '+(target?'target':'no target'));
+				console.log((target ?closestTemplateObject($context) :'comment-list'));
+				$(target ?closestTemplateObject($context) :BlogIt.pm['skin-classes'][(firstComment ?'comment-list-wrapper' : 'comment-list')] ).append($new);
+			}else if ($(target).is('.bi-link-comment-edit')){  //comment edit
+				console.log ('new id: '+$new.attr('id'));
+				$context.replaceWith($new);
+				if ( newCommentApproved != $context.hasClass('blogit-comment-approved') )  (newCommentApproved ?updateCommentCount(1,-1) :updateCommentCount(-1,1));
+			}
+		}
+		flash($new, data);
+	}
+
 //public functions
 	return {
 		showDelete: function(e){
@@ -218,7 +299,7 @@ BlogIt.fn = function($){
 						console.log('dialog: '+$(form).parents('.jBox-content').length);
 						if ($(form).parents('.jBox-content').length){
 							console.log('calling ajax form');
-							BlogIt.fn.ajaxSubmit($(form), BlogIt.fn.updateBlog, e);
+							ajaxSubmit($(form), updateBlog, e);
 						}else{
 							$(window).off('beforeunload');
 							console.log('calling normal form');
@@ -240,7 +321,7 @@ BlogIt.fn = function($){
 				$(this).validate({
 					submitHandler: function(form) {
 						console.log('calling comment ajax form');
-						BlogIt.fn.ajaxSubmit($(form), BlogIt.fn.updateComment, e);  //mode is undefined when normal comment add, since no onclick handler defined
+						ajaxSubmit($(form), updateComment, e);  //mode is undefined when normal comment add, since no onclick handler defined
 					},
 					rules: {
 						ptv_commentauthor: {required: true},
@@ -249,90 +330,6 @@ BlogIt.fn = function($){
 					}
 				});
 			});
-		},
-//TODO: Not PUBLIC
-		//defines the ajax actions when clicking Submit from dialogs, and Submit from comment entry
-		ajaxSubmit: function($frm, submitFn, e){
-			dialogWait();
-			//trigger ajax mode; prevent duplicates which could occur if multiple comments submitted
-			if (!$('[name="bi_mode"]',$frm).length)  $frm.prepend('<input type="hidden" name="bi_mode" value="ajax">');
-
-			//$context is a JQ object we're going to replace; templateClass is used in php.bi_AjaxRedirect to determine which includesection template to use
-			var $context,templateClass,target;
-			if (e){
-				console.log('clicked: '+($(e.target).is('img') ?'img' :'link'));
-				console.log(e.currentTarget);
-				target = ( $(e.target).is('img') ?e.currentTarget :e.target);  //if user clicked img, bubble out to currentTarget to find href link
-				console.log('href: '+target.href);
-				var $closest=closestTemplateObject($(target));
-				//Clicking reply from admin list templateClass is ".blogit-comment-list blogit-comment-admin-list" since container has two classes, use only the first
-				templateClass = ($closest ?'.'+ $closest.attr("class").split(' ')[0] :'');  //no closest when adding new entry from ajax link
-				$('.jBox-content form').prepend('<input type="hidden" name="bi_context" value="'+ templateClass+ '">')  //tell pmwiki which template to use, based on class
-
-				//Find the blog/comment entry that the action relates to, which is either something with an ID of bi_ID, or an element with a template class
-				console.log('target wrapper: ');
-				console.log(getIDWrapper(target));
-				$context = $( getIDWrapper(target) || $closest);
-			} else {
-				console.log('no e');  //e is null for user clicking Post button ('ca')
-			}
-			console.log('templateClass: '+templateClass);
-			console.log ('$context:');
-			console.log ($context);
-			console.log('url: '+$frm.attr('action'));
-			//TODO: Why not fn.ajax
-			$.ajax({type: 'POST', dataType:'json', url:$frm.attr('action'),
-				data: $frm.serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
-				success: function(data){  //after PmForms finishes processing, update page with new content
-					console.log('closing');
-					//TODO: Check needed, or just close?
-					if (!data || (data && data.result!='error'))  if (dialog)  dialog.close();  //TODO: Need more robust check. dialog doesn't exist when submitting comments; why not dialogClose()
-					if (data.out)  submitFn(data, target, $context, templateClass);  //TODO: templateClass not defined from edit comment
-					//TODO: XL('error')
-					else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || 'error')});
-				}
-			});
-		},
-
-//Routines called from ajaxSubmit
-//TODO: Not PUBLIC
-		updateBlog: function(data, target, $context, templateClass){
-			//can't use closest since no e on DOM passed back from server; use bi_seek (filter/find) to start from top of DOM, work down
-			//Can't use entire data.out, as pmwiki returns full html objects, which may include <table> tags, not just the <tr>
-			var $new=$(data.out).bi_seek(templateClass);
-			$context.replaceWith($new);  //update existing blog entry
-			flash($new, data);
-		},
-//TODO: Not PUBLIC
-		updateComment: function(data, target, $context, templateClass){  //data.out is the full #blogit-commentblock which includes 'Comment" header, and a single comment
-			console.log('updating comment: '+templateClass);
-			console.log($context);
-			if (data.result!='error'){
-				console.log('no error');
-				var firstComment = $(BlogIt.pm['skin-classes']['comment-list']).length==0;
-				console.log('first comment: '+firstComment);
-				var $new = (firstComment ?$(data.out) :$(data.out).bi_seek('[id^="bi_ID"]'));  //if this is the first comment then include entire data.out
-				var newCommentApproved = $new.hasClass('blogit-comment-approved');
-				if (!target || $(target).is('.bi-link-comment-reply') ){  //comment add (!target) or comment reply
-					if (!target){  //comment add
-						console.log('comment add');
-						$(BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form')[0].reset();  //Reset the comment form adjacent to the wrapper since we just submitted it
-						//recreate a new capcha code to prevent multiple submits
-						$(BlogIt.pm['skin-classes']['comment-submit']+' img[src*="action\=captchaimage"]').replaceWith($('img[src*="action\=captchaimage"]', data.dom));
-						$(BlogIt.pm['skin-classes']['comment-submit']+' input[name="captchakey"]').replaceWith($('input[name="captchakey"]', data.dom));
-						(newCommentApproved ?updateCommentCount(1,0) :updateCommentCount(0,1))
-					}
-					//if first comment append to wrapper, otherwise add to list; if we have a context use it (on admin page where replying to a comment)
-					console.log('closest: '+(target?'target':'no target'));
-					console.log((target ?closestTemplateObject($context) :'comment-list'));
-					$(target ?closestTemplateObject($context) :BlogIt.pm['skin-classes'][(firstComment ?'comment-list-wrapper' : 'comment-list')] ).append($new);
-				}else if ($(target).is('.bi-link-comment-edit')){  //comment edit
-					console.log ('new id: '+$new.attr('id'));
-					$context.replaceWith($new);
-					if ( newCommentApproved != $context.hasClass('blogit-comment-approved') )  (newCommentApproved ?updateCommentCount(1,-1) :updateCommentCount(-1,1));
-				}
-			}
-			flash($new, data);
 		},
 		addAutocomplete: function(){
 			//Add autocomplete. :not only adds autocomplete if not already added.
