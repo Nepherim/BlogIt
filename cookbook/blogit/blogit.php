@@ -545,7 +545,7 @@ global $bi_AuthorGroup,$bi_Pagename,$bi_CommentsEnabled,$bi_LinkToCommentSite,$b
 		case 'commentreply': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], bi_BasePage($txt), 'bi_cr', '$[reply]', $args['post_text'],'bi-link-comment-reply') :'');
 		case 'commentapprove': return (bi_Auth('comment-approve ' .bi_BasePage($txt))
 			?bi_Link($args['pre_text'], $txt, 'bi_'.($args['status']=='true'?'cua':'ca'), '$['.($args['status']=='true'?'un':'').'approve]', $args['post_text'],
-				'bi-link-comment-'.($args['status']=='true'?'un':'').'approved')
+				'bi-link-comment-'.($args['status']=='true'?'':'un').'approved')
 				:'');
 		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_bip', '$[block]', $args['post_text'],'bi-link-comment-block') :'');
 		case 'tags': return ($txt>'' ?$args['pre_text'].bi_SaveTags('', $txt, 'display').$args['post_text'] :'');

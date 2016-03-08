@@ -6,13 +6,12 @@ jQuery(document).ready(function($){
 	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['blog-form']+' .wikimessage').html(), result:'error'});
 	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['comment-form']+' .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
 
-	//for blog entry add class to prevent validations preventing cancel action
-	$('#blogit-cancel').addClass('cancel');
+	$('#blogit-cancel').addClass('cancel');  //for blog entry add class to prevent validations preventing cancel action
 	BlogIt.fn.addValidation();
 	BlogIt.fn.addAutocomplete();
 
 	$(document).on('click', '.bi-link-comment-unapproved,.bi-link-comment-approved', function(e){ BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.flipCommentStatus(e.target, data); }}, e); });
-	$(document).on('click', '.bi-link-blog-new,.bi-link-blog-edit,.bi-link-comment-edit,.bi-link-comment-reply', function(e){ BlogIt.fn.openDialog(e); });
+	$(document).on('click', '.bi-link-blog-new,.bi-link-blog-edit,.bi-link-comment-edit,.bi-link-comment-reply', function(e){ BlogIt.fn.showDialog(e); });
 	//TODO: Is there actually a blog delete function?
 	$(document).on('click', '.bi-link-comment-delete,.bi-link-blog-delete', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
 	$(document).on("click", '.bi-link-comment-block', function(e){ BlogIt.fn.showBlockIP(e); });  //block comment IP addresses
@@ -25,7 +24,7 @@ BlogIt.fn = function($){
 //private declarations
 //TODO: When are these used? fn.ajax?
 	$.ajaxSetup({ timeout: 15000,  //timeout of 15 seconds
-		contentType: "application/x-www-form-urlencoded; charset="+BlogIt.pm['charset'],  //NOTE: jquery will always send with UTF8, regardless of charset specified.
+		contentType: "application/x-www-form-urlencoded; charset="+BlogIt.pm['charset'],  //jquery will always send with UTF8, regardless of charset specified.
 		error: function(request,error){
 			BlogIt.fn.showMsg({result:'error', msg:(
 				(error=='parsererror' ?'Parsing JSON request failed.'
@@ -37,11 +36,6 @@ BlogIt.fn = function($){
 	});
 	var dialog;  //global dialog reference so we can close from ajaxSubmit()
 
-	function getURLAction(target, m){ return target.href.match(m); }
-	function isComment(e){ return e.hasClass( BlogIt.pm['skin-classes']['comment'].replace(/^\./,'') ); }
-	//TODO: Replace with URLPattern()
-	//TODO: Make use of class "blogit-comment-approved" on surrounding bi_ID
-	function isCommentApproved(e){ return $('a[href*="action\=bi_cua&bi_mode\=ajax"]', e).length > 0; }
 	function updateCommentCount(approvedCC, unapprovedCC){
 		function updateCC(e, c){
 			var e_txt = e.text().replace(/\n/ig, '');  //remove extraneous \n as it messes up the replacing
@@ -69,7 +63,8 @@ BlogIt.fn = function($){
 	function objectRemove(e, data){
 		var $old = getIDWrapper(e.target);
 		//if this is a comment, and if the comment was approved deduct approved-count, else deduct unapproved-comment
-		if ( isComment($old) )  (isCommentApproved($old) ?updateCommentCount(-1, 0) :updateCommentCount(0, -1));
+		if ( $old.hasClass( BlogIt.pm['skin-classes']['comment'].replace(/^\./,'')) )
+			($('a', $old).hasClass('blogit-comment-approved') ?updateCommentCount(-1, 0) :updateCommentCount(0, -1));
 		$old.fadeOut(500, function(){ $(this).remove(); });
 		BlogIt.fn.showMsg(data);
 	};
@@ -147,7 +142,6 @@ BlogIt.fn = function($){
 
 //public functions
 	return {
-		urlPattern: function(p){ return RegExp('action\=bi_('+ p +')&bi_mode\=ajax'); },
 		showDelete: function(e){
 //TODO: Required? Why not required for showBlockIP?
 //			e.preventDefault();
@@ -173,16 +167,16 @@ BlogIt.fn = function($){
 		flipCommentStatus: function(target, data){
 			var $wrapper = getIDWrapper(target);
 			flash($wrapper, data);
-			//TODO: This or isCommentApproved() -- reconcile
-			var unapproved = ( $(target).html()==BlogIt.fn.xl('unapprove') );
-			target.href = (unapproved ?target.href.replace('bi_cua', 'bi_ca') :target.href.replace('bi_ca', 'bi_cua'));
-			$(target).html(BlogIt.fn.xl( (unapproved ?'approve' :'unapprove') ));
-			$wrapper.removeClass('blogit-comment-' +(!unapproved ?'un' :'') +'approved').addClass('blogit-comment-' +(unapproved ?'un' :'') +'approved')
-			if (unapproved)  updateCommentCount(-1,1)
-			else  updateCommentCount(1,-1);
+			var approved = $(target).hasClass('bi-link-comment-approved');
+			target.href = (approved ?target.href.replace('bi_cua', 'bi_ca') :target.href.replace('bi_ca', 'bi_cua'));
+			$(target).html(BlogIt.fn.xl( (approved ?'approve' :'unapprove') ));
+			$wrapper.removeClass('blogit-comment-' +(!approved ?'un' :'') +'approved').addClass('blogit-comment-' +(approved ?'un' :'') +'approved');
+			$(target).removeClass('bi-link-comment-' +(!approved ?'un' :'') +'approved').addClass('bi-link-comment-' +(approved ?'un' :'') +'approved');
+			if (approved) updateCommentCount(-1,1);
+			else updateCommentCount(1,-1);
 		},
 		//opens a dialog with content from PmWiki, calls addValidation(), and then on submit calls ajaxSubmit(), which calls updateBlog/updateComment
-		openDialog: function(e){
+		showDialog: function(e){
 			e.preventDefault();
 			//TOTO: Why not fn.ajax
 			$.ajax({
@@ -190,7 +184,7 @@ BlogIt.fn = function($){
 				url:e.currentTarget.href,  //get the comment form from pmwiki; not .target, because actual target might be an image wrapped in an anchor
 				success: function(data){
 					if (data.out){  //form content returned in data.out
-						var blog=getURLAction(e.currentTarget, 'be|ne');  //are we doing some blog related action?
+						var blog=$(e.currentTarget).is('.bi-link-blog-edit,.bi-link-blog-new');  //are we doing some blog related action?
 						console.log('blog action: '+blog);
 						dialog = new jBox('Confirm', {
 							title: '&nbsp',  //make the title bar appear just for visual
@@ -260,7 +254,8 @@ BlogIt.fn = function($){
 		//defines the ajax actions when clicking Submit from dialogs, and Submit from comment entry
 		ajaxSubmit: function($frm, submitFn, e){
 			dialogWait();
-			if (!$('[name="bi_mode"]',$frm).length)  $frm.prepend('<input type="hidden" name="bi_mode" value="ajax">');  //trigger ajax mode
+			//trigger ajax mode; prevent duplicates which could occur if multiple comments submitted
+			if (!$('[name="bi_mode"]',$frm).length)  $frm.prepend('<input type="hidden" name="bi_mode" value="ajax">');
 
 			//$context is a JQ object we're going to replace; templateClass is used in php.bi_AjaxRedirect to determine which includesection template to use
 			var $context,templateClass,target;
@@ -272,13 +267,12 @@ BlogIt.fn = function($){
 				var $closest=closestTemplateObject($(target));
 				//Clicking reply from admin list templateClass is ".blogit-comment-list blogit-comment-admin-list" since container has two classes, use only the first
 				templateClass = ($closest ?'.'+ $closest.attr("class").split(' ')[0] :'');  //no closest when adding new entry from ajax link
-				$('.jBox-content form').prepend('<input type="hidden" name="bi_context" value="'+ templateClass+ '">')  //trigger multi-entry mode
+				$('.jBox-content form').prepend('<input type="hidden" name="bi_context" value="'+ templateClass+ '">')  //tell pmwiki which template to use, based on class
 
 				//Find the blog/comment entry that the action relates to, which is either something with an ID of bi_ID, or an element with a template class
 				console.log('target wrapper: ');
 				console.log(getIDWrapper(target));
 				$context = $( getIDWrapper(target) || $closest);
-				$('.jBox-content form').prepend('<input type="hidden" name="bi_context" value="'+ templateClass+ '">')  //tell pmwiki which template to use, based on class
 			} else {
 				console.log('no e');  //e is null for user clicking Post button ('ca')
 			}
@@ -318,8 +312,8 @@ BlogIt.fn = function($){
 				var firstComment = $(BlogIt.pm['skin-classes']['comment-list']).length==0;
 				console.log('first comment: '+firstComment);
 				var $new = (firstComment ?$(data.out) :$(data.out).bi_seek('[id^="bi_ID"]'));  //if this is the first comment then include entire data.out
-				var newCommentApproved = isCommentApproved($new);
-				if (!target || getURLAction(target, 'cr') ){  //comment add or comment reply
+				var newCommentApproved = $new.hasClass('blogit-comment-approved');
+				if (!target || $(target).is('.bi-link-comment-reply') ){  //comment add (!target) or comment reply
 					if (!target){  //comment add
 						console.log('comment add');
 						$(BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form')[0].reset();  //Reset the comment form adjacent to the wrapper since we just submitted it
@@ -332,10 +326,10 @@ BlogIt.fn = function($){
 					console.log('closest: '+(target?'target':'no target'));
 					console.log((target ?closestTemplateObject($context) :'comment-list'));
 					$(target ?closestTemplateObject($context) :BlogIt.pm['skin-classes'][(firstComment ?'comment-list-wrapper' : 'comment-list')] ).append($new);
-				}else if (getURLAction(target, 'ce')){  //comment edit
+				}else if ($(target).is('.bi-link-comment-edit')){  //comment edit
 					console.log ('new id: '+$new.attr('id'));
 					$context.replaceWith($new);
-					if (newCommentApproved != isCommentApproved($context))  (newCommentApproved ?updateCommentCount(1,-1) :updateCommentCount(-1,1));
+					if ( newCommentApproved != $context.hasClass('blogit-comment-approved') )  (newCommentApproved ?updateCommentCount(1,-1) :updateCommentCount(-1,1));
 				}
 			}
 			flash($new, data);
