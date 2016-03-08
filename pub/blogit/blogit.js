@@ -1,4 +1,4 @@
-// blogit.js 2016-02-26 1.7.0
+// blogit.js 2016-02-26 1.8.0
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	//show error messages set by pmwiki in .wikimessage
@@ -8,32 +8,22 @@ jQuery(document).ready(function($){
 
 	//for blog entry add class to prevent validations preventing cancel action
 	$('#blogit-cancel').addClass('cancel');
-	$.validator.addMethod(
-		'datetime',
-		function(v, e, fmt){
-			return this.optional(e) ||	RegExp(BlogIt.fmt['entry-date']).test(v);
-		},
-		'Must be datetime.'  //TODO: Add format string XL
-	);
-	BlogIt.fn.validationRules();
-	BlogIt.fn.addTagEvents();
-	BlogIt.fn.addRequireGroup();
+	BlogIt.fn.addValidation();
+	BlogIt.fn.addAutocomplete();
 
-	//TODO: Change listners to parent object, to manage dynamicly added elements (new comments)
-	$('a').filter(function(){ return this.href.match( BlogIt.fn.urlPattern('ca|cua') ); }).on('click', function(e){  //comment un/approve
-		BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.commentStatus(e.target, data); }}, e);
-	});
-	$('a').filter(function(){ return this.href.match( BlogIt.fn.urlPattern('be|ne|ce|cr') ); }).on('click', function(e){ BlogIt.fn.openDialog(e); });
-	$('a').filter(function(){ return this.href.match( BlogIt.fn.urlPattern('del') ); }).on('click', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
-	$(document).on("click", 'a[href*="action\=bi_bip"]', function(e){ BlogIt.fn.showBlockIP(e); });  //block comment IP addresses
-	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').on('change', function(){  //if any field (not a submit button) changes...
-		$(window).on('beforeunload', function(){return BlogIt.fn.xl('You have unsaved changes.');});
-	});
+	$(document).on('click', '.bi-link-comment-unapproved,.bi-link-comment-approved', function(e){ BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.flipCommentStatus(e.target, data); }}, e); });
+	$(document).on('click', '.bi-link-blog-new,.bi-link-blog-edit,.bi-link-comment-edit,.bi-link-comment-reply', function(e){ BlogIt.fn.openDialog(e); });
+	//TODO: Is there actually a blog delete function?
+	$(document).on('click', '.bi-link-comment-delete,.bi-link-blog-delete', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
+	$(document).on("click", '.bi-link-comment-block', function(e){ BlogIt.fn.showBlockIP(e); });  //block comment IP addresses
+	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').on('change',   //if any field (not a submit button) changes...
+		function(){	$(window).on('beforeunload', function(){ return BlogIt.fn.xl('You have unsaved changes.'); }); });
 });
 
 var BlogIt={ fmt:{}, xl:{}, fn:{}, pm:{} };
 BlogIt.fn = function($){
-	//private declarations
+//private declarations
+//TODO: When are these used? fn.ajax?
 	$.ajaxSetup({ timeout: 15000,  //timeout of 15 seconds
 		contentType: "application/x-www-form-urlencoded; charset="+BlogIt.pm['charset'],  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 		error: function(request,error){
@@ -49,6 +39,8 @@ BlogIt.fn = function($){
 
 	function getURLAction(target, m){ return target.href.match(m); }
 	function isComment(e){ return e.hasClass( BlogIt.pm['skin-classes']['comment'].replace(/^\./,'') ); }
+	//TODO: Replace with URLPattern()
+	//TODO: Make use of class "blogit-comment-approved" on surrounding bi_ID
 	function isCommentApproved(e){ return $('a[href*="action\=bi_cua&bi_mode\=ajax"]', e).length > 0; }
 	function updateCommentCount(approvedCC, unapprovedCC){
 		function updateCC(e, c){
@@ -74,7 +66,6 @@ BlogIt.fn = function($){
 		console.log(closest);
 		return (closest.length ?closest :null);  //when clicking ajax new entry
 	}
-	function getEnteredIP(e){ return e+'&bi_ip='+$("#blogit_ip").val(); };
 	function objectRemove(e, data){
 		var $old = getIDWrapper(e.target);
 		//if this is a comment, and if the comment was approved deduct approved-count, else deduct unapproved-comment
@@ -113,7 +104,13 @@ BlogIt.fn = function($){
 		);
 		BlogIt.fn.showMsg(data);
 	};
-
+	$.validator.addMethod(
+		'datetime',
+		function(v, e, fmt){
+			return this.optional(e) ||	RegExp(BlogIt.fmt['entry-date']).test(v);
+		},
+		'Must be datetime.'  //TODO: Add format string XL
+	);
 	//add this to jquery: need to find objects at same level, or below. So do a find() followed by a filter()
 	$.fn.bi_seek = function(seek){
 		var $found;
@@ -125,6 +122,28 @@ BlogIt.fn = function($){
 		});
 		return $found;
 	};
+	//Direct copy from jquery.validate/additional-methods.min.js, so we don't have to include entire file for single function
+	$.validator.addMethod( "require_from_group", function( value, element, options ) {
+		var $fields = $( options[ 1 ], element.form ),
+			$fieldsFirst = $fields.eq( 0 ),
+			validator = $fieldsFirst.data( "valid_req_grp" ) ? $fieldsFirst.data( "valid_req_grp" ) : $.extend( {}, this ),
+			isValid = $fields.filter( function() {
+				return validator.elementValue( this );
+			} ).length >= options[ 0 ];
+
+		// Store the cloned validator for future validation
+		$fieldsFirst.data( "valid_req_grp", validator );
+
+		// If element isn't being validated, run each require_from_group field's validation rules
+		if ( !$( element ).data( "being_validated" ) ) {
+			$fields.data( "being_validated", true );
+			$fields.each( function() {
+				validator.element( this );
+			} );
+			$fields.data( "being_validated", false );
+		}
+		return isValid;
+	}, $.validator.format( "Please fill at least {0} of these fields." ) );  //TODO: XL()
 
 //public functions
 	return {
@@ -144,14 +163,14 @@ BlogIt.fn = function($){
 							BlogIt.fn.xl('Commenter IP: ')+data.ip+'<br/>'+BlogIt.fn.xl('Enter the IP to block:')+
 							//TODO: submit, Cancel with XL()
 							'<input id="blogit_ip" type="text" value="'+data.ip+'"/>','Submit','Cancel',300,
-							{	url: function(e){ return getEnteredIP(e); },
+							{	url: function(e){ return e+'&bi_ip='+$("#blogit_ip").val(); },
 								success: function(data){ BlogIt.fn.showMsg(data); }
 							}, e);
 					}
 				}
 			},e);
 		},
-		commentStatus: function(target, data){
+		flipCommentStatus: function(target, data){
 			var $wrapper = getIDWrapper(target);
 			flash($wrapper, data);
 			//TODO: This or isCommentApproved() -- reconcile
@@ -162,9 +181,10 @@ BlogIt.fn = function($){
 			if (unapproved)  updateCommentCount(-1,1)
 			else  updateCommentCount(1,-1);
 		},
-		//opens a dialog with content from PmWiki, calls validationRules(), and then on submit calls ajaxForm(), which calls updateBlog/updateComment
+		//opens a dialog with content from PmWiki, calls addValidation(), and then on submit calls ajaxSubmit(), which calls updateBlog/updateComment
 		openDialog: function(e){
 			e.preventDefault();
+			//TOTO: Why not fn.ajax
 			$.ajax({
 				dataType:'json',
 				url:e.currentTarget.href,  //get the comment form from pmwiki; not .target, because actual target might be an image wrapped in an anchor
@@ -179,7 +199,7 @@ BlogIt.fn = function($){
 								this.submitButton.off('click.jBox-Confirm' + this.id).on('click.jBox-Confirm' + this.id, function() { this.options.confirm ? this.options.confirm() : eval(this.source.data('jBox-Confirm-submit')); }.bind(this));
 							},
 							closeButton: 'title',
-							confirm: function (ev) { $('.jBox-content form').submit(); },  //will call ajaxForm(), set by call to validationRules below
+							confirm: function (ev) { $('.jBox-content form').submit(); },  //will call ajaxSubmit(), set by call to addValidation below
 							//TODO: XL()
 							confirmButton: 'Submit',
 							cancelButton: 'Cancel',
@@ -187,22 +207,24 @@ BlogIt.fn = function($){
 							width: (blog?750:430), minWidth: (blog?750:430), maxWidth: 10000  //needed to override jbox default
 						})
 						.open();
-						BlogIt.fn.addTagEvents();
-						BlogIt.fn.validationRules(e);  //adds submit handler for button in dialog
+						BlogIt.fn.addAutocomplete();
+						BlogIt.fn.addValidation(e);  //adds submit handler for button in dialog
 					}
 				}
 			});
 		},
-		validationRules: function(e){
+		addValidation: function(e){
 			console.log ('form: '+$(BlogIt.pm['skin-classes']['blog-form']+ ' form').length);
+			console.log($(BlogIt.pm['skin-classes']['blog-form']+ ' form'));
 			$(BlogIt.pm['skin-classes']['blog-form']+ ' form').each(function(){
+				console.log('setting up edit validations');
 				$(this).validate({
 					submitHandler: function(form) {  //Only if the form validates
 						console.log('submitHandler');
 						console.log('dialog: '+$(form).parents('.jBox-content').length);
 						if ($(form).parents('.jBox-content').length){
 							console.log('calling ajax form');
-							BlogIt.fn.ajaxForm($(form), BlogIt.fn.updateBlog, e);
+							BlogIt.fn.ajaxSubmit($(form), BlogIt.fn.updateBlog, e);
 						}else{
 							$(window).off('beforeunload');
 							console.log('calling normal form');
@@ -224,7 +246,7 @@ BlogIt.fn = function($){
 				$(this).validate({
 					submitHandler: function(form) {
 						console.log('calling comment ajax form');
-						BlogIt.fn.ajaxForm($(form), BlogIt.fn.updateComment, e);  //mode is undefined when normal comment add, since no onclick handler defined
+						BlogIt.fn.ajaxSubmit($(form), BlogIt.fn.updateComment, e);  //mode is undefined when normal comment add, since no onclick handler defined
 					},
 					rules: {
 						ptv_commentauthor: {required: true},
@@ -234,8 +256,9 @@ BlogIt.fn = function($){
 				});
 			});
 		},
+//TODO: Not PUBLIC
 		//defines the ajax actions when clicking Submit from dialogs, and Submit from comment entry
-		ajaxForm: function($frm, submitFn, e){
+		ajaxSubmit: function($frm, submitFn, e){
 			dialogWait();
 			if (!$('[name="bi_mode"]',$frm).length)  $frm.prepend('<input type="hidden" name="bi_mode" value="ajax">');  //trigger ajax mode
 
@@ -244,7 +267,7 @@ BlogIt.fn = function($){
 			if (e){
 				console.log('clicked: '+($(e.target).is('img') ?'img' :'link'));
 				console.log(e.currentTarget);
-				target = ( $(e.target).is('img') ?e.currentTarget :e.target);
+				target = ( $(e.target).is('img') ?e.currentTarget :e.target);  //if user clicked img, bubble out to currentTarget to find href link
 				console.log('href: '+target.href);
 				var $closest=closestTemplateObject($(target));
 				//Clicking reply from admin list templateClass is ".blogit-comment-list blogit-comment-admin-list" since container has two classes, use only the first
@@ -262,7 +285,8 @@ BlogIt.fn = function($){
 			console.log('templateClass: '+templateClass);
 			console.log ('$context:');
 			console.log ($context);
-
+			console.log('url: '+$frm.attr('action'));
+			//TODO: Why not fn.ajax
 			$.ajax({type: 'POST', dataType:'json', url:$frm.attr('action'),
 				data: $frm.serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 				success: function(data){  //after PmForms finishes processing, update page with new content
@@ -270,12 +294,14 @@ BlogIt.fn = function($){
 					//TODO: Check needed, or just close?
 					if (!data || (data && data.result!='error'))  if (dialog)  dialog.close();  //TODO: Need more robust check. dialog doesn't exist when submitting comments; why not dialogClose()
 					if (data.out)  submitFn(data, target, $context, templateClass);  //TODO: templateClass not defined from edit comment
+					//TODO: XL('error')
 					else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || 'error')});
 				}
 			});
 		},
 
-//Routines called from ajaxForm
+//Routines called from ajaxSubmit
+//TODO: Not PUBLIC
 		updateBlog: function(data, target, $context, templateClass){
 			//can't use closest since no e on DOM passed back from server; use bi_seek (filter/find) to start from top of DOM, work down
 			//Can't use entire data.out, as pmwiki returns full html objects, which may include <table> tags, not just the <tr>
@@ -283,6 +309,7 @@ BlogIt.fn = function($){
 			$context.replaceWith($new);  //update existing blog entry
 			flash($new, data);
 		},
+//TODO: Not PUBLIC
 		updateComment: function(data, target, $context, templateClass){  //data.out is the full #blogit-commentblock which includes 'Comment" header, and a single comment
 			console.log('updating comment: '+templateClass);
 			console.log($context);
@@ -313,7 +340,7 @@ BlogIt.fn = function($){
 			}
 			flash($new, data);
 		},
-		addTagEvents: function(){
+		addAutocomplete: function(){
 			//Add autocomplete. :not only adds autocomplete if not already added.
 			$('input[name="ptv_entrytags"]').each( function(){
 				console.log(this);
@@ -355,30 +382,6 @@ BlogIt.fn = function($){
 			ajax['url'] = ( typeof ajax.url == 'function' ?ajax.url(e.target.href) :(ajax.url || e.target.href) );
 			ajax['context'] = ajax.context || e.target;
 			$.ajax(ajax);
-		},
-		addRequireGroup: function(){
-			//Direct copy from jquery.validate/additional-methods.min.js, so we don't have to include entire file for single function
-			$.validator.addMethod( "require_from_group", function( value, element, options ) {
-				var $fields = $( options[ 1 ], element.form ),
-					$fieldsFirst = $fields.eq( 0 ),
-					validator = $fieldsFirst.data( "valid_req_grp" ) ? $fieldsFirst.data( "valid_req_grp" ) : $.extend( {}, this ),
-					isValid = $fields.filter( function() {
-						return validator.elementValue( this );
-					} ).length >= options[ 0 ];
-
-				// Store the cloned validator for future validation
-				$fieldsFirst.data( "valid_req_grp", validator );
-
-				// If element isn't being validated, run each require_from_group field's validation rules
-				if ( !$( element ).data( "being_validated" ) ) {
-					$fields.data( "being_validated", true );
-					$fields.each( function() {
-						validator.element( this );
-					} );
-					$fields.data( "being_validated", false );
-				}
-				return isValid;
-			}, $.validator.format( "Please fill at least {0} of these fields." ) );  //TODO: XL()
 		}
 	};
 }(jQuery);

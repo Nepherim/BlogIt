@@ -154,7 +154,7 @@ SDV($AuthFunction,'PmWikiAuth');
 $bi_OriginalFn['AuthFunction']=$AuthFunction;  #must occur before calling bi_Auth()
 $AuthFunction = 'bi_BlogItAuth';  #TODO: Use $AuthUserFunctions instead?
 # Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
-# TODO: Reccomendation from John Rankin to change to (\w[-_\w]*) -- need to determine impact.
+# TODO: Reccomendation from John Rankin to change to (\w[-_\w]*) -- need to determine impact. ORIGINAL: (\w[_\w-]*)
 $PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_\w-]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';  #[1]
 $bi_Pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
 
@@ -166,15 +166,13 @@ if ( bi_Auth('*') )  $EnablePostCaptchaRequired = 0;  #disable captcha for any B
 # ----------------------------------------
 # - Javascript - [1]
 SDVA($HTMLHeaderFmt, array(
-//	'jquery-ui.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jquery-ui.min.css" type="text/css" />',
 	'jbox.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jbox.css" type="text/css" />',
 	'awesomplete.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/awesomplete.css" type="text/css" />',
 	'blogit.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />'));
 SDVA($HTMLFooterFmt, array(
 //TODO: Use replacement string rather than repeating script tags
 	'jquery.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>',
-//	'jquery-ui.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery-ui.min.js"></script>',
-	'jq.validate' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validate.min.js"></script>',
+	'jq-validate.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validate.min.js"></script>',
 	'jbox.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jbox.min.js"></script>',
 	'awesomplete.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/awesomplete.min.js"></script>',
 	'blogit.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>',
@@ -520,12 +518,15 @@ global $bi_CommentSideBarLen,$bi_Pagename,$bi_UnstyleFn,$Charset;
 	if($bi_UnstyleFn>'')	 $text = $bi_UnstyleFn($bi_Pagename, $text);
 	return trim( preg_replace('/(^.{0,' .(empty($len) ?$bi_CommentSideBarLen :$len) .'}\b|\n).*/' .($Charset=='UTF-8' ?'u' :''),'${1}', $text) );
 }
-function bi_Link($pre, $page, $action, $txt, $post){  #valid actions: ajax, normal, ajax-normal, normal-ajax
+function bi_Link($pre, $page, $action, $txt, $post, $cls=''){  #valid actions: ajax, normal, ajax-normal, normal-ajax
 global $bi_Ajax,$PubDirUrl;
 	$hyphen=strpos($bi_Ajax[$action],'-');
-	return $pre .'%apply=link class=blogit-admin-link%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],0,4)=='ajax' ?'&amp;bi_mode=ajax' :'') .' | ' .$txt .']]%%'
-		.($hyphen ?'%apply=link class=blogit-admin-link%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],$hyphen+1)=='ajax' ?'&amp;bi_mode=ajax' :'') .' | ' .$PubDirUrl .'/blogit/link.gif]]%%' :'')
-		.$post;
+	return $pre .'%apply=link class="blogit-admin-link '.$cls.'"%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],0,4)=='ajax' ?'&amp;bi_mode=ajax' :'') .' | ' .$txt .']]'
+		.($hyphen ?'%apply=link class="blogit-admin-link '.$cls.'"%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],$hyphen+1)=='ajax' ?'&amp;bi_mode=ajax' :'') .' | ' .$PubDirUrl .'/blogit/link.gif]]' :'')
+		//PmWiki will apply the last class in a line to all links, regardless of the class requested for each link.
+		//This is circumvented with a (:nl:) splitting links onto separate lines. The two spaces ensure alignment on bullet lists.
+		//TODO: Verify the spaces don't cause issues on skins which don't use bullets for admin links
+		.$post .($cls>'' ? '(:nolinebreaks:)(:nl:)  (:linebreaks:)' :'');
 }
 function blogitSkinMU($fn, $opt, $txt){
 global $bi_AuthorGroup,$bi_Pagename,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern,$EnableBlocklist,$bi_Pages;
@@ -534,19 +535,19 @@ global $bi_AuthorGroup,$bi_Pagename,$bi_CommentsEnabled,$bi_LinkToCommentSite,$b
 	switch ($fn){
 		case 'date': return ME_ftime(XL(array_key_exists($args['fmt'],$dateFmt) ?$dateFmt[$args['fmt']] :$args['fmt']), '@'.$txt);
 		case 'intro': return '(:div999991 class="'.$args['class'].'":)' .blogitMU_intro('', $txt) .'%blogit-more%'. blogitMU_more($args['page'], $txt) ."%%\n(:div99991end:)";
-		case 'author': return ($txt>''
-			?$args['pre_text'] .(PageExists(MakePageName($bi_Pagename, "$bi_AuthorGroup/$txt")) ?"[[$bi_AuthorGroup/$txt]]" :$txt) .$args['post_text']
-			:'');
-		case 'edit': return (bi_Auth('blog-edit '.$args['page']) ?bi_Link($args['pre_text'], $args['page'], 'bi_be', $txt, $args['post-text']) :'');
-		case 'newentry': return (bi_Auth('blog-new '.$bi_Pages['auth']) ?bi_Link($args['pre_text'], $bi_Pages['admin'], 'bi_ne', $txt, $args['post-text']) :'');
-		case 'delete': return (bi_Auth('blog-edit '.$args['page']) ?bi_Link($args['pre_text'], $args['page'], 'bi_del', $txt, $args['post-text']) :'');
-		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_ce', '$[edit]', $args['post_text']) :'');
-		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_del', '$[delete]', $args['post_text']) :'');
-		case 'commentreply': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], bi_BasePage($txt), 'bi_cr', '$[reply]', $args['post_text']) :'');
+		case 'author': return ($txt>'' ?$args['pre_text'] .(PageExists(MakePageName($bi_Pagename, "$bi_AuthorGroup/$txt"))	?"[[$bi_AuthorGroup/$txt]]" :$txt) .$args['post_text'] :'');
+		case 'edit': return (bi_Auth('blog-edit '.$args['page']) ?bi_Link($args['pre_text'], $args['page'], 'bi_be', $txt, $args['post-text'], 'bi-link-blog-edit') :'');
+		case 'newentry': return ( bi_Auth('blog-new '.$bi_Pages['auth']) ?bi_Link($args['pre_text'], $bi_Pages['admin'], 'bi_ne', $txt, $args['post-text'],'bi-link-blog-new') :'');
+		//TODO: Is there a blog delete function?
+		case 'delete': return (bi_Auth('blog-edit '.$args['page']) ?bi_Link($args['pre_text'], $args['page'], 'bi_del', $txt, $args['post-text'],'bi-link-blog-delete') :'');
+		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_ce', '$[edit]', $args['post_text'],'bi-link-comment-edit') :'');
+		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_del', '$[delete]', $args['post_text'],'bi-link-comment-delete') :'');
+		case 'commentreply': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], bi_BasePage($txt), 'bi_cr', '$[reply]', $args['post_text'],'bi-link-comment-reply') :'');
 		case 'commentapprove': return (bi_Auth('comment-approve ' .bi_BasePage($txt))
-			?bi_Link($args['pre_text'], $txt, 'bi_'.($args['status']=='true'?'cua':'ca'), '$['.($args['status']=='true'?'un':'').'approve]', $args['post_text']) :'');
-		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt))
-			?bi_Link($args['pre_text'], $txt, 'bi_bip', '$[block]', $args['post_text']) :'');
+			?bi_Link($args['pre_text'], $txt, 'bi_'.($args['status']=='true'?'cua':'ca'), '$['.($args['status']=='true'?'un':'').'approve]', $args['post_text'],
+				'bi-link-comment-'.($args['status']=='true'?'un':'').'approved')
+				:'');
+		case 'commentblock': return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_bip', '$[block]', $args['post_text'],'bi-link-comment-block') :'');
 		case 'tags': return ($txt>'' ?$args['pre_text'].bi_SaveTags('', $txt, 'display').$args['post_text'] :'');
 		case 'commentcount': return ($args['status']!='none' && $bi_CommentsEnabled!='none'
 			?$args['pre_text'].'[['.$args['group'].'.'.$args['name'].'#blogit-comment-list | '.
