@@ -24,7 +24,8 @@ BlogIt.fn = function($){
 //private declarations
 //TODO: When are these used? fn.ajax?
 	$.ajaxSetup({ timeout: 15000,  //timeout of 15 seconds
-		contentType: "application/x-www-form-urlencoded; charset="+BlogIt.pm['charset'],  //jquery will always send with UTF8, regardless of charset specified.
+		//jquery will always send with UTF8, regardless of charset specified.
+		contentType: "application/x-www-form-urlencoded",
 		error: function(request,error){
 			BlogIt.fn.showMsg({result:'error', msg:(
 				(error=='parsererror' ?'Parsing JSON request failed.'
