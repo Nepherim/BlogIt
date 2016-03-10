@@ -523,10 +523,7 @@ global $bi_Ajax,$PubDirUrl;
 	$hyphen=strpos($bi_Ajax[$action],'-');
 	return $pre .'%apply=link class="blogit-admin-link '.$cls.'"%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],0,4)=='ajax' ?'&amp;bi_mode=ajax' :'') .' | ' .$txt .']]'
 		.($hyphen ?'%apply=link class="blogit-admin-link '.$cls.'"%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],$hyphen+1)=='ajax' ?'&amp;bi_mode=ajax' :'') .' | ' .$PubDirUrl .'/blogit/link.gif]]' :'')
-		//PmWiki will apply the last class in a line to all links, regardless of the class requested for each link.
-		//This is circumvented with a (:nl:) splitting links onto separate lines. The two spaces ensure alignment on bullet lists.
-		//TODO: Verify the spaces don't cause issues on skins which don't use bullets for admin links
-		.$post .($cls>'' ? '(:nolinebreaks:)(:nl:)  (:linebreaks:)' :'');
+		.$post;
 }
 function blogitSkinMU($fn, $opt, $txt){
 global $bi_AuthorGroup,$bi_Pagename,$bi_CommentsEnabled,$bi_LinkToCommentSite,$bi_CommentPattern,$EnableBlocklist,$bi_Pages;
@@ -536,9 +533,11 @@ global $bi_AuthorGroup,$bi_Pagename,$bi_CommentsEnabled,$bi_LinkToCommentSite,$b
 		case 'date': return ME_ftime(XL(array_key_exists($args['fmt'],$dateFmt) ?$dateFmt[$args['fmt']] :$args['fmt']), '@'.$txt);
 		case 'intro': return '(:div999991 class="'.$args['class'].'":)' .blogitMU_intro('', $txt) .'%blogit-more%'. blogitMU_more($args['page'], $txt) ."%%\n(:div99991end:)";
 		case 'author': return ($txt>'' ?$args['pre_text'] .(PageExists(MakePageName($bi_Pagename, "$bi_AuthorGroup/$txt"))	?"[[$bi_AuthorGroup/$txt]]" :$txt) .$args['post_text'] :'');
+		//PmWiki will apply the last class in a line to all links, regardless of the class requested for each link.
+		//So putting a class on a link means we need to ensure links are on separate lines either with (:nl:) or using LI lists
 		case 'edit': return (bi_Auth('blog-edit '.$args['page']) ?bi_Link($args['pre_text'], $args['page'], 'bi_be', $txt, $args['post_text'], 'bi-link-blog-edit') :'');
 		case 'newentry': return ( bi_Auth('blog-new '.$bi_Pages['auth']) ?bi_Link($args['pre_text'], $bi_Pages['admin'], 'bi_ne', $txt, $args['post_text'],'bi-link-blog-new') :'');
-		//TODO: Is there a blog delete function?
+		//blog delete function on blog-grid
 		case 'delete': return (bi_Auth('blog-edit '.$args['page']) ?bi_Link($args['pre_text'], $args['page'], 'bi_del', $txt, $args['post_text'],'bi-link-blog-delete') :'');
 		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_ce', '$[edit]', $args['post_text'],'bi-link-comment-edit') :'');
 		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_del', '$[delete]', $args['post_text'],'bi-link-comment-delete') :'');

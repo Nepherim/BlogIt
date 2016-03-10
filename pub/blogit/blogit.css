@@ -1,13 +1,21 @@
+.blog-list td{
+	padding: 2px 10px;
+}
 .blogit-comment-unapproved{
 	background-color: #D3D3D3;
 	color: #808080;
 	font-style: italic;
 	}
-.blogit-admin-link{
-	border: none !important;
-	padding: 0 0 0 2px !important;
-	display: inline !important;
-	}
+.blogit-admin-links, .blogit-admin-links li {
+	display: inline;
+	list-style-type: none;
+}
+.blogit-admin-links, .blogit-comment-header{
+	margin-right: 20px;
+}
+.blogit-admin-links{
+	padding-left: 20px;
+}
 .blogit-admin-link img{
 	border: none !important;
 	margin: 0 0 1px !important;

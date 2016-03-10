@@ -61,6 +61,7 @@ BlogIt.fn = function($){
 		console.log(closest);
 		return (closest.length ?closest :null);  //when clicking ajax new entry
 	}
+	//removed comments or blog posts (from blog grid)
 	function objectRemove(e, data){
 		var $old = getIDWrapper(e.target);
 		//if this is a comment, and if the comment was approved deduct approved-count, else deduct unapproved-comment
