@@ -5,7 +5,7 @@
 
     For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '20160224';  #1.8.0
+$RecipeInfo['BlogIt']['Version'] = '20160324';  #1.9.0
 if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
 
 # ----------------------------------------
@@ -19,6 +19,7 @@ SDV($CategoryGroup, 'Tags');  #[1]
 SDV($bi_AuthorGroup, 'Profiles');
 SDV($bi_CommentGroup, 'Comments');
 SDV($bi_CommentsEnabled, 'open');
+SDV($bi_CommentsAutoClose, '');  ////disable comments after a period of time, to reduce spam (overrides bi_CommentsEnabled. '1 month ago', '-1 week', etc.
 SDV($bi_DefaultCommentStatus, (IsEnabled($EnablePostCaptchaRequired) ?'true' :'false') );  #auto-approve comments only if captcha is enabled
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_EntriesPerPage, 10);
@@ -130,6 +131,9 @@ SDVA($SearchPatterns['blogit'], ($bi_BlogGroups>''  #either regexes to include (
 $bi_Ajax['bi_cr']=$bi_Ajax['bi_bip']='ajax';  #comment reply is always ajax
 SDV($PmFormRedirectFunction,'bi_Redirect');
 $bi_Forms = array('blogit-entry','blogit-comments');  #needs to be before cookies
+//disable comments after a period of time, to reduce spam
+if ( $bi_CommentsAutoClose != '' && PageVar($pagename,'$:entrydate') < strtotime($bi_CommentsAutoClose) )
+	$bi_CommentsEnabled = 'read-only';
 
 # ----------------------------------------
 # - Usable on Wiki Pages

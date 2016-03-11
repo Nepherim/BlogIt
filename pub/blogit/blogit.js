@@ -1,4 +1,4 @@
-// blogit.js 2016-02-26 1.8.0
+// blogit.js 2016-03-24 1.9.0
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	//show error messages set by pmwiki in .wikimessage
