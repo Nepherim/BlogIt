@@ -320,12 +320,13 @@ global $bi_ResetPmFormField,$bi_OriginalFn,$bi_GroupFooterFmt,$bi_CommentGroup,$
 				$_REQUEST["$k"]=$v;  #Reset form variables that have errors captured outside the PmForms mechanism
 				$FmtPV['$bi_Default_'.$k]='"'.bi_Clean('alpha',$v).'"';  #Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
 			}
-	}elseif ($entrytype == 'blog' && $action=='browse'){
+	}elseif ($entrytype == 'blog' && ($action == 'browse' || $action == 'print')){
 		bi_storeCookie();
 		$bi_EntryStatus = PageTextVar($src,'entrystatus');
 		$bi_AuthEditAdmin = bi_Auth('blog-edit,blog-new,blogit-admin');
 		if ( ($bi_EntryStatus!='draft' && (!bi_FuturePost($Now) || $bi_AuthEditAdmin) ) || ($bi_EntryStatus=='draft' && $bi_AuthEditAdmin) )
-			$GroupHeaderFmt .= '(:includesection "#single-entry-view":)';  #Required for action=browse AND comments when redirected on error (in which case $action=pmform).
+			if ($action == 'browse')  $GroupHeaderFmt .= '(:includesection "#single-entry-view":)';  #action=browse AND comments when redirected on error (in which case $action=pmform)
+			else $GroupHeaderFmt .= '(:includesection "#print-view":)';  //action=print
 	}else
 		bi_storeCookie();
 	if ($bi_Group == $CategoryGroup){
