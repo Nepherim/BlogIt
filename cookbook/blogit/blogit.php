@@ -10,6 +10,7 @@ if ($VersionNum < 2001950)	Abort("<h3>You are running PmWiki version {$Version}.
 
 # ----------------------------------------
 # - User settings
+SDV($FarmPubDirUrl, $PubDirUrl);
 SDV($bi_BlogIt_Enabled, 1); if (!IsEnabled($bi_BlogIt_Enabled))  return;
 SDV($EnablePostCaptchaRequired, 0);
 SDV($bi_DefaultGroup, 'Blog');  #Pre-populates the Pagename field; blogs can exist in *any* group, not simply the default defined here.
@@ -31,7 +32,7 @@ SDV($bi_DateStyle, 'dmy');  #if you change the date entry format, then indicate 
 # ----------------------------------------
 # - Skin settings
 SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));  #Needed if skin is set in group config, which is processed after main config
-SDV($PageCSSListFmt['pub/blogit/blogit-pmwiki.css'],'$PubDirUrl/blogit/blogit-pmwiki.css');  #Auto-load BlogIt PmWiki css file
+SDV($PageCSSListFmt['pub/blogit/blogit-pmwiki.css'],'$FarmPubDirUrl/blogit/blogit-pmwiki.css');  #Auto-load BlogIt PmWiki css file
 SDV($bi_AjaxMsgTimer, 3000);  #Number of milli-seconds that the top ajax message is displayed for
 #key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
 SDVA($bi_Ajax, array('bi_ce'=>'ajax', 'bi_ca'=>'ajax', 'bi_cua'=>'ajax', 'bi_be'=>'normal-ajax', 'bi_ne'=>'normal-ajax', 'bi_del'=>'ajax'));
@@ -166,18 +167,18 @@ if ( bi_Auth('*') )  $EnablePostCaptchaRequired = 0;  #disable captcha for any B
 # ----------------------------------------
 # - Javascript - [1]
 SDVA($HTMLHeaderFmt, array(
-	'jbox.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/jbox.css" type="text/css" />',
-	'awesomplete.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/awesomplete.css" type="text/css" />',
-	'blogit.css' => '<link rel="stylesheet" href="' .$PubDirUrl .'/blogit/blogit.css" type="text/css" />'));
+	'jbox.css' => '<link rel="stylesheet" href="' .$FarmPubDirUrl .'/blogit/jbox.css" type="text/css" />',
+	'awesomplete.css' => '<link rel="stylesheet" href="' .$FarmPubDirUrl .'/blogit/awesomplete.css" type="text/css" />',
+	'blogit.css' => '<link rel="stylesheet" href="' .$FarmPubDirUrl .'/blogit/blogit.css" type="text/css" />'));
 SDVA($HTMLFooterFmt, array(
 //TODO: Use replacement string rather than repeating script tags
-	'jquery.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.min.js"></script>',
-	'jq-validate.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jquery.validate.min.js"></script>',
-	'jbox.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/jbox.min.js"></script>',
-	'awesomplete.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/awesomplete.min.js"></script>',
-	'blogit.js' => '<script type="text/javascript" src="' .$PubDirUrl .'/blogit/blogit.js"></script>',
+	'jquery.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jquery.min.js"></script>',
+	'jq-validate.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jquery.validate.min.js"></script>',
+	'jbox.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jbox.min.js"></script>',
+	'awesomplete.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/awesomplete.min.js"></script>',
+	'blogit.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/blogit.js"></script>',
 	'blogit-core' => '<script type="text/javascript">
-			BlogIt.pm["pubdirurl"]="'.$PubDirUrl.'/blogit";
+			BlogIt.pm["pubdirurl"]="'.$FarmPubDirUrl.'/blogit";
 			BlogIt.pm["categories"]="' .bi_CategoryList() .'";
 			BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE(XL('%d-%m-%Y %H:%M')).'$/;'."\n".
 			'BlogIt.pm["skin-classes"]='. bi_json_encode($bi_SkinClasses) .';'."\n".
@@ -520,10 +521,10 @@ global $bi_CommentSideBarLen,$bi_Pagename,$bi_UnstyleFn,$Charset;
 	return trim( preg_replace('/(^.{0,' .(empty($len) ?$bi_CommentSideBarLen :$len) .'}\b|\n).*/' .($Charset=='UTF-8' ?'u' :''),'${1}', $text) );
 }
 function bi_Link($pre, $page, $action, $txt, $post, $cls=''){  #valid actions: ajax, normal, ajax-normal, normal-ajax
-global $bi_Ajax,$PubDirUrl;
+global $bi_Ajax,$FarmPubDirUrl;
 	$hyphen=strpos($bi_Ajax[$action],'-');
 	return $pre .'%apply=link class="blogit-admin-link '.$cls.'"%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],0,4)=='ajax' ?'&amp;bi_mode=ajax' :'') .' | ' .$txt .']]'
-		.($hyphen ?'%apply=link class="blogit-admin-link '.$cls.'"%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],$hyphen+1)=='ajax' ?'&amp;bi_mode=ajax' :'') .' | ' .$PubDirUrl .'/blogit/link.gif]]' :'')
+		.($hyphen ?'%apply=link class="blogit-admin-link '.$cls.'"%[[' .$page .'?action=' .$action .(substr($bi_Ajax[$action],$hyphen+1)=='ajax' ?'&amp;bi_mode=ajax' :'') .' | ' .$FarmPubDirUrl .'/blogit/link.gif]]' :'')
 		.$post;
 }
 function blogitSkinMU($fn, $opt, $txt){
