@@ -33,7 +33,10 @@ SDV($bi_DateStyle, 'dmy');  #if you change the date entry format, then indicate 
 # ----------------------------------------
 # - Skin settings
 SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));  #Needed if skin is set in group config, which is processed after main config
-SDV($PageCSSListFmt['pub/blogit/blogit-pmwiki.css'],'$FarmPubDirUrl/blogit/blogit-pmwiki.css');  #Auto-load BlogIt PmWiki css file
+SDV($PageCSSListFmt,array(  #Auto-load BlogIt PmWiki css file
+	'pub/css/local.css' => '$PubDirUrl/css/local.css',
+	'pub/blogit/blogit-pmwiki.css' => '$FarmPubDirUrl/blogit/blogit-pmwiki.css'
+));
 SDV($bi_AjaxMsgTimer, 3000);  #Number of milli-seconds that the top ajax message is displayed for
 #key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
 SDVA($bi_Ajax, array('bi_ce'=>'ajax', 'bi_ca'=>'ajax', 'bi_cua'=>'ajax', 'bi_be'=>'normal-ajax', 'bi_ne'=>'normal-ajax', 'bi_del'=>'ajax'));
