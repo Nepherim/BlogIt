@@ -776,7 +776,7 @@ global $CategoryGroup,$bi_TagSeparator;
 	if ($body)  $bodyTags = (preg_match_all('/\[\[\!(.*?)\]\]/', $body, $match) ?$match[1] :array());  #array of tags contained in [[!...]] markup.
 
 	# Make sure tag-field entries are in standard separated format, and place in array
-	if ($user_tags)  $fieldTags = explode($bi_TagSeparator, preg_replace('/'.trim($bi_TagSeparator).'\s*/', $bi_TagSeparator, $user_tags));
+	if ($user_tags)  $fieldTags = explode($bi_TagSeparator, preg_replace('/'.trim($bi_TagSeparator).'\s*/', $bi_TagSeparator, trim($user_tags)));
 	# Concatenate the tag-field tags, with those in the body,
 	$allTags = array_unique(array_merge((array)$fieldTags, (array)$bodyTags));
 	if (empty($allTags))  return '';
