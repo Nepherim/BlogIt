@@ -162,8 +162,7 @@ SDV($AuthFunction,'PmWikiAuth');
 $bi_OriginalFn['AuthFunction']=$AuthFunction;  #must occur before calling bi_Auth()
 $AuthFunction = 'bi_BlogItAuth';  #TODO: Use $AuthUserFunctions instead?
 # Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
-# TODO: Reccomendation from John Rankin to change to (\w[-_\w]*) -- need to determine impact. ORIGINAL: (\w[_\w-]*)
-$PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[_\w-]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';  #[1]
+$PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[-_\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';  #[1]
 $bi_Pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
 
 if ($bi_Pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"' .bi_Clean('word', $_GET['blogid']) .'"';
