@@ -57,7 +57,9 @@ SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tel
 	//TODO: On ajax comment edit, #wikitext not present
 	//TODO: Should be #commentblock for normal comment add
 	'comment-form' => '#wikitext .blogit-comment-form',  #pointer to the wrapper containing the comment-entry FORM object (both ajax and normal entry)
-	'comment-submit' => '#wikitext .blogit-submit-row'  #pointer to the wrapper containing the captcha and comment Submit
+	'comment-submit' => '#wikitext .blogit-submit-row',  #pointer to the wrapper containing the captcha and comment Submit
+	'comment-summary' => '#wikitext .blogit-comment-summary',  #wrapper containing the comments for a single page on the unapproved comment admin page
+	'comment-summary-title' => '#wikitext .blogit-comment-summary h3'  #pointer to each page title on the unapproved comment admin page
 ));
 SDVA($bi_SkinSettings, array(
 	'ajax_textarea_rows' => '18'  #make sure whole ajax dialog fits on low res monitors

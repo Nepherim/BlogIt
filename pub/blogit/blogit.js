@@ -10,11 +10,27 @@ jQuery(document).ready(function($){
 	BlogIt.fn.addValidation();
 	BlogIt.fn.addAutocomplete();
 
+	//Classes are added by bi_Link(), so can be hard-coded.
 	$(document).on('click', '.bi-link-comment-unapproved,.bi-link-comment-approved', function(e){ BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.flipCommentStatus(e.target, data); }}, e); });
 	$(document).on('click', '.bi-link-blog-new,.bi-link-blog-edit,.bi-link-comment-edit,.bi-link-comment-reply', function(e){ BlogIt.fn.showDialog(e); });
 	//TODO: Is there actually a blog delete function?
 	$(document).on('click', '.bi-link-comment-delete,.bi-link-blog-delete', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
 	$(document).on("click", '.bi-link-comment-block', function(e){ BlogIt.fn.showBlockIP(e); });  //block comment IP addresses
+	$(document).on("click", BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment', function(e){
+		if ( !$(e.target).is('a,input') )  BlogIt.fn.commentAdminCheckbox(this, 'flip');
+	});
+	$(BlogIt.pm['skin-classes']['comment-summary-title']).jBox('Tooltip', {
+		trigger: 'mouseenter',
+		content:'<ul class="bi-Comment-Admin"><li class="bi-Comment-AllNone">All</li><li class="bi-Comment-Delete">Delete</li><li class="bi-Comment-Block">Block</li><li class="bi-Comment-BlockDelete">Block & Delete</li>',
+		pointer: 'left',
+		position: {x: 'left', y: 'bottom'},
+		offset:{x:20,y:-5},
+		closeOnMouseleave: true,
+		onOpen: function(){ this.source.addClass('bi-menu-hover'); },
+		onClose: function(){ this.source.removeClass('bi-menu-hover'); }
+	});
+	$(document).on("click", "ul.bi-Comment-Admin li", function(){ BlogIt.fn.commentAdmin(this) });
+	$(BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment').hover ( function(){ BlogIt.fn.commentAdminCheckbox(this, 'show', false)}, function(){BlogIt.fn.commentAdminCheckbox(this, 'hide', true)});
 	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').on('change',   //if any field (not a submit button) changes...
 		function(){	$(window).on('beforeunload', function(){ return BlogIt.fn.xl('You have unsaved changes.'); }); });
 });
@@ -36,7 +52,6 @@ BlogIt.fn = function($){
 		}
 	});
 	var dialog;  //global dialog reference so we can close from ajaxSubmit()
-
 	function updateCommentCount(approvedCC, unapprovedCC){
 		function updateCC(e, c){
 			var e_txt = e.text().replace(/\n/ig, '');  //remove extraneous \n as it messes up the replacing
@@ -92,11 +107,11 @@ BlogIt.fn = function($){
 	function flash($e, data){
 		var bg = $e.parent().css('background-color');
 		$e.animate(
-			{ backgroundColor: '#BBFFB6'},
-			{ duration: 750, complete: function(){
+			{backgroundColor: '#BBFFB6'},
+			{duration: 750, complete: function(){
 				$(this).animate(
-					{ backgroundColor: bg },
-					{ duration:750, complete: function(){ $(this).css('background-color','') } }
+					{backgroundColor: bg },
+					{duration:750, complete: function(){ $(this).css('background-color','') } }
 			)}}
 		);
 		BlogIt.fn.showMsg(data);
@@ -136,7 +151,7 @@ BlogIt.fn = function($){
 			$fields.data( "being_validated", true );
 			$fields.each( function() {
 				validator.element( this );
-			} );
+			});
 			$fields.data( "being_validated", false );
 		}
 		return isValid;
@@ -225,6 +240,27 @@ BlogIt.fn = function($){
 
 //public functions
 	return {
+		commentAdmin: function(src){  //src is the clicked menu item
+			if ( $(src).hasClass('bi-Comment-Delete') )  console.log('delete');
+			else if ( $(src).hasClass('bi-Comment-AllNone') ){
+				$('.bi-menu-hover').next('.blogit-comment-admin-list').children('li').each(function(){
+					($(src).html()=='All' ?BlogIt.fn.commentAdminCheckbox(this, 'show', true) :BlogIt.fn.commentAdminCheckbox(this, 'hide', false) );
+				});
+				$(src).html($(src).html()=='All' ?'None': 'All');
+			}
+			else if ( $(src).hasClass('bi-Comment-BlockDelete') )  console.log('block delete');
+			else if ( $(src).hasClass('bi-Comment-Block') )  console.log('block');
+		},
+		commentAdminCheckbox: function(src, action, opt){  //src [flip|show|hide]
+			if (action == 'flip'){
+				$('input[name^="bi_CommentID"]', src).prop("checked", function(){ return !$(this).prop("checked"); });
+			}else if (action == 'show'){
+				if ( !$('input[name^="bi_CommentID"]', src).length )
+					$('.blogit-admin-links', src).prepend('<input type="checkbox" name="bi_CommentID" value="'+ $(src).attr('id')+ '">');
+				if (opt)  $('input[name^="bi_CommentID"]', src).prop('checked',true);
+			}else
+				$('input[name^="bi_CommentID"]'+ (opt ?':not(:checked)' :''), src).remove();
+		},
 		showDelete: function(e){
 //TODO: Required? Why not required for showBlockIP?
 //			e.preventDefault();

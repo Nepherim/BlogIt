@@ -1,3 +1,8 @@
+#wikitext ul.blogit-admin-links input[name="bi_CommentID"]{
+	position: relative;
+	left: -13px;
+	margin: 0 0 0 -13px;
+}
 .blog-list td{
 	padding: 2px 10px;
 }
