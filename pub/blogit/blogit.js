@@ -12,9 +12,9 @@ jQuery(document).ready(function($){
 
 	//Classes are added by bi_Link(), so can be hard-coded.
 	$(document).on('click', '.bi-link-comment-unapproved,.bi-link-comment-approved', function(e){ BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.flipCommentStatus(e.target, data); }}, e); });
-	$(document).on('click', '.bi-link-blog-new,.bi-link-blog-edit,.bi-link-comment-edit,.bi-link-comment-reply', function(e){ BlogIt.fn.showDialog(e); });
+	$(document).on('click', '.bi-link-blog-new,.bi-link-blog-edit,.bi-link-comment-edit,.bi-link-comment-reply', function(e){ BlogIt.fn.showEdit(e); });
 	//TODO: Is there actually a blog delete function?
-	$(document).on('click', '.bi-link-comment-delete,.bi-link-blog-delete', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
+	$(document).on('click', '.bi-link-comment-delete,.bi-link-blog-delete,.bi-Comment-Delete', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
 	$(document).on("click", '.bi-link-comment-block', function(e){ BlogIt.fn.showBlockIP(e); });  //block comment IP addresses
 	$(document).on("click", BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment', function(e){
 		if ( !$(e.target).is('a,input') )  BlogIt.fn.commentAdminCheckbox(this, 'flip');
@@ -29,7 +29,8 @@ jQuery(document).ready(function($){
 		onOpen: function(){ this.source.addClass('bi-menu-hover'); },
 		onClose: function(){ this.source.removeClass('bi-menu-hover'); }
 	});
-	$(document).on("click", "ul.bi-Comment-Admin li", function(){ BlogIt.fn.commentAdmin(this) });
+	//TODO: Remove and handle specific class click, by adding to existing handlers
+	$(document).on("click", "ul.bi-Comment-Admin li", function(){ BlogIt.fn.commentAdmin(this) });  //handles click for all comment menu actions
 	$(BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment').hover ( function(){ BlogIt.fn.commentAdminCheckbox(this, 'show', false)}, function(){BlogIt.fn.commentAdminCheckbox(this, 'hide', true)});
 	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').on('change',   //if any field (not a submit button) changes...
 		function(){	$(window).on('beforeunload', function(){ return BlogIt.fn.xl('You have unsaved changes.'); }); });
@@ -38,7 +39,7 @@ jQuery(document).ready(function($){
 var BlogIt={ fmt:{}, xl:{}, fn:{}, pm:{} };
 BlogIt.fn = function($){
 //private declarations
-//TODO: When are these used? fn.ajax?
+	//TODO: When are these used? fn.ajax?
 	$.ajaxSetup({ timeout: 15000,  //timeout of 15 seconds
 		//jquery will always send with UTF8, regardless of charset specified.
 		contentType: "application/x-www-form-urlencoded",
@@ -78,11 +79,13 @@ BlogIt.fn = function($){
 	}
 	//removed comments or blog posts (from blog grid)
 	function objectRemove(e, data){
-		var $old = getIDWrapper(e.target);
-		//if this is a comment, and if the comment was approved deduct approved-count, else deduct unapproved-comment
-		if ( $old.hasClass( BlogIt.pm['skin-classes']['comment'].replace(/^\./,'')) )
-			($('a', $old).hasClass('blogit-comment-approved') ?updateCommentCount(-1, 0) :updateCommentCount(0, -1));
-		$old.fadeOut(500, function(){ $(this).remove(); });
+		$(e).each(function(i){
+			var $old = getIDWrapper(this);
+			//if this is a comment, and if the comment was approved deduct approved-count, else deduct unapproved-comment
+			if ( $old.hasClass( BlogIt.pm['skin-classes']['comment'].replace(/^\./,'')) )
+				($('a', $old).hasClass('blogit-comment-approved') ?updateCommentCount(-1, 0) :updateCommentCount(0, -1));
+			$old.fadeOut(500, function(){ $(this).remove(); });
+		});
 		BlogIt.fn.showMsg(data);
 	};
 	//dialog functions
@@ -90,7 +93,8 @@ BlogIt.fn = function($){
 		$('.jBox-title div:not(.jBox-closeButton)').css( clear ?{background:""} :{background: "url( "+ BlogIt.pm.pubdirurl+ "/wait.gif) no-repeat left center", width: "18px", height: "18px"});
 	};
 	function dialogShow(txt, yes, no, w, ajax, e){
-		e.preventDefault();
+		if (typeof e.preventDefault !== 'undefined' && $.isFunction(e.preventDefault))  e.preventDefault();  //need to prevent links which are clicked from loading
+		//TODO: Use single variable/declaration for prompt and dialog
 		var prompt=new jBox('Confirm',{
 			content: txt,
 			_onOpen: function() {  //Override jbox default. Only change is to prevent dialog closing post confirm() so we manually close if form validates.
@@ -103,7 +107,6 @@ BlogIt.fn = function($){
 			width: w, minWidth: w, maxWidth: w  //needed to override jbox default
 		}).open();
 	};
-	//visuals
 	function flash($e, data){
 		var bg = $e.parent().css('background-color');
 		$e.animate(
@@ -116,13 +119,9 @@ BlogIt.fn = function($){
 		);
 		BlogIt.fn.showMsg(data);
 	};
-	$.validator.addMethod(
-		'datetime',
-		function(v, e, fmt){
-			return this.optional(e) ||	RegExp(BlogIt.fmt['entry-date']).test(v);
-		},
-		'Must be datetime.'  //TODO: Add format string XL
-	);
+	$.validator.addMethod('datetime', function(v, e, fmt){
+		return this.optional(e) ||	RegExp(BlogIt.fmt['entry-date']).test(v);
+	},	'Must be datetime.');  //TODO: Add format string XL
 	//add this to jquery: need to find objects at same level, or below. So do a find() followed by a filter()
 	$.fn.bi_seek = function(seek){
 		var $found;
@@ -186,16 +185,13 @@ BlogIt.fn = function($){
 		console.log ('$context:');
 		console.log ($context);
 		console.log('url: '+$frm.attr('action'));
-		//TODO: Why not fn.ajax
+		//TODO: Why not fn.ajax, different params to call in showEdit
 		$.ajax({type: 'POST', dataType:'json', url:$frm.attr('action'),
 			data: $frm.serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 			success: function(data){  //after PmForms finishes processing, update page with new content
-				console.log('closing');
-				//TODO: Check needed, or just close?
-				if (!data || (data && data.result!='error'))  if (dialog)  dialog.close();  //TODO: Need more robust check. dialog doesn't exist when submitting comments; why not dialogClose()
+				if (!data || (data && data.result!='error'))  if (dialog)  dialog.close();  //dialog doesn't exist when submitting comments
 				if (data.out)  submitFn(data, target, $context, templateClass);  //TODO: templateClass not defined from edit comment
-				//TODO: XL('error')
-				else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || 'error')});
+				else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || BlogIt.fn.xl('error'))});
 			}
 		});
 	}
@@ -246,42 +242,21 @@ BlogIt.fn = function($){
 				$('.bi-menu-hover').next('.blogit-comment-admin-list').children('li').each(function(){
 					($(src).html()=='All' ?BlogIt.fn.commentAdminCheckbox(this, 'show', true) :BlogIt.fn.commentAdminCheckbox(this, 'hide', false) );
 				});
-				$(src).html($(src).html()=='All' ?'None': 'All');
+				//TODO: XL()
+				$(src).html( $(src).html()=='All' ?'None': 'All' );
 			}
 			else if ( $(src).hasClass('bi-Comment-BlockDelete') )  console.log('block delete');
 			else if ( $(src).hasClass('bi-Comment-Block') )  console.log('block');
 		},
 		commentAdminCheckbox: function(src, action, opt){  //src [flip|show|hide]
 			if (action == 'flip'){
-				$('input[name^="bi_CommentID"]', src).prop("checked", function(){ return !$(this).prop("checked"); });
+				$('input[name="bi_CommentID[]"]', src).prop("checked", function(){ return !$(this).prop("checked"); });
 			}else if (action == 'show'){
-				if ( !$('input[name^="bi_CommentID"]', src).length )
-					$('.blogit-admin-links', src).prepend('<input type="checkbox" name="bi_CommentID" value="'+ $(src).attr('id')+ '">');
-				if (opt)  $('input[name^="bi_CommentID"]', src).prop('checked',true);
+				if ( !$('input[name="bi_CommentID[]"]', src).length )
+					$('.blogit-admin-links', src).prepend('<input type="checkbox" name="bi_CommentID[]" value="'+ $(src).attr('id')+ '">');
+				if (opt)  $('input[name="bi_CommentID[]"]', src).prop('checked',true);
 			}else
-				$('input[name^="bi_CommentID"]'+ (opt ?':not(:checked)' :''), src).remove();
-		},
-		showDelete: function(e){
-//TODO: Required? Why not required for showBlockIP?
-//			e.preventDefault();
-			//TODO: yes and no with XL()
-			dialogShow(BlogIt.fn.xl('Are you sure you want to delete?'),'Yes','No',300,
-				{success:function(data){ objectRemove(e, data); }},e);
-		},
-		showBlockIP: function(e){
-			BlogIt.fn.ajax({
-				success: function(data){
-					if (data.ip){
-						dialogShow(
-							BlogIt.fn.xl('Commenter IP: ')+data.ip+'<br/>'+BlogIt.fn.xl('Enter the IP to block:')+
-							//TODO: submit, Cancel with XL()
-							'<input id="blogit_ip" type="text" value="'+data.ip+'"/>','Submit','Cancel',300,
-							{	url: function(e){ return e+'&bi_ip='+$("#blogit_ip").val(); },
-								success: function(data){ BlogIt.fn.showMsg(data); }
-							}, e);
-					}
-				}
-			},e);
+				$('input[name="bi_CommentID[]"]'+ (opt ?':not(:checked)' :''), src).remove();
 		},
 		flipCommentStatus: function(target, data){
 			var $wrapper = getIDWrapper(target);
@@ -294,14 +269,49 @@ BlogIt.fn = function($){
 			if (approved) updateCommentCount(-1,1);
 			else updateCommentCount(1,-1);
 		},
+		showDelete: function(e){
+			if (e.target.href){
+				var rc = 1, url = e.target.href;
+			}else{
+				var src=$('.bi-menu-hover').next('ol.blogit-comment-admin-list');
+				console.log('src');
+				console.log(src);
+				var rc = $('input[name="bi_CommentID[]"]', src).length;
+				if (!rc){
+					console.log('nothing selected');
+					return;
+				}else{
+					//TODO: remove LI from name selector -- not needed
+					var url = $('.bi-link-comment-delete:first', src).attr('href')+ '&'+ $('li [name="bi_CommentID[]"]', src).serialize();
+					e = $('[name="bi_CommentID[]"]', src).parent().find('.bi-link-comment-delete');//  $('li.comment', src);
+				}
+			}
+			console.log('url final: '+url);
+			console.log(e);
+			dialogShow(BlogIt.fn.xl('Are you sure you want to delete '+ rc+ ' row'+ (rc>1 ?'s' :'')+ '?'), 'Yes', 'No', 300, {
+				url: url,
+				//TODO: make e an array of objects for bulk delete
+				success:function(data){ objectRemove(e, data); }
+			},e);
+		},
+		showBlockIP: function(e){
+			BlogIt.fn.ajax({ success: function(data){  //first perform ajax call on block link, which retrieves the IP
+				if (data.ip)  dialogShow(  //now show a dialog with the IP
+					BlogIt.fn.xl('Commenter IP: ')+data.ip+'<br/>'+BlogIt.fn.xl('Enter the IP to block:')+
+					'<input id="blogit_ip" type="text" value="'+data.ip+'"/>', 'Submit', 'Cancel', 300, {
+						//TODO: should serialise
+						url: function(e){ return e+'&bi_ip='+$("#blogit_ip").val(); },
+						success: function(data){ BlogIt.fn.showMsg(data); }
+					}, e);
+			}}, e);
+		},
 		//opens a dialog with content from PmWiki, calls addValidation(), and then on submit calls ajaxSubmit(), which calls updateBlog/updateComment
-		showDialog: function(e){
+		showEdit: function(e){
 			e.preventDefault();
-			//TOTO: Why not fn.ajax
-			$.ajax({
-				dataType:'json',
-				url:e.currentTarget.href,  //get the comment form from pmwiki; not .target, because actual target might be an image wrapped in an anchor
+			//TOTO: Why not BlogIt.fn.ajax
+			$.ajax({ dataType:'json', url:e.currentTarget.href,  //get the comment form from pmwiki; not .target, because actual target might be an image wrapped in an anchor
 				success: function(data){
+					//TODO: Need to show error msg if no data.out
 					if (data.out){  //form content returned in data.out
 						var blog=$(e.currentTarget).is('.bi-link-blog-edit,.bi-link-blog-new');  //are we doing some blog related action?
 						console.log('blog action: '+blog);
@@ -406,9 +416,9 @@ BlogIt.fn = function($){
 //Utilities
 		xl: function(t){ return ( (BlogIt.xl[t] ?$('<div>'+BlogIt.xl[t]+'</div>').html() :t) ); },
 		ajax: function(ajax, e){
-			e.preventDefault();
+			if (typeof e.preventDefault !== 'undefined' && $.isFunction(e.preventDefault))  e.preventDefault();
 			ajax['dataType'] = ajax.dataType || 'json';
-			ajax['url'] = ( typeof ajax.url == 'function' ?ajax.url(e.target.href) :(ajax.url || e.target.href) );
+			ajax['url'] = ( typeof ajax.url == 'function' ?ajax.url(e.target.href) :(ajax.url || e.target.href) );  //either eval the fn, or use .url, or lastly href on target
 			ajax['context'] = ajax.context || e.target;
 			$.ajax(ajax);
 		}

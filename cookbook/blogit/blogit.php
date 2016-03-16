@@ -179,8 +179,9 @@ SDVA($HTMLHeaderFmt, array(
 	'awesomplete.css' => '<link rel="stylesheet" href="' .$FarmPubDirUrl .'/blogit/awesomplete.css" type="text/css" />',
 	'blogit.css' => '<link rel="stylesheet" href="' .$FarmPubDirUrl .'/blogit/blogit.css" type="text/css" />'));
 SDVA($HTMLFooterFmt, array(
-//TODO: Use replacement string rather than repeating script tags
+	//TODO: Use replacement string rather than repeating script tags
 	'jquery.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jquery.min.js"></script>',
+	//TODO: Remove pre-production
 	'jq-validate.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jquery.validate.min.js"></script>',
 	'jbox.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jbox.min.js"></script>',
 	'awesomplete.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/awesomplete.min.js"></script>',
@@ -466,12 +467,19 @@ global $bi_ResetPmFormField,$_POST,$_REQUEST,$ROSPatterns,$CategoryGroup,
 	$bi_OriginalFn['HandleActions']['pmform']($src, $auth);  #usually HandlePmForm(), and then off to bi_Redirect()
 }
 function bi_HandleDelete($src, $auth='comment-edit'){  #action=bi_del
-global $WikiDir,$LastModFile;
+global $WikiDir,$LastModFile,$bi_CommentPattern;
 	$result = array('msg'=>XL('Unable to perform delete operation.'), 'result'=>'error');
 	$entrytype = PageTextVar($src,'entrytype');
 	if ( ($entrytype=='comment' || $entrytype=='blog')
 		&& (bi_Auth( ($entrytype=='comment' ?'comment-edit' :'blog-edit') .' ' .$src) && RetrieveAuthPage($src,'read',false, READPAGE_CURRENT)) ){
-		$WikiDir->delete($src);
+		#TODO: if comment, then loop through bi_CommentID if exist
+		if (isset($_GET['bi_CommentID']))
+			foreach ($_GET['bi_CommentID'] as $k)
+				//TODO: This is a hard-coded section of $bi_CommentPattern; pattern would need groups to encompass the Group, and Hyphens, and verify impact of change
+				$WikiDir->delete( preg_replace('/^(.*-)(\d{8}T\d{6}){1}$/', '${1}'. str_replace('bi_ID', '', $k), $src) );
+				//bi_debugLog( 'DELETED: '. preg_replace('/^(.*-)(\d{8}T\d{6}){1}$/', '${1}'. str_replace('bi_ID', '', $k), $src), true);
+		else
+			$WikiDir->delete($src);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
 		$result = array('msg'=>XL('Delete successful.'), 'result'=>'success');
 	}
@@ -821,7 +829,7 @@ global $bi_Pagename,$bi_DisplayFuture;
 function bi_JXL(){  #create javascript array holding all XL translations of text used client-side
 	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:', 'Commenter IP: ',
 			'Enter the IP to block:', 'Submit', 'Post', 'Cancel', 'Either enter a Blog Title or a Pagename.', 'You have unsaved changes.','Website:',
-			'Parsing JSON request failed.','Request timeout.','Error: ');
+			'Parsing JSON request failed.','Request timeout.','Error: ','error','No data returned.');
 	foreach ($a as $k)  $t .= ($k!=XL($k) ?'BlogIt.xl["' .$k .'"]="' .XL($k) ."\";\n" :'');
 
 	$a=array('require'=>'This field is required.', 'date'=>'This field must be formatted as a date.',
