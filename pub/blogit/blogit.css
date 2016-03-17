@@ -1,7 +1,24 @@
-#wikitext ul.blogit-admin-links input[name="bi_CommentID"]{
-	position: relative;
-	left: -13px;
-	margin: 0 0 0 -13px;
+.commenttext{display:block;}
+
+/* comment-admin-menu */
+.blogit-cam-marker{
+	margin-left: 5px;
+	font-size: 80%;
+	cursor: pointer;
+}
+ul.blogit-comment-admin-menu{
+	list-style-type: none;
+	cursor: pointer;
+	padding: 0;
+}
+ul.blogit-comment-admin-menu li{
+	padding: 3px 10px;
+}
+ul.blogit-comment-admin-menu li:hover{
+	background-color: #D3D3D3;
+}
+#wikitext ul.blogit-admin-links input[name="bi_CommentID[]"]{
+	margin: 0 0 0 15px;
 }
 .blog-list td{
 	padding: 2px 10px;
@@ -11,7 +28,7 @@
 	color: #808080;
 	font-style: italic;
 	}
-.blogit-admin-links, .blogit-admin-links li {
+.blogit-admin-links, .blogit-admin-links li{
 	display: inline;
 	list-style-type: none;
 }

@@ -21,16 +21,18 @@ jQuery(document).ready(function($){
 	});
 	$(BlogIt.pm['skin-classes']['comment-summary-title']).jBox('Tooltip', {
 		trigger: 'mouseenter',
-		content:'<ul class="bi-Comment-Admin"><li class="bi-Comment-AllNone">All</li><li class="bi-Comment-Delete">Delete</li><li class="bi-Comment-Block">Block</li><li class="bi-Comment-BlockDelete">Block & Delete</li>',
+		content:'<ul class="blogit-comment-admin-menu"><li class="bi-Comment-AllNone">All</li><li class="bi-Comment-Delete">Delete</li><li class="bi-Comment-Block">Block</li><li class="bi-Comment-BlockDelete">Block & Delete</li>',
 		pointer: 'left',
 		position: {x: 'left', y: 'bottom'},
-		offset:{x:20,y:-5},
+		offset:{x:50,y:-5},
 		closeOnMouseleave: true,
 		onOpen: function(){ this.source.addClass('bi-menu-hover'); },
 		onClose: function(){ this.source.removeClass('bi-menu-hover'); }
 	});
+	//add down arrow character to serve as menu marker.
+	$(BlogIt.pm['skin-classes']['comment-summary-title']).append($('<span class="blogit-cam-marker" />').html('&#9660'));
 	//TODO: Remove and handle specific class click, by adding to existing handlers
-	$(document).on("click", "ul.bi-Comment-Admin li", function(){ BlogIt.fn.commentAdmin(this) });  //handles click for all comment menu actions
+	$(document).on("click", "ul.blogit-comment-admin-menu li", function(){ BlogIt.fn.commentAdmin(this) });  //handles click for all comment menu actions
 	$(BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment').hover ( function(){ BlogIt.fn.commentAdminCheckbox(this, 'show', false)}, function(){BlogIt.fn.commentAdminCheckbox(this, 'hide', true)});
 	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').on('change',   //if any field (not a submit button) changes...
 		function(){	$(window).on('beforeunload', function(){ return BlogIt.fn.xl('You have unsaved changes.'); }); });
@@ -239,6 +241,7 @@ BlogIt.fn = function($){
 		commentAdmin: function(src){  //src is the clicked menu item
 			if ( $(src).hasClass('bi-Comment-Delete') )  console.log('delete');
 			else if ( $(src).hasClass('bi-Comment-AllNone') ){
+				//TODO: function including next()
 				$('.bi-menu-hover').next('.blogit-comment-admin-list').children('li').each(function(){
 					($(src).html()=='All' ?BlogIt.fn.commentAdminCheckbox(this, 'show', true) :BlogIt.fn.commentAdminCheckbox(this, 'hide', false) );
 				});
@@ -253,7 +256,7 @@ BlogIt.fn = function($){
 				$('input[name="bi_CommentID[]"]', src).prop("checked", function(){ return !$(this).prop("checked"); });
 			}else if (action == 'show'){
 				if ( !$('input[name="bi_CommentID[]"]', src).length )
-					$('.blogit-admin-links', src).prepend('<input type="checkbox" name="bi_CommentID[]" value="'+ $(src).attr('id')+ '">');
+					$('.blogit-admin-links .blogit-admin-link:last', src).after('<input type="checkbox" name="bi_CommentID[]" value="'+ $(src).attr('id')+ '">');
 				if (opt)  $('input[name="bi_CommentID[]"]', src).prop('checked',true);
 			}else
 				$('input[name="bi_CommentID[]"]'+ (opt ?':not(:checked)' :''), src).remove();
@@ -269,34 +272,30 @@ BlogIt.fn = function($){
 			if (approved) updateCommentCount(-1,1);
 			else updateCommentCount(1,-1);
 		},
-		showDelete: function(e){
+		showDelete: function(e){  //e is either the delete link click event, or delete admin menu
 			if (e.target.href){
 				var rc = 1, url = e.target.href;
 			}else{
 				var src=$('.bi-menu-hover').next('ol.blogit-comment-admin-list');
-				console.log('src');
-				console.log(src);
 				var rc = $('input[name="bi_CommentID[]"]', src).length;
-				if (!rc){
-					console.log('nothing selected');
-					return;
-				}else{
-					//TODO: remove LI from name selector -- not needed
-					var url = $('.bi-link-comment-delete:first', src).attr('href')+ '&'+ $('li [name="bi_CommentID[]"]', src).serialize();
+				if (rc>0){
+					//TODO: function
+					var url = $('.bi-link-comment-delete:first', src).attr('href')+ '&'+ $('[name="bi_CommentID[]"]', src).serialize();
+					console.log('delete: '+ url);
 					e = $('[name="bi_CommentID[]"]', src).parent().find('.bi-link-comment-delete');//  $('li.comment', src);
-				}
+				}else{
+					//TODO: message, or hide menu option
+					console.log('nothing selected');
+				};
 			}
-			console.log('url final: '+url);
-			console.log(e);
 			dialogShow(BlogIt.fn.xl('Are you sure you want to delete '+ rc+ ' row'+ (rc>1 ?'s' :'')+ '?'), 'Yes', 'No', 300, {
 				url: url,
-				//TODO: make e an array of objects for bulk delete
 				success:function(data){ objectRemove(e, data); }
 			},e);
 		},
-		showBlockIP: function(e){
-			BlogIt.fn.ajax({ success: function(data){  //first perform ajax call on block link, which retrieves the IP
-				if (data.ip)  dialogShow(  //now show a dialog with the IP
+		showBlockIP: function(e){  //based on url in block link
+			BlogIt.fn.ajax({ success: function(data){  //perform ajax call on block link, which retrieves the IP
+				if (data.ip)  dialogShow(  //show a dialog with the IP
 					BlogIt.fn.xl('Commenter IP: ')+data.ip+'<br/>'+BlogIt.fn.xl('Enter the IP to block:')+
 					'<input id="blogit_ip" type="text" value="'+data.ip+'"/>', 'Submit', 'Cancel', 300, {
 						//TODO: should serialise

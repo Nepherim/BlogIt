@@ -56,6 +56,7 @@ SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tel
 	//TODO: No longer used for jq selector to form -- possibly remove?
 	//TODO: On ajax comment edit, #wikitext not present
 	//TODO: Should be #commentblock for normal comment add
+	//TODO: Add .blogit-comment-summary?
 	'comment-form' => '#wikitext .blogit-comment-form',  #pointer to the wrapper containing the comment-entry FORM object (both ajax and normal entry)
 	'comment-submit' => '#wikitext .blogit-submit-row',  #pointer to the wrapper containing the captcha and comment Submit
 	'comment-summary' => '#wikitext .blogit-comment-summary',  #wrapper containing the comments for a single page on the unapproved comment admin page
@@ -476,8 +477,8 @@ global $WikiDir,$LastModFile,$bi_CommentPattern;
 		if (isset($_GET['bi_CommentID']))
 			foreach ($_GET['bi_CommentID'] as $k)
 				//TODO: This is a hard-coded section of $bi_CommentPattern; pattern would need groups to encompass the Group, and Hyphens, and verify impact of change
-				$WikiDir->delete( preg_replace('/^(.*-)(\d{8}T\d{6}){1}$/', '${1}'. str_replace('bi_ID', '', $k), $src) );
-				//bi_debugLog( 'DELETED: '. preg_replace('/^(.*-)(\d{8}T\d{6}){1}$/', '${1}'. str_replace('bi_ID', '', $k), $src), true);
+//				$WikiDir->delete( preg_replace('/^(.*-)(\d{8}T\d{6}){1}$/', '${1}'. str_replace('bi_ID', '', $k), $src) );
+				bi_debugLog( 'DELETED: '. preg_replace('/^(.*-)(\d{8}T\d{6}){1}$/', '${1}'. str_replace('bi_ID', '', $k), $src), true);
 		else
 			$WikiDir->delete($src);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
@@ -827,6 +828,7 @@ global $bi_Pagename,$bi_DisplayFuture;
 	return (PageTextVar($bi_Pagename,'entrydate') > $now || $bi_DisplayFuture=='true');
 }
 function bi_JXL(){  #create javascript array holding all XL translations of text used client-side
+	//TODO: Ensure this list is same as XLPage-blogit, or read file direct rather than hard-coding
 	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:', 'Commenter IP: ',
 			'Enter the IP to block:', 'Submit', 'Post', 'Cancel', 'Either enter a Blog Title or a Pagename.', 'You have unsaved changes.','Website:',
 			'Parsing JSON request failed.','Request timeout.','Error: ','error','No data returned.');
