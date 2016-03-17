@@ -19,9 +19,16 @@ jQuery(document).ready(function($){
 	$(document).on("click", BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment', function(e){
 		if ( !$(e.target).is('a,input') )  BlogIt.fn.commentAdminCheckbox(this, 'flip');
 	});
+	//TODO: Remove and handle specific class click, by adding to existing handlers
+	$(document).on("click", "ul.blogit-comment-admin-menu li", function(){ BlogIt.fn.commentAdmin(this) });  //handles click for all comment menu actions
 	$(BlogIt.pm['skin-classes']['comment-summary-title']).jBox('Tooltip', {
 		trigger: 'mouseenter',
-		content:'<ul class="blogit-comment-admin-menu"><li class="bi-Comment-AllNone">All</li><li class="bi-Comment-Delete">Delete</li><li class="bi-Comment-Block">Block</li><li class="bi-Comment-BlockDelete">Block & Delete</li>',
+		//TODO: Better than hardcoding
+		content:'<ul class="blogit-comment-admin-menu">'+
+			'<li class="bi-Comment-AllNone">All</li>'+
+			'<li class="bi-Comment-Delete">Delete</li><li class="bi-Comment-DeleteFromIP">Delete from IP</li>'+  //delete-from-ip possibly on dialog, not from menu
+			'<li class="bi-Comment-Block">Block</li><li class="bi-Comment-BlockDelete">Block & Delete</li>'+
+			'<li class="bi-Comment-Approve">Approve</li><li class="bi-Comment-Unapprove">Unapprove</li>',
 		pointer: 'left',
 		position: {x: 'left', y: 'bottom'},
 		offset:{x:50,y:-5},
@@ -29,11 +36,11 @@ jQuery(document).ready(function($){
 		onOpen: function(){ this.source.addClass('bi-menu-hover'); },
 		onClose: function(){ this.source.removeClass('bi-menu-hover'); }
 	});
-	//add down arrow character to serve as menu marker.
-	$(BlogIt.pm['skin-classes']['comment-summary-title']).append($('<span class="blogit-cam-marker" />').html('&#9660'));
-	//TODO: Remove and handle specific class click, by adding to existing handlers
-	$(document).on("click", "ul.blogit-comment-admin-menu li", function(){ BlogIt.fn.commentAdmin(this) });  //handles click for all comment menu actions
-	$(BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment').hover ( function(){ BlogIt.fn.commentAdminCheckbox(this, 'show', false)}, function(){BlogIt.fn.commentAdminCheckbox(this, 'hide', true)});
+	$(document).on({
+		mouseenter: function(){ BlogIt.fn.commentAdminCheckbox(this, 'show', false)},
+		mouseleave: function(){BlogIt.fn.commentAdminCheckbox(this, 'hide', true)}},
+		BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment');
+	$(BlogIt.pm['skin-classes']['comment-summary-title']).append($('<span class="blogit-cam-marker" />').html('&#9660'));  //add down arrow character to serve as menu marker
 	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').on('change',   //if any field (not a submit button) changes...
 		function(){	$(window).on('beforeunload', function(){ return BlogIt.fn.xl('You have unsaved changes.'); }); });
 });
@@ -249,8 +256,11 @@ BlogIt.fn = function($){
 				//TODO: XL()
 				$(src).html( $(src).html()=='All' ?'None': 'All' );
 			}
+			else if ( $(src).hasClass('bi-Comment-DeleteFromIP') )  console.log('delete from IP');
 			else if ( $(src).hasClass('bi-Comment-BlockDelete') )  console.log('block delete');
 			else if ( $(src).hasClass('bi-Comment-Block') )  console.log('block');
+			else if ( $(src).hasClass('bi-Comment-Approve') )  console.log('approve');
+			else if ( $(src).hasClass('bi-Comment-Unapprove') )  console.log('unapprove');
 		},
 		commentAdminCheckbox: function(src, action, opt){  //src [flip|show|hide]
 			if (action == 'flip'){
@@ -327,7 +337,7 @@ BlogIt.fn = function($){
 					if (data.out){  //form content returned in data.out
 						var blog=$(e.currentTarget).is('.bi-link-blog-edit,.bi-link-blog-new');  //are we doing some blog related action?
 						console.log('blog action: '+blog);
-						dialog = new jBox('Confirm', {
+						dialog = new jBox('Confirm', {  //uses gloabal dialog var
 							title: '&nbsp',  //make the title bar appear just for visual
 							content: (blog ?$(data.out).filter('#wikiedit') :$(data.out)),  //remove the pmwiki editting help text
 							_onOpen: function() {  //Override jbox default. Only change is to prevent dialog closing post confirm() so we manually close if form validates.
