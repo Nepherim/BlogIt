@@ -15,7 +15,7 @@ jQuery(document).ready(function($){
 	$(document).on('click', '.bi-link-blog-new,.bi-link-blog-edit,.bi-link-comment-edit,.bi-link-comment-reply', function(e){ BlogIt.fn.showEdit(e); });
 	//TODO: Is there actually a blog delete function?
 	$(document).on('click', '.bi-link-comment-delete,.bi-link-blog-delete,.bi-Comment-Delete', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
-	$(document).on("click", '.bi-link-comment-block', function(e){ BlogIt.fn.showBlockIP(e); });  //block comment IP addresses
+	$(document).on("click", '.bi-link-comment-block,.bi-Comment-Block', function(e){ BlogIt.fn.showBlockIP(e); });  //block comment IP addresses
 	$(document).on("click", BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment', function(e){
 		if ( !$(e.target).is('a,input') )  BlogIt.fn.commentAdminCheckbox(this, 'flip');
 	});
@@ -193,7 +193,7 @@ BlogIt.fn = function($){
 			success: function(data){  //after PmForms finishes processing, update page with new content
 				if (!data || (data && data.result!='error'))  if (dialog)  dialog.close();  //dialog doesn't exist when submitting comments
 				if (data.out)  submitFn(data, target, $context, templateClass);  //TODO: templateClass not defined from edit comment
-				else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || BlogIt.fn.xl('error'))});
+				else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || 'error')});
 			}
 		});
 	}
@@ -239,6 +239,7 @@ BlogIt.fn = function($){
 //public functions
 	return {
 		commentAdmin: function(src){  //src is the clicked menu item
+			//TODO: remove handlers from here, and place on global on()
 			if ( $(src).hasClass('bi-Comment-Delete') )  console.log('delete');
 			else if ( $(src).hasClass('bi-Comment-AllNone') ){
 				//TODO: function including next()
@@ -272,37 +273,49 @@ BlogIt.fn = function($){
 			if (approved) updateCommentCount(-1,1);
 			else updateCommentCount(1,-1);
 		},
-		showDelete: function(e){  //e is either the delete link click event, or delete admin menu
-			if (e.target.href){
+		createURL: function(e, action){
+			if (e.target.href){  //use url on link
 				var rc = 1, url = e.target.href;
-			}else{
-				var src=$('.bi-menu-hover').next('ol.blogit-comment-admin-list');
+			}else{  //or create url based on checkboxes
+				var src=$('.bi-menu-hover').next('ol.blogit-comment-admin-list');  //get comment block for title admin is on
 				var rc = $('input[name="bi_CommentID[]"]', src).length;
 				if (rc>0){
 					//TODO: function
-					var url = $('.bi-link-comment-delete:first', src).attr('href')+ '&'+ $('[name="bi_CommentID[]"]', src).serialize();
-					console.log('delete: '+ url);
-					e = $('[name="bi_CommentID[]"]', src).parent().find('.bi-link-comment-delete');//  $('li.comment', src);
-				}else{
-					//TODO: message, or hide menu option
-					console.log('nothing selected');
-				};
+					var url = $('.bi-link-comment-'+ action+ ':first', src).attr('href')+ '&'+ $('[name="bi_CommentID[]"]:checked', src).serialize();  //:checked in case cursor is hovering
+					console.log(action+ ': '+ url);
+					e = $('[name="bi_CommentID[]"]:checked', src).closest('li.comment').find('.bi-link-comment-'+ action);  //find admin link on the row corresponding to action
+				}
 			}
-			dialogShow(BlogIt.fn.xl('Are you sure you want to delete '+ rc+ ' row'+ (rc>1 ?'s' :'')+ '?'), 'Yes', 'No', 300, {
-				url: url,
-				success:function(data){ objectRemove(e, data); }
-			},e);
+			return {rc:rc, url:url, e:e};
+		},
+		showDelete: function(e){  //e is either the delete link click event, or delete admin menu
+			url=BlogIt.fn.createURL(e, 'delete');
+			if (url.rc>0){
+				dialogShow(BlogIt.fn.xl('Are you sure you want to delete '+ url.rc+ ' row'+ (url.rc>1 ?'s' :'')+ '?'), 'Yes', 'No', 300, {
+					url: url.url,
+					success:function(data){ objectRemove(url.e, data); }
+				},url.e);
+			}else  //TODO: message, or hide menu option
+				console.log('nothing selected');
 		},
 		showBlockIP: function(e){  //based on url in block link
-			BlogIt.fn.ajax({ success: function(data){  //perform ajax call on block link, which retrieves the IP
-				if (data.ip)  dialogShow(  //show a dialog with the IP
-					BlogIt.fn.xl('Commenter IP: ')+data.ip+'<br/>'+BlogIt.fn.xl('Enter the IP to block:')+
-					'<input id="blogit_ip" type="text" value="'+data.ip+'"/>', 'Submit', 'Cancel', 300, {
-						//TODO: should serialise
-						url: function(e){ return e+'&bi_ip='+$("#blogit_ip").val(); },
-						success: function(data){ BlogIt.fn.showMsg(data); }
-					}, e);
-			}}, e);
+			url=BlogIt.fn.createURL(e, 'block');
+			if (url.rc>0){
+				BlogIt.fn.ajax({  //perform ajax call on block link, which retrieves the IP
+					url: url.url,
+					success: function(data){  //success returns IP
+						if (data.ip)  dialogShow(
+							//TODO: Remove BlogIt.fn.xl('Commenter IP') from XL list
+							BlogIt.fn.xl('Enter the IP to block:')+
+							'<textarea id="blogit_ip" type="text">'+ data.ip+ '</textarea>', 'Submit', 'Cancel', 200, {
+								url: function(){
+									console.log('BLOCK: '+ url.url+ encodeURI('&bi_ip='+ $("#blogit_ip").val().replace(/\n/g,',') ));
+									return url.url+ encodeURI( '&bi_ip='+ $("#blogit_ip").val().replace(/\n/g,',') ); },
+								success: function(data){ BlogIt.fn.showMsg(data); }
+							}, e);
+					}
+				}, e);
+			}
 		},
 		//opens a dialog with content from PmWiki, calls addValidation(), and then on submit calls ajaxSubmit(), which calls updateBlog/updateComment
 		showEdit: function(e){

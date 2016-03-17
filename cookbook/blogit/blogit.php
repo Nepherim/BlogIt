@@ -467,20 +467,27 @@ global $bi_ResetPmFormField,$_POST,$_REQUEST,$ROSPatterns,$CategoryGroup,
 	bi_debugLog('Calling HandlePmForm: '.$_POST['ptv_entrydate']);
 	$bi_OriginalFn['HandleActions']['pmform']($src, $auth);  #usually HandlePmForm(), and then off to bi_Redirect()
 }
+function bi_GetPages($src){
+	#handle bulk deletes
+	$pages=array();
+	if (isset($_GET['bi_CommentID']))
+		foreach ($_GET['bi_CommentID'] as $k)
+			//TODO: This is a hard-coded section of $bi_CommentPattern; pattern would need groups to encompass the Group, and Hyphens, and verify impact of change
+			$pages[] = preg_replace('/^(.*-)(\d{8}T\d{6}){1}$/', '${1}'. str_replace('bi_ID', '', $k), $src);
+	else
+		$pages[]=$src;
+	return $pages;
+}
 function bi_HandleDelete($src, $auth='comment-edit'){  #action=bi_del
-global $WikiDir,$LastModFile,$bi_CommentPattern;
+global $WikiDir,$LastModFile;
 	$result = array('msg'=>XL('Unable to perform delete operation.'), 'result'=>'error');
 	$entrytype = PageTextVar($src,'entrytype');
 	if ( ($entrytype=='comment' || $entrytype=='blog')
 		&& (bi_Auth( ($entrytype=='comment' ?'comment-edit' :'blog-edit') .' ' .$src) && RetrieveAuthPage($src,'read',false, READPAGE_CURRENT)) ){
-		#TODO: if comment, then loop through bi_CommentID if exist
-		if (isset($_GET['bi_CommentID']))
-			foreach ($_GET['bi_CommentID'] as $k)
-				//TODO: This is a hard-coded section of $bi_CommentPattern; pattern would need groups to encompass the Group, and Hyphens, and verify impact of change
-//				$WikiDir->delete( preg_replace('/^(.*-)(\d{8}T\d{6}){1}$/', '${1}'. str_replace('bi_ID', '', $k), $src) );
-				bi_debugLog( 'DELETED: '. preg_replace('/^(.*-)(\d{8}T\d{6}){1}$/', '${1}'. str_replace('bi_ID', '', $k), $src), true);
-		else
-			$WikiDir->delete($src);
+		$pages=bi_GetPages($src);
+		foreach ($pages as $p)
+//			$WikiDir->delete( $p );
+			bi_debugLog( 'DELETED: '. $p, true);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
 		$result = array('msg'=>XL('Delete successful.'), 'result'=>'success');
 	}
@@ -490,25 +497,44 @@ function bi_HandleBlockIP($src, $auth='comment-approve'){  #action=bi_bip
 global $bi_Pages;
 	$result = array('msg'=>XL('Unable to block IP address.'), 'result'=>'error');
 	if (PageTextVar($src,'entrytype')=='comment' && bi_Auth($auth.' '.$src)){
-		if ($_GET['bi_ip']>''){
+		if ($_GET['bi_ip']>''){  #either we have an IP, or need to find one
 			Lock(2);
 			$old = RetrieveAuthPage($bi_Pages['blocklist'], 'edit', false);
 			if ($old){
-				if (!preg_match('/\nblock:' .preg_replace(array('/\./','/\*/'),array('\\.','\\*'),$_GET['bi_ip']) .'\n/', $old['text'])) {
-					$new = $old;
-					if (substr($new['text'],-1,1) != "\n") $new['text'] .= "\n";
-					$new['text'] .= 'block:'.$_GET['bi_ip'] ."\n";
-					PostPage($bi_Pages['blocklist'],$old,$new);
-					$result = array('msg'=>XL('Blocked IP address: ').$_GET['bi_ip'], 'result'=>'success', 'ip'=>$_GET['bi_ip']);
-				}else  $result = array('result'=>'error', 'msg'=>XL('IP address is already being blocked: '.$_GET['bi_ip']));
+				$ip = explode(',', $_GET['bi_ip']);
+				$blocked=array();
+				$already=array();
+				foreach ($ip as $key) {
+					#check to see if ip is already blocked
+					if (!preg_match('/\nblock:' .preg_replace(array('/\./','/\*/'),array('\\.','\\*'), $key) .'\n/', $old['text'])) {
+						$new = $old;
+						$blocked[]=$key;
+						$new['text'] .= (substr($new['text'],-1,1) != "\n" ?"\n": ''). 'block:'. $key. "\n";  #add newline to end of file, and then blocked ip
+					}else
+						$already[]=$key;
+				}
+				#TODO: Uncomment pre-production
+				#if (!empty($blocked))  PostPage($bi_Pages['blocklist'],$old,$new);
+				$result = array(
+					'msg'=>(!empty($blocked) ?XL('Blocked IP address: '). implode(',', $blocked) :'').
+						(!empty($blocked) && !empty($already) ?'<br />':''). (!empty($already) ?XL('IP address is already being blocked: '). implode(',', $already) :''),
+					'result'=>'success');  #removed , 'ip'=>$_GET['bi_ip'], not used
+			#TODO: Add "cannot edit" to XL()
 			}else  $result = array('result'=>'error', 'msg'=>'Cannot edit '.$bi_Pages['blocklist']);
-
 		}else{  #No IP passed in, so determine who created page
-			$page = RetrieveAuthPage($src,'read',false);
-			if ($page)
-				foreach($page as $k=>$v)  #find the last diff in the list, which is the create point
-					if (preg_match("/^diff:(\d+):(\d+):?([^:]*)/",$k,$match))  $ip = @$page['host:' .$match[1]];
-			$result = array('result'=>($ip>'' ?'success' :'error'), 'ip'=>$ip, 'msg'=>($ip>'' ?'' :XL('Unable to determine IP address.')));
+			$ip=array();
+			$pages=bi_GetPages($src);
+			foreach ($pages as $p){
+				$page = RetrieveAuthPage($p,'read',false);
+				if ($page){
+					#TODO: Why not just find last host? Is it always last or could other elements exist?
+					foreach($page as $k=>$v)  #loop through all diffs, only last one is needed, as it's the creation
+						if ( preg_match("/^diff:(\d+):(\d+):?([^:]*)/", $k, $match) )
+							$x = @$page['host:' .$match[1]];  #find host line with same timestamp as diff
+					$ip[$x] = $x;  #store as key/value to ensure we don't store same IP multiple times
+				}
+				$result = array('result'=>(!$ip ?'error' :'success'), 'ip'=>implode($ip,"\n"), 'msg'=>(!$ip ?XL('Unable to determine IP address.'): ''));
+			}
 		}
 	}
 	bi_Redirect(bi_Clean('mode',$_GET['bi_Mode']), $result);
@@ -831,7 +857,7 @@ function bi_JXL(){  #create javascript array holding all XL translations of text
 	//TODO: Ensure this list is same as XLPage-blogit, or read file direct rather than hard-coding
 	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:', 'Commenter IP: ',
 			'Enter the IP to block:', 'Submit', 'Post', 'Cancel', 'Either enter a Blog Title or a Pagename.', 'You have unsaved changes.','Website:',
-			'Parsing JSON request failed.','Request timeout.','Error: ','error','No data returned.');
+			'Parsing JSON request failed.','Request timeout.','Error: ','No data returned.');
 	foreach ($a as $k)  $t .= ($k!=XL($k) ?'BlogIt.xl["' .$k .'"]="' .XL($k) ."\";\n" :'');
 
 	$a=array('require'=>'This field is required.', 'date'=>'This field must be formatted as a date.',
