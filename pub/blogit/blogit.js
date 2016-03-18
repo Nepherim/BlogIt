@@ -17,19 +17,19 @@ jQuery(document).ready(function($){
 	//TODO: Is there actually a blog delete function?
 	$(document).on('click', '.bi-link-comment-delete,.bi-link-blog-delete,.bi-Comment-Delete', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
 	$(document).on("click", '.bi-link-comment-block,.bi-Comment-Block', function(e){ BlogIt.fn.showBlockIP(e); });  //block comment IP addresses
+	$(document).on("click", '.bi-Comment-AllNone', function(e){ BlogIt.fn.toggleCheckboxes(e); });
 	$(document).on("click", BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment', function(e){
 		if ( !$(e.target).is('a,input') )  BlogIt.fn.commentAdminCheckbox(this, 'flip');
 	});
-	//TODO: Remove and handle specific class click, by adding to existing handlers
-	$(document).on("click", "ul.blogit-comment-admin-menu li", function(){ BlogIt.fn.commentAdmin(this) });  //handles click for all comment menu actions
 	$(BlogIt.pm['skin-classes']['comment-summary-title']).jBox('Tooltip', {
 		trigger: 'mouseenter',
 		//TODO: Better than hardcoding
 		content:'<ul class="blogit-comment-admin-menu">'+
 			'<li class="bi-Comment-AllNone">All</li>'+
-			'<li class="bi-Comment-Delete">Delete</li><li class="bi-Comment-DeleteFromIP">Delete from IP</li>'+  //delete-from-ip possibly on dialog, not from menu
+			'<li class="bi-Comment-Approve">Approve</li><li class="bi-Comment-Unapprove">Unapprove</li>'+
 			'<li class="bi-Comment-Block">Block</li>'+
-			'<li class="bi-Comment-Approve">Approve</li><li class="bi-Comment-Unapprove">Unapprove</li>',
+			'<li class="bi-Comment-Delete">Delete</li>'+
+			'<li class="bi-Comment-DeleteFromIP">Delete from IP</li>',  //delete-from-ip possibly on dialog, not from menu
 		pointer: 'left',
 		position: {x: 'left', y: 'bottom'},
 		offset:{x:50,y:-5},
@@ -49,10 +49,10 @@ jQuery(document).ready(function($){
 var BlogIt={ fmt:{}, xl:{}, fn:{}, pm:{} };
 BlogIt.fn = function($){
 //private declarations
-	//TODO: When are these used? fn.ajax?
-	$.ajaxSetup({ timeout: 15000,  //timeout of 15 seconds
-		//jquery will always send with UTF8, regardless of charset specified.
-		contentType: "application/x-www-form-urlencoded",
+	$.ajaxSetup({
+		timeout: 15000,  //timeout of 15 seconds
+		dataType:'json',
+		contentType: "application/x-www-form-urlencoded",  //jquery will always send with UTF8, regardless of charset specified.
 		error: function(request,error){
 			BlogIt.fn.showMsg({result:'error', msg:(
 				(error=='parsererror' ?'Parsing JSON request failed.'
@@ -209,8 +209,9 @@ BlogIt.fn = function($){
 		console.log ('$context:');
 		console.log ($context);
 		console.log('url: '+$frm.attr('action'));
-		//TODO: Why not fn.ajax, different params to call in showEdit
-		$.ajax({type: 'POST', dataType:'json', url:$frm.attr('action'),
+		BlogIt.fn.ajax({
+			type: 'POST',
+			url:$frm.attr('action'),
 			data: $frm.serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 			success: function(data){  //after PmForms finishes processing, update page with new content
 				if (!data || (data && data.result!='error'))  if (dialog)  dialog.close();  //dialog doesn't exist when submitting comments
@@ -262,21 +263,13 @@ BlogIt.fn = function($){
 
 //public functions
 	return {
-		commentAdmin: function(src){  //src is the clicked menu item
-			//TODO: remove handlers from here, and place on global on()
-			if ( $(src).hasClass('bi-Comment-Delete') )  console.log('delete');
-			else if ( $(src).hasClass('bi-Comment-AllNone') ){
-				//TODO: function including next()
-				$('.bi-menu-hover').next('.blogit-comment-admin-list').children('li').each(function(){
-					($(src).html()=='All' ?BlogIt.fn.commentAdminCheckbox(this, 'show', true) :BlogIt.fn.commentAdminCheckbox(this, 'hide', false) );
-				});
-				//TODO: XL()
-				$(src).html( $(src).html()=='All' ?'None': 'All' );
-			}
-			else if ( $(src).hasClass('bi-Comment-DeleteFromIP') )  console.log('delete from IP');
-			else if ( $(src).hasClass('bi-Comment-Block') )  console.log('block');
-			else if ( $(src).hasClass('bi-Comment-Approve') )  console.log('approve');
-			else if ( $(src).hasClass('bi-Comment-Unapprove') )  console.log('unapprove');
+		toggleCheckboxes: function(src){  //src is the clicked menu item
+			//TODO: function including next()
+			$('.bi-menu-hover').next('.blogit-comment-admin-list').children('li').each(function(){
+				($(src).html()=='All' ?BlogIt.fn.commentAdminCheckbox(this, 'show', true) :BlogIt.fn.commentAdminCheckbox(this, 'hide', false) );
+			});
+			//TODO: XL()
+			$(src).html( $(src).html()=='All' ?'None': 'All' );
 		},
 		commentAdminCheckbox: function(src, action, opt){  //src [flip|show|hide]
 			if (action == 'flip'){
@@ -297,7 +290,7 @@ BlogIt.fn = function($){
 				var src=$('.bi-menu-hover').next('ol.blogit-comment-admin-list');  //get comment block for title admin is on
 				var rc = $('input[name="bi_CommentID[]"]', src).length;
 				if (rc>0){
-					var actionLink='.bi-link-comment-'+ action+ 'd:first';
+					var actionLink='.bi-link-comment-'+ action+ (action=='approve'||action=='unapprove' ?'d' :'')+ ':first';
 					if (action=='approve'||action=='unapprove')
 						actionLink += (',.bi-link-comment-'+ (action=='approve' ?'unapproved': 'approved')+ ':first');  //search for either approved OR unapproved link
 					//:checked in case cursor is hovering; slice otherwise might have both approved and unapproved links
@@ -325,6 +318,7 @@ BlogIt.fn = function($){
 		showDelete: function(e){  //e is either the delete link click event, or delete admin menu
 			url=BlogIt.fn.createURL(e, 'delete');
 			if (url.rc>0){
+				//TODO: XL
 				dialogShow(BlogIt.fn.xl('Are you sure you want to delete '+ url.rc+ ' row'+ (url.rc>1 ?'s' :'')+ '?'), 'Yes', 'No', 300, {
 					url: url.url,
 					success:function(data){ objectRemove(url.e, data); }
@@ -353,8 +347,8 @@ BlogIt.fn = function($){
 		//opens a dialog with content from PmWiki, calls addValidation(), and then on submit calls ajaxSubmit(), which calls updateBlog/updateComment
 		showEdit: function(e){
 			e.preventDefault();
-			//TOTO: Why not BlogIt.fn.ajax
-			$.ajax({ dataType:'json', url:e.currentTarget.href,  //get the comment form from pmwiki; not .target, because actual target might be an image wrapped in an anchor
+			BlogIt.fn.ajax({
+				url:e.currentTarget.href,  //get the comment form from pmwiki; not .target, because actual target might be an image wrapped in an anchor
 				success: function(data){
 					//TODO: Need to show error msg if no data.out
 					if (data.out){  //form content returned in data.out
@@ -457,10 +451,8 @@ BlogIt.fn = function($){
 		},
 //Utilities
 		xl: function(t){ return ( (BlogIt.xl[t] ?$('<div>'+BlogIt.xl[t]+'</div>').html() :t) ); },
-		ajax: function(ajax){
-			ajax['dataType'] = ajax.dataType || 'json';
+		ajax: function(ajax){  //wrapper to enable url to be a function
 			ajax['url'] = ( typeof ajax.url == 'function' ?ajax.url() :ajax.url );  //either eval the fn, or use .url
-			ajax['context'] = ajax.context;  //TODO: Make sure ajax calls set context
 			$.ajax(ajax);
 		}
 	};
