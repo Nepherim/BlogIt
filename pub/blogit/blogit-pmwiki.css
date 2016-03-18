@@ -1,3 +1,4 @@
+.commenttext{display:block;} /*required since removed br tags from coreTemplate*/
 fieldset { border: none; }
 #wikiedit .inputbutton { margin:2px; }
 .blogit-clear { clear: both; }

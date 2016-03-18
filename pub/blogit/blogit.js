@@ -37,7 +37,7 @@ jQuery(document).ready(function($){
 		onOpen: function(){ this.source.addClass('bi-menu-hover'); },
 		onClose: function(){ this.source.removeClass('bi-menu-hover'); }
 	});
-	$(document).on({
+	$(document).on({  //hover doesn't cope with dynamically added elements
 		mouseenter: function(){ BlogIt.fn.commentAdminCheckbox(this, 'show', false)},
 		mouseleave: function(){BlogIt.fn.commentAdminCheckbox(this, 'hide', true)}},
 		BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment');
@@ -82,9 +82,6 @@ BlogIt.fn = function($){
 		var vc = [BlogIt.pm['skin-classes']['blog-entry'], BlogIt.pm['skin-classes']['comment-admin-list'], BlogIt.pm['skin-classes']['blog-entry-summary'],
 			BlogIt.pm['skin-classes']['blog-list-row'], BlogIt.pm['skin-classes']['comment-list']];
 		var closest = $target.closest(vc.join(','));
-		console.log('closest: '+(closest ?'found' :'not  found'));
-		console.log('class: '+closest.attr("class"));
-		console.log(closest);
 		return (closest.length ?closest :null);  //when clicking ajax new entry
 	}
 	//removed comments or blog posts (from blog grid)
@@ -116,7 +113,8 @@ BlogIt.fn = function($){
 	}
 	//dialog functions
 	function dialogWait(clear){
-		$('.jBox-title div:not(.jBox-closeButton)').css( clear ?{background:""} :{background: "url( "+ BlogIt.pm.pubdirurl+ "/wait.gif) no-repeat left center", width: "18px", height: "18px"});
+		$('.jBox-title div:not(.jBox-closeButton)')
+			.css( clear ?{background:""} :{background: "url( "+ BlogIt.pm.pubdirurl+ "/wait.gif) no-repeat left center", width: "18px", height: "18px"});
 	};
 	function dialogShow(txt, yes, no, w, ajax){
 		//TODO: Use single variable/declaration for prompt and dialog
@@ -143,9 +141,6 @@ BlogIt.fn = function($){
 			)}}
 		);
 	};
-	$.validator.addMethod('datetime', function(v, e, fmt){
-		return this.optional(e) ||	RegExp(BlogIt.fmt['entry-date']).test(v);
-	},	'Must be datetime.');  //TODO: Add format string XL
 	//add this to jquery: need to find objects at same level, or below. So do a find() followed by a filter()
 	$.fn.bi_seek = function(seek){
 		var $found;
@@ -157,6 +152,9 @@ BlogIt.fn = function($){
 		});
 		return $found;
 	};
+	$.validator.addMethod('datetime', function(v, e, fmt){
+		return this.optional(e) ||	RegExp(BlogIt.fmt['entry-date']).test(v);
+	},	'Must be datetime.');  //TODO: Add format string XL
 	//Direct copy from jquery.validate/additional-methods.min.js, so we don't have to include entire file for single function
 	$.validator.addMethod( "require_from_group", function( value, element, options ) {
 		var $fields = $( options[ 1 ], element.form ),
@@ -188,7 +186,7 @@ BlogIt.fn = function($){
 
 		//$context is a JQ object we're going to replace; templateClass is used in php.bi_AjaxRedirect to determine which includesection template to use
 		var $context,templateClass,target;
-		if (e){
+		if (e){  //e is null for user clicking comment add Post button
 			console.log('clicked: '+($(e.target).is('img') ?'img' :'link'));
 			console.log(e.currentTarget);
 			target = ( $(e.target).is('img') ?e.currentTarget :e.target);  //if user clicked img, bubble out to currentTarget to find href link
@@ -202,8 +200,6 @@ BlogIt.fn = function($){
 			console.log('target wrapper: ');
 			console.log(getIDWrapper(target));
 			$context = $( getIDWrapper(target) || $closest);
-		} else {
-			console.log('no e');  //e is null for user clicking Post button ('ca')
 		}
 		console.log('templateClass: '+templateClass);
 		console.log ('$context:');
@@ -214,9 +210,12 @@ BlogIt.fn = function($){
 			url:$frm.attr('action'),
 			data: $frm.serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 			success: function(data){  //after PmForms finishes processing, update page with new content
-				if (!data || (data && data.result!='error'))  if (dialog)  dialog.close();  //dialog doesn't exist when submitting comments
-				if (data.out)  submitFn(data, target, $context, templateClass);  //TODO: templateClass not defined from edit comment
-				else  BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || 'error')});
+				if (!data || (data && data.result!='error'))
+					if (dialog)  dialog.close();  //dialog doesn't exist when submitting comments
+				if (data.out)
+					submitFn(data, target, $context, templateClass);  //TODO: templateClass not defined from edit comment
+				else
+					BlogIt.fn.showMsg({msg:(data.msg || BlogIt.fn.xl('No data returned.')), result:(data.result || 'error')});
 			}
 		});
 	}
@@ -313,7 +312,7 @@ BlogIt.fn = function($){
 					url: url.url,
 					success: function(data){ if (data.result=='error')  BlogIt.fn.showMsg(data); flipCommentStatus(url.e, action); }
 				});
-			};
+			}
 		},
 		showDelete: function(e){  //e is either the delete link click event, or delete admin menu
 			url=BlogIt.fn.createURL(e, 'delete');
@@ -323,8 +322,7 @@ BlogIt.fn = function($){
 					url: url.url,
 					success:function(data){ objectRemove(url.e, data); }
 				});
-			}else  //TODO: message, or hide menu option
-				console.log('nothing selected');
+			}
 		},
 		showBlockIP: function(e){  //based on url in block link
 			url=BlogIt.fn.createURL(e, 'block');
