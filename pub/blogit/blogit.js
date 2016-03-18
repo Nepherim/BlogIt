@@ -11,7 +11,8 @@ jQuery(document).ready(function($){
 	BlogIt.fn.addAutocomplete();
 
 	//Classes are added by bi_Link(), so can be hard-coded.
-	$(document).on('click', '.bi-link-comment-unapproved,.bi-link-comment-approved', function(e){ BlogIt.fn.ajax({ success: function(data){ BlogIt.fn.flipCommentStatus(e.target, data); }}, e); });
+	$(document).on('click', '.bi-link-comment-unapproved,.bi-Comment-Approve', function(e){ BlogIt.fn.commentApprove(e, 'approve'); });  //action approve
+	$(document).on('click', '.bi-link-comment-approved,.bi-Comment-Unapprove', function(e){ BlogIt.fn.commentApprove(e, 'unapprove'); });  //action unapprove
 	$(document).on('click', '.bi-link-blog-new,.bi-link-blog-edit,.bi-link-comment-edit,.bi-link-comment-reply', function(e){ BlogIt.fn.showEdit(e); });
 	//TODO: Is there actually a blog delete function?
 	$(document).on('click', '.bi-link-comment-delete,.bi-link-blog-delete,.bi-Comment-Delete', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
@@ -27,7 +28,7 @@ jQuery(document).ready(function($){
 		content:'<ul class="blogit-comment-admin-menu">'+
 			'<li class="bi-Comment-AllNone">All</li>'+
 			'<li class="bi-Comment-Delete">Delete</li><li class="bi-Comment-DeleteFromIP">Delete from IP</li>'+  //delete-from-ip possibly on dialog, not from menu
-			'<li class="bi-Comment-Block">Block</li><li class="bi-Comment-BlockDelete">Block & Delete</li>'+
+			'<li class="bi-Comment-Block">Block</li>'+
 			'<li class="bi-Comment-Approve">Approve</li><li class="bi-Comment-Unapprove">Unapprove</li>',
 		pointer: 'left',
 		position: {x: 'left', y: 'bottom'},
@@ -96,13 +97,28 @@ BlogIt.fn = function($){
 			$old.fadeOut(500, function(){ $(this).remove(); });
 		});
 		BlogIt.fn.showMsg(data);
-	};
+	}
+	function flipCommentStatus(target, action){
+		action = (action || 'flip');
+		$(target).each(function(i){
+			var $wrapper = getIDWrapper(this);
+			flash($wrapper);
+			var approved = $(this).hasClass('bi-link-comment-approved');
+			if (action=='flip' || (action=='unapprove'&&approved) || (action=='approve'&&!approved)){
+				this.href = (approved ?this.href.replace('action=bi_cua', 'action=bi_ca') :this.href.replace('action=bi_ca', 'action=bi_cua'));
+				$(this).html(BlogIt.fn.xl( (approved ?'approve' :'unapprove') ));
+				$wrapper.removeClass('blogit-comment-' +(!approved ?'un' :'') +'approved').addClass('blogit-comment-' +(approved ?'un' :'') +'approved');
+				$(this).removeClass('bi-link-comment-' +(!approved ?'un' :'') +'approved').addClass('bi-link-comment-' +(approved ?'un' :'') +'approved');
+				if (approved) updateCommentCount(-1,1);
+				else updateCommentCount(1,-1);
+			}
+		});
+	}
 	//dialog functions
 	function dialogWait(clear){
 		$('.jBox-title div:not(.jBox-closeButton)').css( clear ?{background:""} :{background: "url( "+ BlogIt.pm.pubdirurl+ "/wait.gif) no-repeat left center", width: "18px", height: "18px"});
 	};
-	function dialogShow(txt, yes, no, w, ajax, e){
-		if (typeof e.preventDefault !== 'undefined' && $.isFunction(e.preventDefault))  e.preventDefault();  //need to prevent links which are clicked from loading
+	function dialogShow(txt, yes, no, w, ajax){
 		//TODO: Use single variable/declaration for prompt and dialog
 		var prompt=new jBox('Confirm',{
 			content: txt,
@@ -111,12 +127,12 @@ BlogIt.fn = function($){
 			},
 			confirmButton: BlogIt.fn.xl(yes),
 			cancelButton: BlogIt.fn.xl(no),
-			confirm: function(){ BlogIt.fn.ajax(ajax, e); prompt.close(); },
+			confirm: function(){ BlogIt.fn.ajax(ajax); prompt.close(); },
 			onCloseComplete: function () { this.destroy(); },
 			width: w, minWidth: w, maxWidth: w  //needed to override jbox default
 		}).open();
 	};
-	function flash($e, data){
+	function flash($e){
 		var bg = $e.parent().css('background-color');
 		$e.animate(
 			{backgroundColor: '#BBFFB6'},
@@ -126,7 +142,6 @@ BlogIt.fn = function($){
 					{duration:750, complete: function(){ $(this).css('background-color','') } }
 			)}}
 		);
-		BlogIt.fn.showMsg(data);
 	};
 	$.validator.addMethod('datetime', function(v, e, fmt){
 		return this.optional(e) ||	RegExp(BlogIt.fmt['entry-date']).test(v);
@@ -210,7 +225,8 @@ BlogIt.fn = function($){
 		//Can't use entire data.out, as pmwiki returns full html objects, which may include <table> tags, not just the <tr>
 		var $new=$(data.out).bi_seek(templateClass);
 		$context.replaceWith($new);  //update existing blog entry
-		flash($new, data);
+		flash($new);
+		BlogIt.fn.showMsg(data);
 	}
 	function updateComment(data, target, $context, templateClass){  //data.out is the full #blogit-commentblock which includes 'Comment" header, and a single comment
 		console.log('updating comment: '+templateClass);
@@ -240,7 +256,8 @@ BlogIt.fn = function($){
 				if ( newCommentApproved != $context.hasClass('blogit-comment-approved') )  (newCommentApproved ?updateCommentCount(1,-1) :updateCommentCount(-1,1));
 			}
 		}
-		flash($new, data);
+		flash($new);
+		BlogIt.fn.showMsg(data);
 	}
 
 //public functions
@@ -257,7 +274,6 @@ BlogIt.fn = function($){
 				$(src).html( $(src).html()=='All' ?'None': 'All' );
 			}
 			else if ( $(src).hasClass('bi-Comment-DeleteFromIP') )  console.log('delete from IP');
-			else if ( $(src).hasClass('bi-Comment-BlockDelete') )  console.log('block delete');
 			else if ( $(src).hasClass('bi-Comment-Block') )  console.log('block');
 			else if ( $(src).hasClass('bi-Comment-Approve') )  console.log('approve');
 			else if ( $(src).hasClass('bi-Comment-Unapprove') )  console.log('unapprove');
@@ -272,31 +288,39 @@ BlogIt.fn = function($){
 			}else
 				$('input[name="bi_CommentID[]"]'+ (opt ?':not(:checked)' :''), src).remove();
 		},
-		flipCommentStatus: function(target, data){
-			var $wrapper = getIDWrapper(target);
-			flash($wrapper, data);
-			var approved = $(target).hasClass('bi-link-comment-approved');
-			target.href = (approved ?target.href.replace('bi_cua', 'bi_ca') :target.href.replace('bi_ca', 'bi_cua'));
-			$(target).html(BlogIt.fn.xl( (approved ?'approve' :'unapprove') ));
-			$wrapper.removeClass('blogit-comment-' +(!approved ?'un' :'') +'approved').addClass('blogit-comment-' +(approved ?'un' :'') +'approved');
-			$(target).removeClass('bi-link-comment-' +(!approved ?'un' :'') +'approved').addClass('bi-link-comment-' +(approved ?'un' :'') +'approved');
-			if (approved) updateCommentCount(-1,1);
-			else updateCommentCount(1,-1);
-		},
-		createURL: function(e, action){
-			if (e.target.href){  //use url on link
+		createURL: function(e, action){  //returns rowcount, url with serialilzed bi_CommentID[], and e jquery object set (1 or more)
+			if (e.target.href){  //e is an event from a link click
+				e.preventDefault();
 				var rc = 1, url = e.target.href;
-			}else{  //or create url based on checkboxes
+				e=$(e.target);
+			}else{  //clicked admin menu, create url based on checkboxes
 				var src=$('.bi-menu-hover').next('ol.blogit-comment-admin-list');  //get comment block for title admin is on
 				var rc = $('input[name="bi_CommentID[]"]', src).length;
 				if (rc>0){
-					//TODO: function
-					var url = $('.bi-link-comment-'+ action+ ':first', src).attr('href')+ '&'+ $('[name="bi_CommentID[]"]:checked', src).serialize();  //:checked in case cursor is hovering
+					var actionLink='.bi-link-comment-'+ action+ 'd:first';
+					if (action=='approve'||action=='unapprove')
+						actionLink += (',.bi-link-comment-'+ (action=='approve' ?'unapproved': 'approved')+ ':first');  //search for either approved OR unapproved link
+					//:checked in case cursor is hovering; slice otherwise might have both approved and unapproved links
+					var url = $(actionLink, src).slice( 0, 1 ).attr('href')+ '&'+ $('[name="bi_CommentID[]"]:checked', src).serialize();
+					if (action=='approve'||action=='unapprove')
+						url=url.replace(/action=bi_c(a|ua)/,(action=='approve' ?'action=bi_ca': 'action=bi_cua'));
 					console.log(action+ ': '+ url);
-					e = $('[name="bi_CommentID[]"]:checked', src).closest('li.comment').find('.bi-link-comment-'+ action);  //find admin link on the row corresponding to action
+					e = $('[name="bi_CommentID[]"]:checked', src).closest('li.comment').find(actionLink);  //find admin links on the row corresponding to action
 				}
 			}
+			console.log('URL Element');
+			console.log(e);
 			return {rc:rc, url:url, e:e};
+		},
+		//TODO: Consolidate duplicative functionality from commentApprove/showDelete/showBlockIP possibly into fn.ajax?
+		commentApprove: function(e, action){
+			url=BlogIt.fn.createURL(e, action);
+			if (url.rc>0){
+				BlogIt.fn.ajax({
+					url: url.url,
+					success: function(data){ if (data.result=='error')  BlogIt.fn.showMsg(data); flipCommentStatus(url.e, action); }
+				});
+			};
 		},
 		showDelete: function(e){  //e is either the delete link click event, or delete admin menu
 			url=BlogIt.fn.createURL(e, 'delete');
@@ -304,7 +328,7 @@ BlogIt.fn = function($){
 				dialogShow(BlogIt.fn.xl('Are you sure you want to delete '+ url.rc+ ' row'+ (url.rc>1 ?'s' :'')+ '?'), 'Yes', 'No', 300, {
 					url: url.url,
 					success:function(data){ objectRemove(url.e, data); }
-				},url.e);
+				});
 			}else  //TODO: message, or hide menu option
 				console.log('nothing selected');
 		},
@@ -313,18 +337,17 @@ BlogIt.fn = function($){
 			if (url.rc>0){
 				BlogIt.fn.ajax({  //perform ajax call on block link, which retrieves the IP
 					url: url.url,
-					success: function(data){  //success returns IP
-						if (data.ip)  dialogShow(
+					success: function(data){ if (data.ip)  //success returns IP
+						dialogShow(
 							//TODO: Remove BlogIt.fn.xl('Commenter IP') from XL list
-							BlogIt.fn.xl('Enter the IP to block:')+
-							'<textarea id="blogit_ip" type="text">'+ data.ip+ '</textarea>', 'Submit', 'Cancel', 200, {
+							BlogIt.fn.xl('Enter the IP to block:')+ '<textarea id="blogit_ip" type="text">'+ data.ip+ '</textarea>', 'Submit', 'Cancel', 200, {
 								url: function(){
 									console.log('BLOCK: '+ url.url+ encodeURI('&bi_ip='+ $("#blogit_ip").val().replace(/\n/g,',') ));
 									return url.url+ encodeURI( '&bi_ip='+ $("#blogit_ip").val().replace(/\n/g,',') ); },
 								success: function(data){ BlogIt.fn.showMsg(data); }
-							}, e);
+							});
 					}
-				}, e);
+				});
 			}
 		},
 		//opens a dialog with content from PmWiki, calls addValidation(), and then on submit calls ajaxSubmit(), which calls updateBlog/updateComment
@@ -385,12 +408,9 @@ BlogIt.fn = function($){
 			});
 
 			//dialog comment form is not wrapped in class
-			console.log('form selector: '+'.jBox-content form,'+ BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form');
 			$('.jBox-content form,'+ BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form').each(function(){
-				console.log('setting up comment validations');
 				$(this).validate({
 					submitHandler: function(form) {
-						console.log('calling comment ajax form');
 						ajaxSubmit($(form), updateComment, e);  //mode is undefined when normal comment add, since no onclick handler defined
 					},
 					rules: {
@@ -437,11 +457,10 @@ BlogIt.fn = function($){
 		},
 //Utilities
 		xl: function(t){ return ( (BlogIt.xl[t] ?$('<div>'+BlogIt.xl[t]+'</div>').html() :t) ); },
-		ajax: function(ajax, e){
-			if (typeof e.preventDefault !== 'undefined' && $.isFunction(e.preventDefault))  e.preventDefault();
+		ajax: function(ajax){
 			ajax['dataType'] = ajax.dataType || 'json';
-			ajax['url'] = ( typeof ajax.url == 'function' ?ajax.url(e.target.href) :(ajax.url || e.target.href) );  //either eval the fn, or use .url, or lastly href on target
-			ajax['context'] = ajax.context || e.target;
+			ajax['url'] = ( typeof ajax.url == 'function' ?ajax.url() :ajax.url );  //either eval the fn, or use .url
+			ajax['context'] = ajax.context;  //TODO: Make sure ajax calls set context
 			$.ajax(ajax);
 		}
 	};

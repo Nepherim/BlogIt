@@ -378,17 +378,20 @@ global $Now,$ChangeSummary;
 	$m = XL(($approve?'a':'una').'pprove comment');
 	$result = array('msg'=>XL('Unable to '.$m.'.'), 'result'=>'error');
 	if (bi_Auth($auth)){
-		if ($src)  $old = RetrieveAuthPage($src,'read',false);
-		if ($old){
-			$new = $old;
-			$new['csum'] = $new['csum:' .$Now] = $ChangeSummary = $m;
-			$_POST['diffclass']='minor';
-			$new['text'] = preg_replace(
-				'/\(:commentapproved:'.($approve?'false':'true').':\)/', '(:commentapproved:'.($approve?'true':'false').':)',
-				$new['text']);
-			PostPage($src,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
-			$result = array('msg'=>XL(ucfirst($m).' successful.'), 'result'=>'success');
+		$pages=bi_GetPages($src);
+		foreach ($pages as $p){
+			$old = RetrieveAuthPage($p,'read',false);
+			if ($old){
+				$new = $old;
+				$new['csum'] = $new['csum:' .$Now] = $ChangeSummary = $m;
+				$_POST['diffclass']='minor';
+				$new['text'] = preg_replace(
+					'/\(:commentapproved:'.($approve?'false':'true').':\)/', '(:commentapproved:'.($approve?'true':'false').':)',
+					$new['text']);
+				#PostPage($p,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
+			}
 		}
+		$result = array('msg'=>XL(ucfirst($m).' successful.'), 'result'=>'success');
 	}
 	bi_Redirect(bi_Clean('mode',$_GET['bi_mode']), $result);
 }

@@ -1,4 +1,4 @@
-.commenttext{display:block;}
+.commenttext{display:block;} /*required since removed br tags from coreTemplate*/
 
 /* comment-admin-menu */
 .blogit-cam-marker{
