@@ -530,10 +530,7 @@ global $bi_Pages;
 			foreach ($pages as $p){
 				$page = RetrieveAuthPage($p,'read',false);
 				if ($page){
-					#TODO: Why not just find last host? Is it always last or could other elements exist?
-					foreach($page as $k=>$v)  #loop through all diffs, only last one is needed, as it's the creation
-						if ( preg_match("/^diff:(\d+):(\d+):?([^:]*)/", $k, $match) )
-							$x = @$page['host:' .$match[1]];  #find host line with same timestamp as diff
+					$x = preg_grep_keys('/^host:.*$/', $page, -1);  #find the last occurence of host: which stores creator IP
 					$ip[$x] = $x;  #store as key/value to ensure we don't store same IP multiple times
 				}
 				$result = array('result'=>(!$ip ?'error' :'success'), 'ip'=>implode($ip,"\n"), 'msg'=>(!$ip ?XL('Unable to determine IP address.'): ''));
@@ -717,6 +714,10 @@ global $AuthList,$bi_Auth,$bi_Pagename,$EnableAuthUser,$bi_Pages,$bi_OriginalFn,
 # ----------------------------------------
 # - Internal Functions
 # ----------------------------------------
+function preg_grep_keys($pattern, $input, $offset, $length=NULL) {
+    $m = array_intersect_key($input, array_flip(preg_grep($pattern, array_keys($input))));  #find keys matching pattern
+    return array_pop((array_slice($m, $offset, $length)));  #find specific element; extra parenthesis is required
+}
 # Generates a list of all categories in use, for Ajax tag suggest
 function bi_CategoryList(){
 global $CategoryGroup;

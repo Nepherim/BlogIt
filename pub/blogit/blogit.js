@@ -206,7 +206,7 @@ BlogIt.fn = function($){
 		console.log ($context);
 		console.log('url: '+$frm.attr('action'));
 		BlogIt.fn.ajax({
-			type: 'POST',
+			method: 'POST',
 			url:$frm.attr('action'),
 			data: $frm.serialize(),  //NOTE: jquery will always send with UTF8, regardless of charset specified.
 			success: function(data){  //after PmForms finishes processing, update page with new content
