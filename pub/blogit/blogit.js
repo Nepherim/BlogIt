@@ -11,11 +11,12 @@ jQuery(document).ready(function($){
 	BlogIt.fn.addAutocomplete();
 
 	//Classes are added by bi_Link(), so can be hard-coded.
-	$(document).on('click', '.bi-link-comment-unapproved,.bi-Comment-Approve', function(e){ BlogIt.fn.commentApprove(e, 'approve'); });  //action approve
-	$(document).on('click', '.bi-link-comment-approved,.bi-Comment-Unapprove', function(e){ BlogIt.fn.commentApprove(e, 'unapprove'); });  //action unapprove
-	$(document).on('click', '.bi-link-blog-new,.bi-link-blog-edit,.bi-link-comment-edit,.bi-link-comment-reply', function(e){ BlogIt.fn.showEdit(e); });
-	//TODO: Is there actually a blog delete function?
-	$(document).on('click', '.bi-link-comment-delete,.bi-link-blog-delete,.bi-Comment-Delete', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
+	$(document).on('click', '.bi-link-comment-unapproved[href*="bi_mode=ajax"],.bi-Comment-Approve', function(e){ BlogIt.fn.commentApprove(e, 'approve'); });  //action approve
+	$(document).on('click', '.bi-link-comment-approved[href*="bi_mode=ajax"],.bi-Comment-Unapprove', function(e){ BlogIt.fn.commentApprove(e, 'unapprove'); });  //action unapprove
+	//TODO: Due to pmwiki bug where classes on last link override earlier links on the same line, need to check 'bi_mode=ajax' (ref php.bi_Link())
+	$(document).on('click', '.bi-link-blog-new[href*="bi_mode=ajax"],.bi-link-blog-edit[href*="bi_mode=ajax"],'+
+		'.bi-link-comment-edit[href*="bi_mode=ajax"],.bi-link-comment-reply', function(e){ BlogIt.fn.showEdit(e); });
+	$(document).on('click', '.bi-link-comment-delete[href*="bi_mode=ajax"],.bi-link-blog-delete[href*="bi_mode=ajax"],.bi-Comment-Delete', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
 	$(document).on("click", '.bi-link-comment-block,.bi-Comment-Block', function(e){ BlogIt.fn.showBlockIP(e); });  //block comment IP addresses
 	$(document).on("click", '.bi-Comment-AllNone', function(e){ BlogIt.fn.toggleCheckboxes(e); });
 	$(document).on("click", BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment', function(e){
@@ -194,6 +195,7 @@ BlogIt.fn = function($){
 			var $closest=closestTemplateObject($(target));
 			//Clicking reply from admin list templateClass is ".blogit-comment-list blogit-comment-admin-list" since container has two classes, use only the first
 			templateClass = ($closest ?'.'+ $closest.attr("class").split(' ')[0] :'');  //no closest when adding new entry from ajax link
+			//TODO: Only add if not already. Can occur if error on comment reply, so dialog doesn't close, and user re-submits
 			$('.jBox-content form').prepend('<input type="hidden" name="bi_context" value="'+ templateClass+ '">')  //tell pmwiki which template to use, based on class
 
 			//Find the blog/comment entry that the action relates to, which is either something with an ID of bi_ID, or an element with a template class
@@ -342,7 +344,7 @@ BlogIt.fn = function($){
 				});
 			}
 		},
-		//opens a dialog with content from PmWiki, calls addValidation(), and then on submit calls ajaxSubmit(), which calls updateBlog/updateComment
+		//ajax editing opens a dialog with content from PmWiki, calls addValidation(), and then on submit calls ajaxSubmit(), which calls updateBlog/updateComment
 		showEdit: function(e){
 			e.preventDefault();
 			BlogIt.fn.ajax({
@@ -365,8 +367,7 @@ BlogIt.fn = function($){
 							cancelButton: 'Cancel',
 							onCloseComplete: function () { this.destroy(); },
 							width: (blog?750:430), minWidth: (blog?750:430), maxWidth: 10000  //needed to override jbox default
-						})
-						.open();
+						}).open();
 						BlogIt.fn.addAutocomplete();
 						BlogIt.fn.addValidation(e);  //adds submit handler for button in dialog
 					}
