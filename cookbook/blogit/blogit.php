@@ -91,7 +91,8 @@ SDVA($bi_Paths,array(
 	'pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/scripts/guiedit.php",
 	'convert'=>"$FarmD/cookbook/blogit/blogit_upgrade.php", 'feeds'=>"$FarmD/scripts/feeds.php"));
 
-//Blogit pagename routines
+# ----------------------------------------
+# - Pagename patterns
 //TODO: '\\x80-\\xfe' should be double quotes if \\?
 SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
@@ -142,7 +143,7 @@ $bi_Ajax['bi_cr']=$bi_Ajax['bi_bip']='ajax';  #comment reply is always ajax
 SDV($PmFormRedirectFunction,'bi_Redirect');
 $bi_Forms = array('blogit-entry','blogit-comments');  #needs to be before cookies
 //disable comments after a period of time, to reduce spam
-if ( $bi_CommentsAutoClose != '' && PageVar($pagename,'$:entrydate') < strtotime($bi_CommentsAutoClose) )
+if ( $bi_CommentsAutoClose != '' && PageTextVar($pagename,'$:entrydate') < strtotime($bi_CommentsAutoClose) )
 	$bi_CommentsEnabled = 'read-only';
 //when $action='pmform' need to know what the user is doing, which is in bi_frm_action
 $bi_FrmAction=bi_Clean('action','bi_'. @$_REQUEST['bi_frm_action']);
@@ -173,9 +174,7 @@ $AuthFunction = 'bi_BlogItAuth';  #TODO: Use $AuthUserFunctions instead?
 # Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[-_\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';  #[1]
 $bi_Pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
-bi_debugLog('pagename: '. $bi_Pagename. '::'. $pagename, true);
 list($bi_Group, $bi_Name) = explode('.', $bi_Pagename);
-bi_debugLog('Group: '.$bi_Group. ' ::'.$bi_Name);
 
 if ($bi_Pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"' .bi_Clean('word', $_GET['blogid']) .'"';
 # Cannot be done as part of handler due to scoping issues when include done in function
@@ -199,6 +198,7 @@ SDVA($HTMLFooterFmt, array(
 	'blogit.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/blogit.js"></script>',
 	'blogit-core' => '<script type="text/javascript">
 			BlogIt.pm["pubdirurl"]="'.$FarmPubDirUrl.'/blogit";
+			BlogIt.pm["basepage"]="'.$bi_Pagename.'";
 			BlogIt.pm["categories"]="' .bi_CategoryList() .'";
 			BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE(XL('%d-%m-%Y %H:%M')).'$/;'."\n".
 			'BlogIt.pm["skin-classes"]='. bi_json_encode($bi_SkinClasses) .';'."\n".
@@ -241,8 +241,6 @@ $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array())
 array_unshift ($PmFormTemplatesFmt,	($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$bi_Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
 #TODO: Big issue if group has a hyphen (note, spaced group names are auto-converted to include hyphen)
 $bi_CommentPage=(preg_match($bi_CommentPattern,$bi_Pagename) ?$bi_Pagename :$bi_CommentGroup .'.' .$bi_Group .'-' .$bi_Name .'-' .date('Ymd\THms'));
-bi_debugLog('comment page: '.$bi_CommentPage, true);
-
 #TODO: Can remove successpage, since redirect goes to bi_AjaxRedirect, call from pmform handler
 SDV($PmForm['blogit-entry'], 'form=#blog-form-control fmt=#blog-post-control' .($FmtPV['$bi_Mode']=='ajax' ?' successpage=""' :''));  #PmForm does a redirect browse if successpage is set
 #if page is an existing comment (ie, has a comment page name) then use it, otherwise create it
@@ -333,7 +331,7 @@ $MarkupExpr['bi_url'] = 'bi_URL($args)';
 # Display of blogit forms is handled by page browse; when user clicks Submit, then pmforms takes over which then calls this function
 function bi_HandleBrowse($src, $auth = 'read'){
 global $bi_ResetPmFormField,$bi_OriginalFn,$bi_GroupFooterFmt,$bi_CommentGroup,$action,$Now,$bi_Name,$FmtPV,
-	$HandleActions,$GroupPrintHeaderFmt,$GroupPrintFooterFmt,$GroupHeaderFmt,$GroupFooterFmt,$bi_Group,$FmtPV,$CategoryGroup,$AsSpacedFunction;
+	$HandleActions,$GroupPrintHeaderFmt,$GroupPrintFooterFmt,$GroupHeaderFmt,$GroupFooterFmt,$bi_Group,$CategoryGroup,$AsSpacedFunction;
 	bi_debugLog('HandleBrowse: '.$action.'['.$FmtPV['$bi_Mode'].'] '.$_REQUEST['target']);
 	if ($bi_Group == $bi_CommentGroup){ bi_Redirect(); return; }  #After editing/deleting a comment page, and after HandlePmForm() has done a redirect()
 	if ($FmtPV['$bi_Mode'] == 'ajax'){ bi_AjaxRedirect(); return; }
@@ -474,6 +472,8 @@ global $bi_ResetPmFormField,$_POST,$_REQUEST,$ROSPatterns,$CategoryGroup,
 	}elseif ($bi_CommentsEnabled=='open' && $_POST['target']=='blogit-comments'){
 		bi_decodeUTF8($_POST);  #ajax posts from jquery are always utf8
 		bi_ProcessHooks('comment', 'pre-save', $src, $auth);
+		//TODO: Set in javascript -- BUT potential could be maliciously ovrriden with nonsense
+		$_POST['ptv_blogit_basepage'] = (empty($_POST['ptv_blogit_basepage']) ?$src :$_POST['ptv_blogit_basepage']);  //required since older versions didn't get this set, and won't have it
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_commenttext'] = rtrim($_POST['ptv_commenttext'],"\n\r\x0B")."\n";  #ensures markup is closed correctly (eg, links at end of comment)
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
@@ -605,10 +605,7 @@ global $bi_AuthorGroup,$bi_Pagename,$bi_CommentsEnabled,$bi_LinkToCommentSite,$b
 		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_ce', '$[edit]', $args['post_text'],'bi-link-comment-edit') :'');
 		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_del', '$[delete]', $args['post_text'],'bi-link-comment-delete') :'');
 		#$pn can be two space separated urls for comment reply. cr needs to pass actual pagename when not in admin page.
-		case 'commentreply':
-			//TODO: Fix how $FullName is parsed for spaced groups.
-			$pn=PageVar($pagename,'$:blogit_basepage');  //use variable if it exists for comments post 1.9.0 -- earlier use variable $txt, which may format spaced groups incorrectly.
-			return (bi_Auth('comment-edit '.bi_BasePage((!$pn ?$txt :$pn))) ?bi_Link($args['pre_text'], bi_BasePage((!$pn ?$txt :$pn)), 'bi_cr', '$[reply]', $args['post_text'],'bi-link-comment-reply') :'');
+		case 'commentreply':	return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], bi_BasePage($txt), 'bi_cr', '$[reply]', $args['post_text'],'bi-link-comment-reply') :'');
 		case 'commentapprove': return (bi_Auth('comment-approve ' .bi_BasePage($txt))
 			?bi_Link($args['pre_text'], $txt, 'bi_'.($args['status']=='true'?'cua':'ca'), '$['.($args['status']=='true'?'un':'').'approve]', $args['post_text'],
 				'bi-link-comment-'.($args['status']=='true'?'':'un').'approved')

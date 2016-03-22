@@ -412,6 +412,7 @@ BlogIt.fn = function($){
 			$('.jBox-content form,'+ BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form').each(function(){
 				$(this).validate({
 					submitHandler: function(form) {
+						$('[name="ptv_blogit_basepage"][value=""]', form).val(BlogIt.pm['basepage']);
 						ajaxSubmit($(form), updateComment, e);  //mode is undefined when normal comment add, since no onclick handler defined
 					},
 					//TODO: Only require when class class="blogit-required""
