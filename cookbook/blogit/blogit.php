@@ -87,15 +87,19 @@ bi_SDVSA($bi_StatusType, array('draft', 'publish', 'sticky'));  #adding element 
 bi_SDVSA($bi_CommentType, array('open', 'readonly', 'none'));  #adding element is okay; removing elements may loose functionality
 bi_SDVSA($bi_CommentApprovalType, array('true', 'false'));
 bi_SDVSA($bi_Hooks, array());  #processing hooks, pointers to a function(). Format: $bi_Hooks[$type][$stage][] $type=blog,comment $stage=pre-entry, pre-save, post-save
-SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
+SDVA($bi_Paths,array(
+	'pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/scripts/guiedit.php",
+	'convert'=>"$FarmD/cookbook/blogit/blogit_upgrade.php", 'feeds'=>"$FarmD/scripts/feeds.php"));
 
+//Blogit pagename routines
+//TODO: '\\x80-\\xfe' should be double quotes if \\?
+SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',  #strip single-quotes
 	"/[^". $PageNameChars. "]+/" => $bi_TitleSeparator,  #convert everything else to hyphen
 	"/(^\\" .$bi_TitleSeparator ."+)|(\\" .$bi_TitleSeparator ."+\$)/" => '',  #trim hyphens front and back
 	"/\\" .$bi_TitleSeparator ."{2,}/" => $bi_TitleSeparator  #trim duplicate hyphens
 ));
-
 if (function_exists('Markup_e'))
 	SDVA($bi_MakePageNamePatterns, array(
 		($Charset=='UTF-8' ?"/^([\\xc0-\\xdf].)/" :'//') => ($Charset=='UTF-8' ?PCCF("return utf8toupper(\$m[1]);") :''),  #uppercase first letter
@@ -109,9 +113,6 @@ else
 SDVA($bi_FixPageTitlePatterns, array(
 	'/[.\\/#]/' => ''	#remove dots, forward and backslashes in page titles as MakePageName returns '' when these characters are present
 ));
-SDVA($bi_Paths,array(
-	'pmform'=>"$FarmD/cookbook/pmform.php", 'guiedit'=>"$FarmD/scripts/guiedit.php",
-	'convert'=>"$FarmD/cookbook/blogit/blogit_upgrade.php", 'feeds'=>"$FarmD/scripts/feeds.php"));
 
 # ----------------------------------------
 # - Internal Use Only
@@ -143,6 +144,8 @@ $bi_Forms = array('blogit-entry','blogit-comments');  #needs to be before cookie
 //disable comments after a period of time, to reduce spam
 if ( $bi_CommentsAutoClose != '' && PageVar($pagename,'$:entrydate') < strtotime($bi_CommentsAutoClose) )
 	$bi_CommentsEnabled = 'read-only';
+//when $action='pmform' need to know what the user is doing, which is in bi_frm_action
+$bi_FrmAction=bi_Clean('action','bi_'. @$_REQUEST['bi_frm_action']);
 
 # ----------------------------------------
 # - Usable on Wiki Pages
@@ -170,6 +173,9 @@ $AuthFunction = 'bi_BlogItAuth';  #TODO: Use $AuthUserFunctions instead?
 # Need to save entrybody in an alternate format to prevent (:...:) markup confusing the end of the variable definition.
 $PageTextVarPatterns['[[#anchor]]'] = '/(\[\[#blogit_(\w[-_\w]*)\]\](?: *\n)?)(.*?)(\[\[#blogit_\2end\]\])/s';  #[1]
 $bi_Pagename = ResolvePageName($pagename);  #undo clean urls (replace / with .) to make pagename checks easier
+bi_debugLog('pagename: '. $bi_Pagename. '::'. $pagename, true);
+list($bi_Group, $bi_Name) = explode('.', $bi_Pagename);
+bi_debugLog('Group: '.$bi_Group. ' ::'.$bi_Name);
 
 if ($bi_Pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"' .bi_Clean('word', $_GET['blogid']) .'"';
 # Cannot be done as part of handler due to scoping issues when include done in function
@@ -186,6 +192,7 @@ SDVA($HTMLFooterFmt, array(
 	//TODO: Use replacement string rather than repeating script tags
 	'jquery.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jquery.min.js"></script>',
 	//TODO: Remove pre-production
+	'jquery-migrate' => '<script src="http://code.jquery.com/jquery-migrate-1.4.0.js"></script>',
 	'jq-validate.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jquery.validate.min.js"></script>',
 	'jbox.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jbox.min.js"></script>',
 	'awesomplete.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/awesomplete.min.js"></script>',
@@ -229,12 +236,13 @@ if ($bi_RSSEnabled == 'true' && $action == 'rss' && $bi_Pagename==$bi_Pages['rss
 # ----------------------------------------
 # - PmForms Setup -- most config is needed just to display forms (ie, comment form)
 include_once($bi_Paths['pmform']);
-list($bi_Group, $bi_Name) = explode('.', $bi_Pagename);
 $PmFormPostPatterns['/\r/'] = '';  #fixes a bug in pmforms where multi-line entries/comments are stored across multiple lines in the base page
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
 array_unshift ($PmFormTemplatesFmt,	($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$bi_Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
 #TODO: Big issue if group has a hyphen (note, spaced group names are auto-converted to include hyphen)
 $bi_CommentPage=(preg_match($bi_CommentPattern,$bi_Pagename) ?$bi_Pagename :$bi_CommentGroup .'.' .$bi_Group .'-' .$bi_Name .'-' .date('Ymd\THms'));
+bi_debugLog('comment page: '.$bi_CommentPage, true);
+
 #TODO: Can remove successpage, since redirect goes to bi_AjaxRedirect, call from pmform handler
 SDV($PmForm['blogit-entry'], 'form=#blog-form-control fmt=#blog-post-control' .($FmtPV['$bi_Mode']=='ajax' ?' successpage=""' :''));  #PmForm does a redirect browse if successpage is set
 #if page is an existing comment (ie, has a comment page name) then use it, otherwise create it
@@ -294,6 +302,7 @@ if(function_exists('Markup_e')) {  #PmWiki 2.2.58+ / PHP5
 
 $SaveAttrPatterns['/\\(:includesection\\s.*?:\\)/i'] = ' ';  #prevents include sections becoming part of page targets list
 if (IsEnabled($EnableGUIButtons) && $FmtPV['$bi_Mode']!='ajax'){
+	//TODO: Use bi_Frm_Action
 	if ($action=='bi_be' || $action=='bi_ne' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry'))
 		include_once($bi_Paths['guiedit']);  #PmWiki only includes this automatically if action=edit.
 }else  Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
@@ -330,6 +339,7 @@ global $bi_ResetPmFormField,$bi_OriginalFn,$bi_GroupFooterFmt,$bi_CommentGroup,$
 	if ($FmtPV['$bi_Mode'] == 'ajax'){ bi_AjaxRedirect(); return; }
 
 	$entrytype = PageTextVar($src,'entrytype');
+	//TODO: Use bi_Frm_Action
 	if ($action=='pmform' && $_REQUEST['target']=='blogit-entry'){
 		if (isset($bi_ResetPmFormField))
 			foreach ($bi_ResetPmFormField  as $k => $v) {
@@ -361,6 +371,7 @@ function bi_HandleEdit($src, $auth='blog-edit'){  #action=(bi_be|bi_ne|bi_ce|bi_
 global $action,$HandleActions,$bi_OriginalFn,$GroupHeaderFmt,$bi_Pages,$bi_Hooks,$FmtPV;
 	$entrytype = PageTextVar($src,'entrytype');
 	bi_debugLog('HandleEdit: '.$action.' - '.$entrytype);
+	//TODO: Why is admin-page check key here? ne can occur anywhere.
 	$type=( ($action=='bi_be' && $entrytype=='blog') || ($action=='bi_ne'&&$src==$bi_Pages['admin']) ?'blog' :'comment');
 	if ( ($entrytype==$type || $action=='bi_ne' || $action=='bi_cr') && bi_Auth($auth) ){
 		bi_ProcessHooks($type, 'pre-entry', $src, $auth);
@@ -594,7 +605,10 @@ global $bi_AuthorGroup,$bi_Pagename,$bi_CommentsEnabled,$bi_LinkToCommentSite,$b
 		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_ce', '$[edit]', $args['post_text'],'bi-link-comment-edit') :'');
 		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_del', '$[delete]', $args['post_text'],'bi-link-comment-delete') :'');
 		#$pn can be two space separated urls for comment reply. cr needs to pass actual pagename when not in admin page.
-		case 'commentreply': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], bi_BasePage($txt), 'bi_cr', '$[reply]', $args['post_text'],'bi-link-comment-reply') :'');
+		case 'commentreply':
+			//TODO: Fix how $FullName is parsed for spaced groups.
+			$pn=PageVar($pagename,'$:blogit_basepage');  //use variable if it exists for comments post 1.9.0 -- earlier use variable $txt, which may format spaced groups incorrectly.
+			return (bi_Auth('comment-edit '.bi_BasePage((!$pn ?$txt :$pn))) ?bi_Link($args['pre_text'], bi_BasePage((!$pn ?$txt :$pn)), 'bi_cr', '$[reply]', $args['post_text'],'bi-link-comment-reply') :'');
 		case 'commentapprove': return (bi_Auth('comment-approve ' .bi_BasePage($txt))
 			?bi_Link($args['pre_text'], $txt, 'bi_'.($args['status']=='true'?'cua':'ca'), '$['.($args['status']=='true'?'un':'').'approve]', $args['post_text'],
 				'bi-link-comment-'.($args['status']=='true'?'':'un').'approved')
@@ -678,9 +692,7 @@ function bi_strtotime($d, $f='%d-%m-%Y %H:%M', $z=''){  #[assumes valid date] co
 #      comment page (from comment reply) get translated back to Test/Group-First-in-test-group-20160310T180328 NOT Test-Group/First-in-test-group-20160310T180328
 function bi_BasePage($pn){
 global $bi_Pagename,$bi_Pages,$bi_CommentPattern;
-	$p = explode(' ', $pn);  #$pn can be two space separated urls for comment reply. cr needs to pass actual pagename when not in admin page
-	if ( $bi_Pagename != $bi_Pages['admin'] && isset($p[1]) )  return $p[1];
-	else  return preg_replace($bi_CommentPattern,'${1}.${2}',$p[0]);
+	return preg_replace($bi_CommentPattern,'${1}.${2}',$pn);
 }
 # 0:fullname 1:param 2:val
 function bi_URL($args){
@@ -755,8 +767,8 @@ bi_debugLog('bi_SendAjax: '.$markup);
 	bi_echo_json_encode(array('out'=>MarkupToHTML($bi_Pagename, $markup), 'result'=>'success', 'msg'=>XL($msg), 'dom'=>$dom));
 }
 function bi_AjaxRedirect($result=''){
-global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action,$bi_Name,$bi_Group,$bi_Pages,$bi_SkinClasses;
-bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']. '::'. $_REQUEST['target']);
+global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action,$bi_Name,$bi_Group,$bi_Pages,$bi_SkinClasses,$bi_FrmAction;
+bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']. '::'. $_REQUEST['target']. '::'. $action);
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 if pmform failed (invalid captcha, etc)
 		//TODO: Should blogit-comments be hardcoded, or refer to skinclasses?
 		//Translate the class of the html element being updated (bi_context) to the template to be used to generate new data on includesection from pmwiki
@@ -767,9 +779,11 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']. '::'. $_REQUEST['target'])
 		//$bi_SkinClasses['blog-list-row'] - '.blogit-blog-list-row': '#blog-grid
 		// otherwise ('.blogit-post'): '#single-entry-view'
 		if ($_REQUEST['target']=='blogit-comments'){
-			bi_SendAjax('(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['comment-admin-list'] ?'#unapproved-comments' :'#comments-pagelist')
+			bi_SendAjax(
+				//TODO: Use blogitSkinMU() based on $bi_FrmAction
+				'(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['comment-admin-list'] ?'#unapproved-comments' :'#comments-pagelist')
 				.' commentid=' .$bi_CommentPage.' entrycomments=readonly":)',
-				($bi_CommentPage==$bi_Pagename
+				($bi_FrmAction=='bi_ce'
 					#TODO: XL
 					?'Successfully updated comment.'
 					:XL('Successfully added new comment.')
@@ -778,6 +792,7 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']. '::'. $_REQUEST['target'])
 			);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
 			bi_SendAjax((isset($_REQUEST['bi_context'])  #might have clicked from many places. We only care about a few.
+				//TODO: Use blogitSkinMU() based on $bi_FrmAction
 				?'(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['blog-entry-summary']
 				//TODO: Should these be hardcoded, or lookup to skinClasses?
 					?'#blog-summary-pagelist group=' .$bi_Group .' name='.$bi_Name  #main blog summary page
@@ -785,7 +800,7 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']. '::'. $_REQUEST['target'])
 						?'#blog-grid group=' .$bi_Group .' name='.$bi_Name
 						:'#single-entry-view')  #single entry blog view
 					) .'":)'
-				:'No context set on comment submit.'), 'Successfully '. ($action=='bi_ne'||($action=='pmform' && $bi_Pagename==$bi_Pages['admin']) ?'added' :'updated') .' blog entry.');
+				:'No context set on comment submit.'), 'Successfully '. ($bi_FrmAction=='bi_ne' ?'added' :'updated') .' blog entry.');
 		}else  bi_echo_json_encode($result);
 	}else  bi_echo_json_encode(array('result'=>'error','msg'=>FmtPageName(utf8_encode(implode($MessagesFmt)), $bi_Pagename)) );
 	exit;
@@ -910,6 +925,8 @@ function bi_FeedText($pagename, &$page, $tag){
 # ----------------------------------------
 function bi_Clean($m, $v){
 	if ($m=='mode')  return ($v=='ajax' ?'ajax' :'');
+	//ensure action is one of this set when coming through pmform
+	elseif ($m=='action') return ( preg_match('/(bi_ce|bi_cr|bi_ca|bi_ne|bi_be)/', $v, $f) ?$f[1] :'' );
 	elseif ($m=='word')  return preg_replace("/\\W+/", "", $v);  //remove all non-alpha-numerics
 	elseif ($m=='alpha')  return str_replace('$', '&#036;', str_replace('\'','&#039;', str_replace('"','&quot;', $v)));
 	else return '';

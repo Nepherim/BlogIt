@@ -181,23 +181,30 @@ BlogIt.fn = function($){
 
 	//defines the ajax actions when clicking Submit from dialogs, and Submit from comment entry
 	function ajaxSubmit($frm, submitFn, e){
+		//$context is a JQ object we're going to replace; templateClass is used in php.bi_AjaxRedirect to determine which includesection template to use
+		var $context,templateClass,target;
 		dialogWait();
 		//trigger ajax mode; prevent duplicates which could occur if multiple comments submitted
 		if (!$('[name="bi_mode"]',$frm).length)  $frm.prepend('<input type="hidden" name="bi_mode" value="ajax">');
-
-		//$context is a JQ object we're going to replace; templateClass is used in php.bi_AjaxRedirect to determine which includesection template to use
-		var $context,templateClass,target;
+		if (e)  target = ( $(e.target).is('img') ?e.currentTarget :e.target);  //if user clicked img, bubble out to currentTarget to find href link
+		console.log('action: '+ $('[name="action"]',$frm).val());
+//		console.log( 'href':+ ( !e || !!empty(target.href.match(/action=bi_(cr|ce|be|ne)/) )) );
+		console.log('found: '+$('[name="bi_frm_action"]',$frm).length);
+		if ($('[name="action"]',$frm).val()=='pmform' && (!e || target.href.match(/action=bi_(cr|ce|be|ne)/)) && !$('[name="bi_frm_action"]',$frm).length){
+			console.log('added frm action');
+			$frm.prepend('<input type="hidden" name="bi_frm_action" value="'+ (!e ?'ca' :target.href.match(/action=bi_(cr|ce|be|ne)/)[1])+ '">')
+		}
 		if (e){  //e is null for user clicking comment add Post button
 			console.log('clicked: '+($(e.target).is('img') ?'img' :'link'));
 			console.log(e.currentTarget);
-			target = ( $(e.target).is('img') ?e.currentTarget :e.target);  //if user clicked img, bubble out to currentTarget to find href link
+//			target = ( $(e.target).is('img') ?e.currentTarget :e.target);  //if user clicked img, bubble out to currentTarget to find href link
 			console.log('href: '+target.href);
 			var $closest=closestTemplateObject($(target));
 			//Clicking reply from admin list templateClass is ".blogit-comment-list blogit-comment-admin-list" since container has two classes, use only the first
 			templateClass = ($closest ?'.'+ $closest.attr("class").split(' ')[0] :'');  //no closest when adding new entry from ajax link
-			//TODO: Only add if not already. Can occur if error on comment reply, so dialog doesn't close, and user re-submits
-			$('.jBox-content form').prepend('<input type="hidden" name="bi_context" value="'+ templateClass+ '">')  //tell pmwiki which template to use, based on class
-
+			//tell pmwiki which template to use, based on class
+			if (!$('[name="bi_context"]',$frm).length)  $frm.prepend('<input type="hidden" name="bi_context" value="'+ templateClass+ '">')
+			console.log('action:'+ $('[name="action"]',$frm).val());
 			//Find the blog/comment entry that the action relates to, which is either something with an ID of bi_ID, or an element with a template class
 			console.log('target wrapper: ');
 			console.log(getIDWrapper(target));
@@ -392,6 +399,7 @@ BlogIt.fn = function($){
 							form.submit();
 						}
 					},
+					//TODO: Only require when class class="blogit-required""
 					rules: {
 						ptv_entrydate: {datetime: true},
 						ptv_entryurl: {require_from_group: [1, 'input[name="ptv_entrytitle"],input[name="ptv_entryurl"]']},
@@ -406,6 +414,7 @@ BlogIt.fn = function($){
 					submitHandler: function(form) {
 						ajaxSubmit($(form), updateComment, e);  //mode is undefined when normal comment add, since no onclick handler defined
 					},
+					//TODO: Only require when class class="blogit-required""
 					rules: {
 						ptv_commentauthor: {required: true},
 						ptv_email: {required: true, email: true},
