@@ -412,7 +412,11 @@ BlogIt.fn = function($){
 			$('.jBox-content form,'+ BlogIt.pm['skin-classes']['comment-list-wrapper']+ '+form').each(function(){
 				$(this).validate({
 					submitHandler: function(form) {
-						$('[name="ptv_blogit_basepage"][value=""]', form).val(BlogIt.pm['basepage']);
+						//populate ptv_blogit_basepage in comments, as a pointer back to parent page
+						if ( /action=bi_ce/.test(e.target.href) ){  //cr is handled in bi_HandleProcessForm()
+							$m = e.target.href.match(/bi_base=(.*\..*)&/);
+							if ($m)  $('[name="ptv_blogit_basepage"][value=""]', form).val($m[1]);
+						}
 						ajaxSubmit($(form), updateComment, e);  //mode is undefined when normal comment add, since no onclick handler defined
 					},
 					//TODO: Only require when class class="blogit-required""

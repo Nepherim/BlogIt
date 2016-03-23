@@ -198,7 +198,6 @@ SDVA($HTMLFooterFmt, array(
 	'blogit.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/blogit.js"></script>',
 	'blogit-core' => '<script type="text/javascript">
 			BlogIt.pm["pubdirurl"]="'.$FarmPubDirUrl.'/blogit";
-			BlogIt.pm["basepage"]="'.$bi_Pagename.'";
 			BlogIt.pm["categories"]="' .bi_CategoryList() .'";
 			BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE(XL('%d-%m-%Y %H:%M')).'$/;'."\n".
 			'BlogIt.pm["skin-classes"]='. bi_json_encode($bi_SkinClasses) .';'."\n".
@@ -206,6 +205,7 @@ SDVA($HTMLFooterFmt, array(
 			'BlogIt.pm["ajax-message-timer"]='.$bi_AjaxMsgTimer.';'."\n".
 			bi_JXL()."\n".
 		'</script>'));
+
 
 # ----------------------------------------
 # - RSS Config
@@ -468,12 +468,13 @@ global $bi_ResetPmFormField,$_POST,$_REQUEST,$ROSPatterns,$CategoryGroup,
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_entryauthor'];
 		bi_ProcessHooks('blog', 'post-save', $src, $auth);
 
-	#only set defaults if we're not editing the comment
+	#TODO: Seems to be used on comment edit as well, since comment edit passes target of blogit-comments
+	#only set defaults if we're not editing the comment -- reply or add
 	}elseif ($bi_CommentsEnabled=='open' && $_POST['target']=='blogit-comments'){
 		bi_decodeUTF8($_POST);  #ajax posts from jquery are always utf8
 		bi_ProcessHooks('comment', 'pre-save', $src, $auth);
 		//TODO: Set in javascript -- BUT potential could be maliciously ovrriden with nonsense
-		$_POST['ptv_blogit_basepage'] = (empty($_POST['ptv_blogit_basepage']) ?$src :$_POST['ptv_blogit_basepage']);  //required since older versions didn't get this set, and won't have it
+		$_POST['ptv_blogit_basepage'] = (empty($_POST['ptv_blogit_basepage']) ?$src :$_POST['ptv_blogit_basepage']);  //for bi_cr, required since older versions didn't get this set, and won't have it
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_commenttext'] = rtrim($_POST['ptv_commenttext'],"\n\r\x0B")."\n";  #ensures markup is closed correctly (eg, links at end of comment)
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
@@ -579,10 +580,10 @@ global $bi_CommentSideBarLen,$bi_Pagename,$bi_UnstyleFn,$Charset;
 	if($bi_UnstyleFn>'')  $text = $bi_UnstyleFn($bi_Pagename, $text);
 	return trim( preg_replace('/(^.{0,' .(empty($len) ?$bi_CommentSideBarLen :$len) .'}\b|\n).*/' .($Charset=='UTF-8' ?'u' :''),'${1}', $text) );
 }
-function bi_Link($pre, $page, $action, $txt, $post, $cls=''){  #valid actions: ajax, normal, ajax-normal, normal-ajax
+function bi_Link($pre, $page, $action, $txt, $post, $cls='', $base=''){  #valid actions: ajax, normal, ajax-normal, normal-ajax
 global $bi_Ajax,$FarmPubDirUrl;
 	#TODO: Due to pmwiki bug where classes on last link override earlier links on the same line, showEdit only functions where 'bi_mode=ajax'
-	$lnk='%apply=link class="blogit-admin-link $$mode$$'. $cls. '"%[['. $page. '?action='. $action;
+	$lnk='%apply=link class="blogit-admin-link $$mode$$'. $cls. '"%[['. $page. '?action='. $action. ($base>'' ?'&amp;bi_base='. $base: '');
 	$ajax=array( (substr($bi_Ajax[$action],0,4)=='ajax' ?'&amp;bi_mode=ajax' :''), (substr($bi_Ajax[$action], strpos($bi_Ajax[$action],'-')+1)=='ajax' ?'&amp;bi_mode=ajax' :'') );
 	return $pre. str_replace('$$mode$$', ($ajax[0]>'' ?'bi-ajax-mode ' :''), $lnk). $ajax[0] .' | ' .$txt .']]'  #text link
 		.($ajax[1]>'' ?str_replace('$$mode$$', 'bi-ajax-mode ', $lnk). $ajax[1]. ' | '. $FarmPubDirUrl. '/blogit/link.gif]]' :'')  #optional second image link
@@ -602,10 +603,10 @@ global $bi_AuthorGroup,$bi_Pagename,$bi_CommentsEnabled,$bi_LinkToCommentSite,$b
 		case 'newentry': return ( bi_Auth('blog-new '.$bi_Pages['auth']) ?bi_Link($args['pre_text'], $bi_Pages['admin'], 'bi_ne', $txt, $args['post_text'],'bi-link-blog-new') :'');
 		//blog delete function on blog-grid
 		case 'delete': return (bi_Auth('blog-edit '.$args['page']) ?bi_Link($args['pre_text'], $args['page'], 'bi_del', $txt, $args['post_text'],'bi-link-blog-delete') :'');
-		case 'commentedit': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_ce', '$[edit]', $args['post_text'],'bi-link-comment-edit') :'');
+		case 'commentedit': return (bi_Auth('comment-edit '.$txt)
+			?bi_Link($args['pre_text'], $txt, 'bi_ce', '$[edit]', $args['post_text'],'bi-link-comment-edit',bi_BasePage($txt, $args['base'])) :'');
 		case 'commentdelete': return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], $txt, 'bi_del', '$[delete]', $args['post_text'],'bi-link-comment-delete') :'');
-		#$pn can be two space separated urls for comment reply. cr needs to pass actual pagename when not in admin page.
-		case 'commentreply':	return (bi_Auth('comment-edit '.bi_BasePage($txt)) ?bi_Link($args['pre_text'], bi_BasePage($txt), 'bi_cr', '$[reply]', $args['post_text'],'bi-link-comment-reply') :'');
+		case 'commentreply':	return (bi_Auth('comment-edit '.bi_BasePage($txt, $args['base'])) ?bi_Link($args['pre_text'], bi_BasePage($txt, $args['base']), 'bi_cr', '$[reply]', $args['post_text'],'bi-link-comment-reply') :'');
 		case 'commentapprove': return (bi_Auth('comment-approve ' .bi_BasePage($txt))
 			?bi_Link($args['pre_text'], $txt, 'bi_'.($args['status']=='true'?'cua':'ca'), '$['.($args['status']=='true'?'un':'').'approve]', $args['post_text'],
 				'bi-link-comment-'.($args['status']=='true'?'':'un').'approved')
@@ -685,11 +686,11 @@ function bi_strtotime($d, $f='%d-%m-%Y %H:%M', $z=''){  #[assumes valid date] co
 # ----------------------------------------
 # - Markup Expression Functions
 # ----------------------------------------
-#TODO: Fails if group has a hyphen since page name is Test-Group/First-in-test-group-20160310T180328, comment page is Comments.Test-Group-First-in-test-group-20160310T180328
-#      comment page (from comment reply) get translated back to Test/Group-First-in-test-group-20160310T180328 NOT Test-Group/First-in-test-group-20160310T180328
-function bi_BasePage($pn){
-global $bi_Pagename,$bi_Pages,$bi_CommentPattern;
-	return preg_replace($bi_CommentPattern,'${1}.${2}',$pn);
+function bi_BasePage($pn, $base=''){  //$pn should be a comment page
+global $bi_CommentPattern,$SiteGroup;
+	//Use ptv_blogit_basepage if the page has it (comments post 1.9.0), otherwise try work out basepage using pattern.
+	// The pattern match will return the wrong result when Group has a space or hyphen, converting Test-Page.Page-Name into Test.Page-Page-Name.
+	return ( ($base>'' && $base!=$SiteGroup. '.BlogIt-Admin') ?$base :IsEnabled(PageTextVar($pn, 'blogit_basepage'), preg_replace($bi_CommentPattern,'${1}.${2}',$pn)) );
 }
 # 0:fullname 1:param 2:val
 function bi_URL($args){
@@ -764,7 +765,7 @@ bi_debugLog('bi_SendAjax: '.$markup);
 	bi_echo_json_encode(array('out'=>MarkupToHTML($bi_Pagename, $markup), 'result'=>'success', 'msg'=>XL($msg), 'dom'=>$dom));
 }
 function bi_AjaxRedirect($result=''){
-global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action,$bi_Name,$bi_Group,$bi_Pages,$bi_SkinClasses,$bi_FrmAction;
+global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action,$bi_Name,$bi_Group,$bi_Pages,$bi_SkinClasses,$bi_FrmAction,$_POST;
 bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']. '::'. $_REQUEST['target']. '::'. $action);
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 if pmform failed (invalid captcha, etc)
 		//TODO: Should blogit-comments be hardcoded, or refer to skinclasses?
@@ -779,7 +780,8 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']. '::'. $_REQUEST['target'].
 			bi_SendAjax(
 				//TODO: Use blogitSkinMU() based on $bi_FrmAction
 				'(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['comment-admin-list'] ?'#unapproved-comments' :'#comments-pagelist')
-				.' commentid=' .$bi_CommentPage.' entrycomments=readonly":)',
+				//TODO: Pass in basepage?
+				.' commentid=' .$bi_CommentPage.' entrycomments=readonly base='. IsEnabled($_POST['ptv_blogit_basepage']). '":)',
 				($bi_FrmAction=='bi_ce'
 					#TODO: XL
 					?'Successfully updated comment.'
