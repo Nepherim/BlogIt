@@ -19,7 +19,7 @@ SDV($CategoryGroup, 'Tags');  #[1]
 SDV($bi_AuthorGroup, 'Profiles');
 SDV($bi_CommentGroup, 'Comments');
 SDV($bi_CommentsEnabled, 'open');
-SDV($bi_CommentsAutoClose, '');  ////disable comments after a period of time, to reduce spam (overrides bi_CommentsEnabled. '1 month ago', '-1 week', etc.
+SDV($bi_CommentsAutoClose, '');  //disable comments after a period of time, to reduce spam (overrides bi_CommentsEnabled. '1 month ago', '-1 week', etc.
 SDV($bi_DefaultCommentStatus, (IsEnabled($EnablePostCaptchaRequired) ?'true' :'false') );  #auto-approve comments only if captcha is enabled
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_EntriesPerPage, 10);
@@ -53,7 +53,6 @@ SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tel
 	'comment-list-wrapper' => '#blogit-comment-list',  #pointer to a wrapper around the comment-list; used for the first comment, where 'comment-list' may not exist. Should not include headers or form.
 	//TODO: #wikiedit will only find fist #wikiedit, not second potential ajax form
 	'blog-form' => '#wikiedit.blogit-blog-form',  #pointer to the wrapper containing the blog-entry FORM object
-	//TODO: Should be #wikitext #comments
 	//TODO: No longer used for jq selector to form -- possibly remove?
 	//TODO: On ajax comment edit, #wikitext not present
 	//TODO: Should be #commentblock for normal comment add
@@ -61,7 +60,8 @@ SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tel
 	'comment-form' => '#wikitext .blogit-comment-form',  #pointer to the wrapper containing the comment-entry FORM object (both ajax and normal entry)
 	'comment-submit' => '#wikitext .blogit-submit-row',  #pointer to the wrapper containing the captcha and comment Submit
 	'comment-summary' => '#wikitext .blogit-comment-summary',  #wrapper containing the comments for a single page on the unapproved comment admin page
-	'comment-summary-title' => '#wikitext .blogit-comment-summary h3'  #pointer to each page title on the unapproved comment admin page
+	'comment-summary-title' => '#wikitext .blogit-comment-summary h3',  #pointer to each page title on the unapproved comment admin page
+	'comment-block-title' => '.blogit-commentblock h2'  #pointer to each page title on the unapproved comment admin page
 ));
 SDVA($bi_SkinSettings, array(
 	'ajax_textarea_rows' => '18'  #make sure whole ajax dialog fits on low res monitors
@@ -143,7 +143,7 @@ $bi_Ajax['bi_cr']=$bi_Ajax['bi_bip']='ajax';  #comment reply is always ajax
 SDV($PmFormRedirectFunction,'bi_Redirect');
 $bi_Forms = array('blogit-entry','blogit-comments');  #needs to be before cookies
 //disable comments after a period of time, to reduce spam
-if ( $bi_CommentsAutoClose != '' && PageTextVar($pagename,'$:entrydate') < strtotime($bi_CommentsAutoClose) )
+if ( $bi_CommentsAutoClose>'' && PageTextVar($pagename,'$:entrydate') < strtotime($bi_CommentsAutoClose) )
 	$bi_CommentsEnabled = 'read-only';
 //when $action='pmform' need to know what the user is doing, which is in bi_frm_action
 $bi_FrmAction=bi_Clean('action','bi_'. @$_REQUEST['bi_frm_action']);
@@ -179,7 +179,8 @@ list($bi_Group, $bi_Name) = explode('.', $bi_Pagename);
 if ($bi_Pagename == $bi_Pages['blog_list'])	$FmtPV['$bi_BlogId']='"' .bi_Clean('word', $_GET['blogid']) .'"';
 # Cannot be done as part of handler due to scoping issues when include done in function
 if ($action=='blogitupgrade' && bi_Auth('blogit-admin'))  include_once($bi_Paths['convert']);
-if ( bi_Auth('*') )  $EnablePostCaptchaRequired = 0;  #disable captcha for any BlogIt user
+$bi_AuthUser=bi_Auth('*');
+if ( $bi_AuthUser )  $EnablePostCaptchaRequired = 0;  #disable captcha for any BlogIt user
 
 # ----------------------------------------
 # - Javascript - [1]
@@ -190,22 +191,19 @@ SDVA($HTMLHeaderFmt, array(
 SDVA($HTMLFooterFmt, array(
 	//TODO: Use replacement string rather than repeating script tags
 	'jquery.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jquery.min.js"></script>',
-	//TODO: Remove pre-production
-	'jquery-migrate' => '<script src="http://code.jquery.com/jquery-migrate-1.4.0.js"></script>',
-	'jq-validate.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jquery.validate.min.js"></script>',
+	'validate.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jquery.validate.min.js"></script>',
 	'jbox.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jbox.min.js"></script>',
 	'awesomplete.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/awesomplete.min.js"></script>',
 	'blogit.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/blogit.js"></script>',
-	'blogit-core' => '<script type="text/javascript">
-			BlogIt.pm["pubdirurl"]="'.$FarmPubDirUrl.'/blogit";
-			BlogIt.pm["categories"]="' .bi_CategoryList() .'";
-			BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE(XL('%d-%m-%Y %H:%M')).'$/;'."\n".
-			'BlogIt.pm["skin-classes"]='. bi_json_encode($bi_SkinClasses) .';'."\n".
-			'BlogIt.pm["charset"]="'.$Charset.'";'."\n".
-			'BlogIt.pm["ajax-message-timer"]='.$bi_AjaxMsgTimer.';'."\n".
-			bi_JXL()."\n".
-		'</script>'));
-
+	'blogit-core' => '<script type="text/javascript">'.
+		'BlogIt.pm["pubdirurl"]="'.$FarmPubDirUrl.'/blogit";'.
+		'BlogIt.pm["user"]='. (int)$bi_AuthUser. ';'.
+		'BlogIt.pm["categories"]="' .bi_CategoryList() .'";'.
+		'BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE(XL('%d-%m-%Y %H:%M')).'$/;'.
+		'BlogIt.pm["skin-classes"]='. bi_json_encode($bi_SkinClasses). ';'.
+		'BlogIt.pm["charset"]="'.$Charset. '";'.
+		'BlogIt.pm["ajax-message-timer"]='.$bi_AjaxMsgTimer. ';'.
+		bi_JXL(). '</script>'));
 
 # ----------------------------------------
 # - RSS Config

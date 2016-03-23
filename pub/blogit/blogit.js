@@ -19,30 +19,31 @@ jQuery(document).ready(function($){
 	$(document).on('click', '.bi-link-comment-delete[href*="bi_mode=ajax"],.bi-link-blog-delete[href*="bi_mode=ajax"],.bi-Comment-Delete', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
 	$(document).on("click", '.bi-link-comment-block,.bi-Comment-Block', function(e){ BlogIt.fn.showBlockIP(e); });  //block comment IP addresses
 	$(document).on("click", '.bi-Comment-AllNone', function(e){ BlogIt.fn.toggleCheckboxes(e); });
-	$(document).on("click", BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment', function(e){
-		if ( !$(e.target).is('a,input') )  BlogIt.fn.commentAdminCheckbox(this, 'flip');
-	});
-	$(BlogIt.pm['skin-classes']['comment-summary-title']).jBox('Tooltip', {
-		trigger: 'mouseenter',
-		//TODO: Better than hardcoding
-		content:'<ul class="blogit-comment-admin-menu">'+
-			'<li class="bi-Comment-AllNone">All</li>'+
-			'<li class="bi-Comment-Approve">Approve</li><li class="bi-Comment-Unapprove">Unapprove</li>'+
-			'<li class="bi-Comment-Block">Block</li>'+
-			'<li class="bi-Comment-Delete">Delete</li>'+
-			'<li class="bi-Comment-DeleteFromIP">Delete from IP</li>',  //delete-from-ip possibly on dialog, not from menu
-		pointer: 'left',
-		position: {x: 'left', y: 'bottom'},
-		offset:{x:50,y:-5},
-		closeOnMouseleave: true,
-		onOpen: function(){ this.source.addClass('bi-menu-hover'); },
-		onClose: function(){ this.source.removeClass('bi-menu-hover'); }
-	});
-	$(document).on({  //hover doesn't cope with dynamically added elements
-		mouseenter: function(){ BlogIt.fn.commentAdminCheckbox(this, 'show', false)},
-		mouseleave: function(){BlogIt.fn.commentAdminCheckbox(this, 'hide', true)}},
-		BlogIt.pm['skin-classes']['comment-summary']+ ' li.comment');
-	$(BlogIt.pm['skin-classes']['comment-summary-title']).append($('<span class="blogit-cam-marker" />').html('&#9660'));  //add down arrow character to serve as menu marker
+	if (BlogIt.pm["user"]){
+		$(document).on("click", 'li.comment', function(e){ if ( !$(e.target).is('a,input') )  BlogIt.fn.commentAdminCheckbox(this, 'flip'); });
+		$(document).on({  //hover doesn't cope with dynamically added elements
+			mouseenter: function(){ BlogIt.fn.commentAdminCheckbox(this, 'show', false)},
+			mouseleave: function(){BlogIt.fn.commentAdminCheckbox(this, 'hide', true)}},
+			'li.comment');
+	  //add down arrow character to serve as menu marker
+		$(BlogIt.pm['skin-classes']['comment-summary-title']+','+BlogIt.pm['skin-classes']['comment-block-title']).append($('<span class="blogit-cam-marker" />').html('&#9660'));
+		$(BlogIt.pm['skin-classes']['comment-summary-title']+','+BlogIt.pm['skin-classes']['comment-block-title']).jBox('Tooltip', {
+			trigger: 'mouseenter',
+			//TODO: Better than hardcoding
+			content:'<ul class="blogit-comment-admin-menu">'+
+				'<li class="bi-Comment-AllNone">All</li>'+
+				'<li class="bi-Comment-Approve">Approve</li><li class="bi-Comment-Unapprove">Unapprove</li>'+
+				'<li class="bi-Comment-Block">Block</li>'+
+				'<li class="bi-Comment-Delete">Delete</li>'+
+				'<li class="bi-Comment-DeleteFromIP">Delete from IP</li>',  //delete-from-ip possibly on dialog, not from menu
+			pointer: 'left',
+			position: {x: 'left', y: 'bottom'},
+			offset:{x:50,y:-5},
+			closeOnMouseleave: true,
+			onOpen: function(){ this.source.addClass('bi-menu-hover'); },
+			onClose: function(){ this.source.removeClass('bi-menu-hover'); }
+		});
+	}
 	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').on('change',   //if any field (not a submit button) changes...
 		function(){	$(window).on('beforeunload', function(){ return BlogIt.fn.xl('You have unsaved changes.'); }); });
 });
@@ -77,6 +78,10 @@ BlogIt.fn = function($){
 	function getIDWrapper(target){
 		var found=$(target).closest('[id^="bi_ID"]');
 		return (found.length ?found :null);
+	}
+	function getCommentBlock(){
+		var src = $('.bi-menu-hover').next('ol.blogit-comment-admin-list');
+		return ( src.length>0 ?src :$('#wikitext ol.blogit-comment-list') );  //get comment block for title admin is on
 	}
 	function closestTemplateObject($target){
 		//Find the class which represents the pagelist template we should use, based on where user clicked
@@ -271,13 +276,14 @@ BlogIt.fn = function($){
 
 //public functions
 	return {
-		toggleCheckboxes: function(src){  //src is the clicked menu item
-			//TODO: function including next()
-			$('.bi-menu-hover').next('.blogit-comment-admin-list').children('li').each(function(){
-				($(src).html()=='All' ?BlogIt.fn.commentAdminCheckbox(this, 'show', true) :BlogIt.fn.commentAdminCheckbox(this, 'hide', false) );
+		toggleCheckboxes: function(e){  //e is the clicked menu item event
+			var $src=$(e.target);
+			var $blk=getCommentBlock();
+			$blk.children('li').each(function(){
+				($src.html()=='All' ?BlogIt.fn.commentAdminCheckbox(this, 'show', true) :BlogIt.fn.commentAdminCheckbox(this, 'hide', false) );
 			});
 			//TODO: XL()
-			$(src).html( $(src).html()=='All' ?'None': 'All' );
+			$src.html( $src.html()=='All' ?'None': 'All' );
 		},
 		commentAdminCheckbox: function(src, action, opt){  //src [flip|show|hide]
 			if (action == 'flip'){
@@ -295,7 +301,7 @@ BlogIt.fn = function($){
 				var rc = 1, url = e.target.href;
 				e=$(e.target);
 			}else{  //clicked admin menu, create url based on checkboxes
-				var src=$('.bi-menu-hover').next('ol.blogit-comment-admin-list');  //get comment block for title admin is on
+				var src = getCommentBlock();  //get comment block for title admin is on
 				var rc = $('input[name="bi_CommentID[]"]', src).length;
 				if (rc>0){
 					var actionLink='.bi-link-comment-'+ action+ (action=='approve'||action=='unapprove' ?'d' :'')+ ':first';
