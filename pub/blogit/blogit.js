@@ -34,8 +34,7 @@ jQuery(document).ready(function($){
 				'<li class="bi-Comment-AllNone">All</li>'+
 				'<li class="bi-Comment-Approve">Approve</li><li class="bi-Comment-Unapprove">Unapprove</li>'+
 				'<li class="bi-Comment-Block">Block</li>'+
-				'<li class="bi-Comment-Delete">Delete</li>'+
-				'<li class="bi-Comment-DeleteFromIP">Delete from IP</li>',  //delete-from-ip possibly on dialog, not from menu
+				'<li class="bi-Comment-Delete">Delete</li>',
 			pointer: 'left',
 			position: {x: 'left', y: 'bottom'},
 			offset:{x:50,y:-5},
@@ -160,7 +159,7 @@ BlogIt.fn = function($){
 	};
 	$.validator.addMethod('datetime', function(v, e, fmt){
 		return this.optional(e) ||	RegExp(BlogIt.fmt['entry-date']).test(v);
-	},	'Must be datetime.');  //TODO: Add format string XL
+	},	BlogIt.xl['Must be a datetime.']);  //TODO: Can't BlogIt.fn.xl since not yet declared at this point.
 	//Direct copy from jquery.validate/additional-methods.min.js, so we don't have to include entire file for single function
 	$.validator.addMethod( "require_from_group", function( value, element, options ) {
 		var $fields = $( options[ 1 ], element.form ),
@@ -182,7 +181,7 @@ BlogIt.fn = function($){
 			$fields.data( "being_validated", false );
 		}
 		return isValid;
-	}, $.validator.format( "Please fill at least {0} of these fields." ) );  //TODO: XL()
+	}, $.validator.format( "Please fill at least {0} of these fields." ) );  //Can't put this format in XL
 
 	//defines the ajax actions when clicking Submit from dialogs, and Submit from comment entry
 	function ajaxSubmit($frm, submitFn, e){
@@ -192,33 +191,17 @@ BlogIt.fn = function($){
 		//trigger ajax mode; prevent duplicates which could occur if multiple comments submitted
 		if (!$('[name="bi_mode"]',$frm).length)  $frm.prepend('<input type="hidden" name="bi_mode" value="ajax">');
 		if (e)  target = ( $(e.target).is('img') ?e.currentTarget :e.target);  //if user clicked img, bubble out to currentTarget to find href link
-		console.log('action: '+ $('[name="action"]',$frm).val());
-//		console.log( 'href':+ ( !e || !!empty(target.href.match(/action=bi_(cr|ce|be|ne)/) )) );
-		console.log('found: '+$('[name="bi_frm_action"]',$frm).length);
-		if ($('[name="action"]',$frm).val()=='pmform' && (!e || target.href.match(/action=bi_(cr|ce|be|ne)/)) && !$('[name="bi_frm_action"]',$frm).length){
-			console.log('added frm action');
+		if ($('[name="action"]',$frm).val()=='pmform' && (!e || target.href.match(/action=bi_(cr|ce|be|ne)/)) && !$('[name="bi_frm_action"]',$frm).length)
 			$frm.prepend('<input type="hidden" name="bi_frm_action" value="'+ (!e ?'ca' :target.href.match(/action=bi_(cr|ce|be|ne)/)[1])+ '">')
-		}
 		if (e){  //e is null for user clicking comment add Post button
-			console.log('clicked: '+($(e.target).is('img') ?'img' :'link'));
-			console.log(e.currentTarget);
-//			target = ( $(e.target).is('img') ?e.currentTarget :e.target);  //if user clicked img, bubble out to currentTarget to find href link
-			console.log('href: '+target.href);
 			var $closest=closestTemplateObject($(target));
 			//Clicking reply from admin list templateClass is ".blogit-comment-list blogit-comment-admin-list" since container has two classes, use only the first
 			templateClass = ($closest ?'.'+ $closest.attr("class").split(' ')[0] :'');  //no closest when adding new entry from ajax link
 			//tell pmwiki which template to use, based on class
 			if (!$('[name="bi_context"]',$frm).length)  $frm.prepend('<input type="hidden" name="bi_context" value="'+ templateClass+ '">')
-			console.log('action:'+ $('[name="action"]',$frm).val());
 			//Find the blog/comment entry that the action relates to, which is either something with an ID of bi_ID, or an element with a template class
-			console.log('target wrapper: ');
-			console.log(getIDWrapper(target));
 			$context = $( getIDWrapper(target) || $closest);
 		}
-		console.log('templateClass: '+templateClass);
-		console.log ('$context:');
-		console.log ($context);
-		console.log('url: '+$frm.attr('action'));
 		BlogIt.fn.ajax({
 			method: 'POST',
 			url:$frm.attr('action'),
@@ -280,10 +263,9 @@ BlogIt.fn = function($){
 			var $src=$(e.target);
 			var $blk=getCommentBlock();
 			$blk.children('li').each(function(){
-				($src.html()=='All' ?BlogIt.fn.commentAdminCheckbox(this, 'show', true) :BlogIt.fn.commentAdminCheckbox(this, 'hide', false) );
+				($src.html()==BlogIt.fn.xl('All') ?BlogIt.fn.commentAdminCheckbox(this, 'show', true) :BlogIt.fn.commentAdminCheckbox(this, 'hide', false) );
 			});
-			//TODO: XL()
-			$src.html( $src.html()=='All' ?'None': 'All' );
+			$src.html( $src.html()==BlogIt.fn.xl('All') ?BlogIt.fn.xl('None'): BlogIt.fn.xl('All') );
 		},
 		commentAdminCheckbox: function(src, action, opt){  //src [flip|show|hide]
 			if (action == 'flip'){
@@ -332,8 +314,7 @@ BlogIt.fn = function($){
 		showDelete: function(e){  //e is either the delete link click event, or delete admin menu
 			url=BlogIt.fn.createURL(e, 'delete');
 			if (url.rc>0){
-				//TODO: XL
-				dialogShow(BlogIt.fn.xl('Are you sure you want to delete '+ url.rc+ ' row'+ (url.rc>1 ?'s' :'')+ '?'), 'Yes', 'No', 300, {
+				dialogShow(BlogIt.fn.xl('Are you sure you want to delete ')+ url.rc+ BlogIt.fn.xl(' row'+ (url.rc>1 ?'s' :'')+ '?'), 'Yes', 'No', 300, {
 					url: url.url,
 					success:function(data){ objectRemove(url.e, data); }
 				});
@@ -346,11 +327,8 @@ BlogIt.fn = function($){
 					url: url.url,
 					success: function(data){ if (data.ip)  //success returns IP
 						dialogShow(
-							//TODO: Remove BlogIt.fn.xl('Commenter IP') from XL list
 							BlogIt.fn.xl('Enter the IP to block:')+ '<textarea id="blogit_ip" type="text">'+ data.ip+ '</textarea>', 'Submit', 'Cancel', 200, {
-								url: function(){
-									console.log('BLOCK: '+ url.url+ encodeURI('&bi_ip='+ $("#blogit_ip").val().replace(/\n/g,',') ));
-									return url.url+ encodeURI( '&bi_ip='+ $("#blogit_ip").val().replace(/\n/g,',') ); },
+								url: function(){ return url.url+ encodeURI( '&bi_ip='+ $("#blogit_ip").val().replace(/\n/g,',') ); },
 								success: function(data){ BlogIt.fn.showMsg(data); }
 							});
 					}
@@ -375,9 +353,8 @@ BlogIt.fn = function($){
 							},
 							closeButton: 'title',
 							confirm: function (ev) { $('.jBox-content form').submit(); },  //will call ajaxSubmit(), set by call to addValidation below
-							//TODO: XL()
-							confirmButton: 'Submit',
-							cancelButton: 'Cancel',
+							confirmButton: BlogIt.fn.xl('Submit'),
+							cancelButton: BlogIt.fn.xl('Cancel'),
 							onCloseComplete: function () { this.destroy(); },
 							width: (blog?750:430), minWidth: (blog?750:430), maxWidth: 10000  //needed to override jbox default
 						}).open();
@@ -388,20 +365,13 @@ BlogIt.fn = function($){
 			});
 		},
 		addValidation: function(e){
-			console.log ('form: '+$(BlogIt.pm['skin-classes']['blog-form']+ ' form').length);
-			console.log($(BlogIt.pm['skin-classes']['blog-form']+ ' form'));
 			$(BlogIt.pm['skin-classes']['blog-form']+ ' form').each(function(){
-				console.log('setting up edit validations');
 				$(this).validate({
 					submitHandler: function(form) {  //Only if the form validates
-						console.log('submitHandler');
-						console.log('dialog: '+$(form).parents('.jBox-content').length);
 						if ($(form).parents('.jBox-content').length){
-							console.log('calling ajax form');
 							ajaxSubmit($(form), updateBlog, e);
 						}else{
 							$(window).off('beforeunload');
-							console.log('calling normal form');
 							form.submit();
 						}
 					},
@@ -469,6 +439,7 @@ BlogIt.fn = function($){
 			);
 		},
 //Utilities
+		//DIV tags to peprform basic sanitize -- DIV tags are not returned, just the XL string.
 		xl: function(t){ return ( (BlogIt.xl[t] ?$('<div>'+BlogIt.xl[t]+'</div>').html() :t) ); },
 		ajax: function(ajax){  //wrapper to enable url to be a function
 			ajax['url'] = ( typeof ajax.url == 'function' ?ajax.url() :ajax.url );  //either eval the fn, or use .url

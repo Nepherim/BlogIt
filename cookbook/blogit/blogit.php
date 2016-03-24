@@ -387,7 +387,7 @@ function bi_HandleCommentUnapprove($src, $auth='comment-approve'){  #action=bi_c
 }
 function bi_HandleCommentApprove($src, $auth='comment-approve', $approve=true){  #action=bi_ca
 global $Now,$ChangeSummary;
-	$m = XL(($approve?'a':'una').'pprove comment');
+	$m = ($approve?'a':'una').'pprove comment';
 	$result = array('msg'=>XL('Unable to '.$m.'.'), 'result'=>'error');
 	if (bi_Auth($auth)){
 		$pages=bi_GetPages($src);
@@ -537,8 +537,7 @@ global $bi_Pages;
 					'msg'=>(!empty($blocked) ?XL('Blocked IP address: '). implode(',', $blocked) :'').
 						(!empty($blocked) && !empty($already) ?'<br />':''). (!empty($already) ?XL('IP address is already being blocked: '). implode(',', $already) :''),
 					'result'=>'success');  #removed , 'ip'=>$_GET['bi_ip'], not used
-			#TODO: Add "cannot edit" to XL()
-			}else  $result = array('result'=>'error', 'msg'=>'Cannot edit '.$bi_Pages['blocklist']);
+			}else  $result = array('result'=>'error', 'msg'=>XL('Cannot edit ').$bi_Pages['blocklist']);
 		}else{  #No IP passed in, so determine who created page
 			$ip=array();
 			$pages=bi_GetPages($src);
@@ -778,11 +777,9 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']. '::'. $_REQUEST['target'].
 			bi_SendAjax(
 				//TODO: Use blogitSkinMU() based on $bi_FrmAction
 				'(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['comment-admin-list'] ?'#unapproved-comments' :'#comments-pagelist')
-				//TODO: Pass in basepage?
 				.' commentid=' .$bi_CommentPage.' entrycomments=readonly base='. IsEnabled($_POST['ptv_blogit_basepage']). '":)',
 				($bi_FrmAction=='bi_ce'
-					#TODO: XL
-					?'Successfully updated comment.'
+					?XL('Successfully updated comment.')
 					:XL('Successfully added new comment.')
 						.(PageTextVar($bi_CommentPage,'commentapproved')=='false' ?'<br />' .XL('All comments are reviewed before being displayed.') :'')),
 				MarkupToHTML($bi_Pagename, '{$Captcha} (:input captcha tabindex=1:)')
@@ -886,16 +883,11 @@ global $bi_Pagename,$bi_DisplayFuture;
 	return (PageTextVar($bi_Pagename,'entrydate') > $now || $bi_DisplayFuture=='true');
 }
 function bi_JXL(){  #create javascript array holding all XL translations of text used client-side
-	//TODO: Ensure this list is same as XLPage-blogit, or read file direct rather than hard-coding
-	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:', 'Commenter IP: ',
+	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:',
 			'Enter the IP to block:', 'Submit', 'Post', 'Cancel', 'Either enter a Blog Title or a Pagename.', 'You have unsaved changes.','Website:',
-			'Parsing JSON request failed.','Request timeout.','Error: ','No data returned.');
+			'Parsing JSON request failed.','Request timeout.','Error: ','No data returned.', 'Must be a datetime.');
 	foreach ($a as $k)  $t .= ($k!=XL($k) ?'BlogIt.xl["' .$k .'"]="' .XL($k) ."\";\n" :'');
-
-	$a=array('require'=>'This field is required.', 'date'=>'This field must be formatted as a date.',
-		'email'=>'This field must be formatted as an email.', 'url'=>'This field must be formatted as a URL.');
-	foreach ($a as $k=>$v)  $t1 .= ($v!=XL($v) ?$k .':"' .XL($v) ."\",\n" :'');
-	return ($t1>'' ?$t .'jQuery.extend(jQuery.validity.messages, {' .substr($t1,0,-2).'});' :$t);
+	return ($t);
 }
 # Functions processed for different entry $types (blog, comment), at different $stages (pre-entry, pre-save, post-save)
 function bi_ProcessHooks($type, $stage, $src, $auth){
@@ -932,7 +924,6 @@ function bi_Clean($m, $v){
 function bi_SDVSA(&$var, $val){ $var = (is_array($var) && !empty($var) ?$var :$val); }
 function bi_setFmtPV($a){ foreach ($a as $k)  $GLOBALS['FmtPV']['$'.$k]='$GLOBALS["'.$k.'"]'; }
 # Sets $FmtPV variables named $key_VALUE. $a is an array with the key as the variable name, and values as indecies.
-//TODO: INJECTION?
 function bi_setFmtPVA ($a){
 	foreach ($a as $var=>$vals)
 		foreach ($vals as $k=>$v)
