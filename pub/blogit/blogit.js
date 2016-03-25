@@ -1,4 +1,4 @@
-// blogit.js 2016-03-24 1.9.0
+// blogit.js 2016-03-27 1.9.0
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	//show error messages set by pmwiki in .wikimessage
@@ -6,7 +6,6 @@ jQuery(document).ready(function($){
 	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['blog-form']+' .wikimessage').html(), result:'error'});
 	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['comment-form']+' .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
 
-	$('#blogit-cancel').addClass('cancel');  //for blog entry add class to prevent validations preventing cancel action
 	BlogIt.fn.addValidation();
 	BlogIt.fn.addAutocomplete();
 
@@ -19,30 +18,29 @@ jQuery(document).ready(function($){
 	$(document).on('click', '.bi-link-comment-delete[href*="bi_mode=ajax"],.bi-link-blog-delete[href*="bi_mode=ajax"],.bi-Comment-Delete', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
 	$(document).on("click", '.bi-link-comment-block,.bi-Comment-Block', function(e){ BlogIt.fn.showBlockIP(e); });  //block comment IP addresses
 	$(document).on("click", '.bi-Comment-AllNone', function(e){ BlogIt.fn.toggleCheckboxes(e); });
-	if (BlogIt.pm["user"]){
-		$(document).on("click", 'li.comment', function(e){ if ( !$(e.target).is('a,input') )  BlogIt.fn.commentAdminCheckbox(this, 'flip'); });
-		$(document).on({  //hover doesn't cope with dynamically added elements
-			mouseenter: function(){ BlogIt.fn.commentAdminCheckbox(this, 'show', false)},
-			mouseleave: function(){BlogIt.fn.commentAdminCheckbox(this, 'hide', true)}},
-			'li.comment');
-	  //add down arrow character to serve as menu marker
-		$(BlogIt.pm['skin-classes']['comment-summary-title']+','+BlogIt.pm['skin-classes']['comment-block-title']).append($('<span class="blogit-cam-marker" />').html('&#9660'));
-		$(BlogIt.pm['skin-classes']['comment-summary-title']+','+BlogIt.pm['skin-classes']['comment-block-title']).jBox('Tooltip', {
-			trigger: 'mouseenter',
-			//TODO: Better than hardcoding
-			content:'<ul class="blogit-comment-admin-menu">'+
-				'<li class="bi-Comment-AllNone">All</li>'+
-				'<li class="bi-Comment-Approve">Approve</li><li class="bi-Comment-Unapprove">Unapprove</li>'+
-				'<li class="bi-Comment-Block">Block</li>'+
-				'<li class="bi-Comment-Delete">Delete</li>',
-			pointer: 'left',
-			position: {x: 'left', y: 'bottom'},
-			offset:{x:50,y:-5},
-			closeOnMouseleave: true,
-			onOpen: function(){ this.source.addClass('bi-menu-hover'); },
-			onClose: function(){ this.source.removeClass('bi-menu-hover'); }
-		});
-	}
+	$(document).on("click", 'li.comment.blogit-admin', function(e){ if ( !$(e.target).is('a,input') )  BlogIt.fn.commentAdminCheckbox(this, 'flip'); });
+	$(document).on({  //hover doesn't cope with dynamically added elements
+		mouseenter: function(){ BlogIt.fn.commentAdminCheckbox(this, 'show', false)},
+		mouseleave: function(){BlogIt.fn.commentAdminCheckbox(this, 'hide', true)}},
+		'li.comment.blogit-admin');
+	var $bi_menu = $(BlogIt.pm['skin-classes']['comment-summary-title']+','+BlogIt.pm['skin-classes']['comment-block-title']+'.blogit-admin');
+  //add down arrow character to serve as menu marker, both on admin-page, page titles and on single page Comment header -- only for admin user
+	$bi_menu.append($('<span class="blogit-cam-marker" />').html('&#9660'));
+	$bi_menu.jBox('Tooltip', {
+		trigger: 'mouseenter',
+		//TODO: Better than hardcoding
+		content:'<ul class="blogit-comment-admin-menu">'+
+			'<li class="bi-Comment-AllNone">All</li>'+
+			'<li class="bi-Comment-Approve">Approve</li><li class="bi-Comment-Unapprove">Unapprove</li>'+
+			'<li class="bi-Comment-Block">Block</li>'+
+			'<li class="bi-Comment-Delete">Delete</li>',
+		pointer: 'left',
+		position: {x: 'left', y: 'bottom'},
+		offset:{x:50,y:-5},
+		closeOnMouseleave: true,
+		onOpen: function(){ this.source.addClass('bi-menu-hover'); },
+		onClose: function(){ this.source.removeClass('bi-menu-hover'); }
+	});
 	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').on('change',   //if any field (not a submit button) changes...
 		function(){	$(window).on('beforeunload', function(){ return BlogIt.fn.xl('You have unsaved changes.'); }); });
 });

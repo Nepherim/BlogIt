@@ -197,7 +197,6 @@ SDVA($HTMLFooterFmt, array(
 	'blogit.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/blogit.js"></script>',
 	'blogit-core' => '<script type="text/javascript">'.
 		'BlogIt.pm["pubdirurl"]="'.$FarmPubDirUrl.'/blogit";'.
-		'BlogIt.pm["user"]='. (int)$bi_AuthUser. ';'.
 		'BlogIt.pm["categories"]="' .bi_CategoryList() .'";'.
 		'BlogIt.fmt["entry-date"]=/^'.bi_DateFmtRE(XL('%d-%m-%Y %H:%M')).'$/;'.
 		'BlogIt.pm["skin-classes"]='. bi_json_encode($bi_SkinClasses). ';'.
