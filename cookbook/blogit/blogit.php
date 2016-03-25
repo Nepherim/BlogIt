@@ -421,7 +421,7 @@ global $_GET,$GroupHeaderFmt;
 function bi_HandleProcessForm ($src, $auth='read'){  #performs submit action for comments and blogs
 global $bi_ResetPmFormField,$_POST,$_REQUEST,$ROSPatterns,$CategoryGroup,
 	$bi_DefaultGroup,$bi_CommentsEnabled,$Now,$bi_OriginalFn,$GroupHeaderFmt,$bi_Forms,$bi_EnablePostDirectives,$PmFormPostPatterns,
-	$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired,$bi_Hooks;
+	$AutoCreate,$bi_DefaultCommentStatus,$bi_FixPageTitlePatterns,$bi_CommentPattern,$Author,$EnablePostAuthorRequired,$bi_Hooks,$bi_MakePageNamePatterns;
 
 	$bi_Mode = bi_Clean('mode',$_POST['bi_mode']);
 	bi_debugLog('HandleProcessForm: '.$bi_Mode);
@@ -461,7 +461,7 @@ global $bi_ResetPmFormField,$_POST,$_REQUEST,$ROSPatterns,$CategoryGroup,
 		$_POST['ptv_entrytitle'] = (empty($title) ?$pg :$_POST['ptv_entrytitle']);  #use either the url or the original title (not the clean title)
 		$_POST['ptv_entryurl'] = (empty($title)&&empty($pg) ?$_POST['ptv_entryurl']
 			:MakePageName($src, ( empty($gr) ?$bi_DefaultGroup :$gr ) .'.' .(empty($pg) ?$title :$pg) ));
-		$_POST['ptv_entrytags'] = implode(', ', array_unique(explode(', ',$_POST['ptv_entrytags'])));  #remove duplicates
+		$_POST['ptv_entrytags'] = implode(', ', PPRA($bi_MakePageNamePatterns, array_unique(explode(', ',$_POST['ptv_entrytags']))));  #remove duplicates
 		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']);
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_entryauthor'];
 		bi_ProcessHooks('blog', 'post-save', $src, $auth);
@@ -837,19 +837,16 @@ global $PageTextVarPatterns;
 # Combines categories in body [[!...]] with separated tag list in tag-field.
 # Stores combined list in tag-field in PmWiki format [[!...]][[!...]].
 function bi_SaveTags($body, $user_tags, $mode='save') {
-global $CategoryGroup,$bi_TagSeparator;
+global $CategoryGroup,$bi_TagSeparator,$bi_MakePageNamePatterns;
 	# Read tags from body, strip [[!...]]
 	if ($body)  $bodyTags = (preg_match_all('/\[\[\!(.*?)\]\]/', $body, $match) ?$match[1] :array());  #array of tags contained in [[!...]] markup.
 
 	# Make sure tag-field entries are in standard separated format, and place in array
 	if ($user_tags)  $fieldTags = explode($bi_TagSeparator, preg_replace('/'.trim($bi_TagSeparator).'\s*/', $bi_TagSeparator, trim($user_tags)));
-	# Concatenate the tag-field tags, with those in the body,
-	$allTags = array_unique(array_merge((array)$fieldTags, (array)$bodyTags));
-	if (empty($allTags))  return '';
-	sort($allTags);
-
-	# generate a new separated string.
-	if ($mode=='display')  $allTags = preg_replace('/\s+/', '-', $allTags);
+	# Concatenate the tag-field tags, with those in the body, PPRA removes all non-pagename chars
+	$allTags = PPRA($bi_MakePageNamePatterns, array_unique(array_merge((array)$fieldTags, (array)$bodyTags)));
+	if (!empty($allTags))
+		sort($allTags);
 	return ($allTags ?'[[!'.implode(']]'.$bi_TagSeparator.'[[!', $allTags).']]' :'');
 }
 function bi_GetPmMarkup($body, $tags, $title){  #wrapper for bi_SaveTags, also used in blogit_upgrade.php
