@@ -385,7 +385,7 @@ global $Now,$ChangeSummary;
 				$new['text'] = preg_replace(
 					'/\(:commentapproved:'.($approve?'false':'true').':\)/', '(:commentapproved:'.($approve?'true':'false').':)',
 					$new['text']);
-				#PostPage($p,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
+				PostPage($p,$old,$new);  #Don't need UpdatePage, as we don't require edit functions to run
 			}
 		}
 		$result = array('msg'=>XL(ucfirst($m).' successful.'), 'result'=>'success');
@@ -487,7 +487,7 @@ global $WikiDir,$LastModFile;
 		$pages=bi_GetPages($src);
 		foreach ($pages as $p)
 			$WikiDir->delete( $p );
-			bi_debugLog( 'DELETED: '. $p, true);
+			bi_debugLog( 'Deleted: '. $p);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
 		$result = array('msg'=>XL('Delete successful.'), 'result'=>'success');
 	}
