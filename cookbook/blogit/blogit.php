@@ -849,18 +849,8 @@ global $CategoryGroup,$bi_TagSeparator;
 	sort($allTags);
 
 	# generate a new separated string.
-	if ($mode=='display')  return ($allTags ?'[['.$CategoryGroup.'.'.implode('|+]]'.$bi_TagSeparator.'[['.$CategoryGroup.'.', $allTags).'|+]]' :'');
-
-	else  return ($allTags ?'[[!'.implode(']]'.$bi_TagSeparator.'[[!', $allTags).']]' :'');
-/* TODO:
-	# generate a new separated string.
-	if ($mode=='display'){
-#		foreach ($allTags as $k=>$v)  $allTags[$k] = $CategoryGroup.'/'.$v;
-		return '[['.$CategoryGroup.'/'.implode('|+]]'.$bi_TagSeparator.'[['.$CategoryGroup.'/', $allTags).'|+]]';
-#		foreach ($allTags as $k=>$v)  $allTags[$k] = MakeLink($bi_Pagename, $CategoryGroup.'.'.$v,$v);
-#		return Keep(implode($bi_TagSeparator, $allTags));
-	}else  return '[[!'.implode(']]'.$bi_TagSeparator.'[[!', $allTags).']]';
-*/
+	if ($mode=='display')  $allTags = preg_replace('/\s+/', '-', $allTags);
+	return ($allTags ?'[[!'.implode(']]'.$bi_TagSeparator.'[[!', $allTags).']]' :'');
 }
 function bi_GetPmMarkup($body, $tags, $title){  #wrapper for bi_SaveTags, also used in blogit_upgrade.php
 	return bi_SaveTags($body, $tags) .'(:title ' .$title .':)';
