@@ -39,7 +39,7 @@ SDV($PageCSSListFmt,array(  #Auto-load BlogIt PmWiki css file
 ));
 SDV($bi_AjaxMsgTimer, 3000);  #Number of milli-seconds that the top ajax message is displayed for
 #key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
-#TODO: Is this actually used??! Does it define how elements are displayed, or even handled?
+#Used to define how admin links are displayed and handled
 SDVA($bi_Ajax, array('bi_ce'=>'ajax', 'bi_ca'=>'ajax', 'bi_cua'=>'ajax', 'bi_be'=>'normal-ajax', 'bi_ne'=>'normal-ajax', 'bi_del'=>'ajax'));
 SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tells blogit where to find content used for dynamic ajax page updates
 	'blog-entry' => '.blogit-post',  #container for entry in single-entry view, which should include the ajax edit-link.
@@ -51,15 +51,9 @@ SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tel
 	'comment-admin-list' => '.blogit-comment-admin-list',  #surrounds the unapproved-comment list section (in #comment-view-admin)
 	'comment-list' => '.blogit-comment-list',  #pointer to the entire comment list, excluding headers, and comment form. Contained in #comments-pagelist, usually not changed.
 	'comment-list-wrapper' => '#blogit-comment-list',  #pointer to a wrapper around the comment-list; used for the first comment, where 'comment-list' may not exist. Should not include headers or form.
-	//TODO: #wikiedit will only find fist #wikiedit, not second potential ajax form
-	'blog-form' => '#wikiedit.blogit-blog-form',  #pointer to the wrapper containing the blog-entry FORM object
-	//TODO: No longer used for jq selector to form -- possibly remove?
-	//TODO: On ajax comment edit, #wikitext not present
-	//TODO: Should be #commentblock for normal comment add
-	//TODO: Add .blogit-comment-summary?
 	'comment-form' => '#wikitext .blogit-comment-form',  #pointer to the wrapper containing the comment-entry FORM object (both ajax and normal entry)
+	'blog-form' => '#wikiedit.blogit-blog-form',  #pointer to the wrapper containing the blog-entry FORM object
 	'comment-submit' => '#wikitext .blogit-submit-row',  #pointer to the wrapper containing the captcha and comment Submit
-	'comment-summary' => '#wikitext .blogit-comment-summary',  #wrapper containing the comments for a single page on the unapproved comment admin page
 	'comment-summary-title' => '#wikitext .blogit-comment-summary h3',  #pointer to each page title on the unapproved comment admin page
 	'comment-block-title' => '.blogit-commentblock h2'  #pointer to each page title on the unapproved comment admin page
 ));
@@ -93,7 +87,6 @@ SDVA($bi_Paths,array(
 
 # ----------------------------------------
 # - Pagename patterns
-//TODO: '\\x80-\\xfe' should be double quotes if \\?
 SDV($PageNameChars,'-[:alnum:]' .($Charset=='UTF-8' ?'\\x80-\\xfe' :'') );
 SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '',  #strip single-quotes
@@ -127,7 +120,6 @@ SDV($FPLTemplatePageFmt, array(
 	'{$SiteGroup}.LocalTemplates', '{$SiteGroup}.PageListTemplates'));
 SDV($bi_CommentPattern, '/^' .$bi_CommentGroup .'[\/\.](.*?)-(.*?)-(\d{8}T\d{6}){1}\z/');
 SDVA($bi_DateSequences, array('ymd'=>'$2/$3/$1 $4:$5', 'dmy'=>'$2/$1/$3 $4:$5','mdy'=>'$1/$2/$3 $4:$5'));  #used to convert date fmt into std "[m/d/y] H:M"
-//TODO: (?=\d)^(?:(?!(?:10\D(?:0?[5-9]|1[0-4])\D(?:1582))|(?:0?9\D(?:0?[3-9]|1[0-3])\D(?:1752)))((?:0?[13578]|1[02])|(?:0?[469]|11)(?!\/31)(?!-31)(?!\.31)|(?:0?2(?=.?(?:(?:29.(?!000[04]|(?:(?:1[^0-6]|[2468][^048]|[3579][^26])00))(?:(?:(?:\d\d)(?:[02468][048]|[13579][26])(?!\x20BC))|(?:00(?:42|3[0369]|2[147]|1[258]|09)\x20BC))))))|(?:0?2(?=.(?:(?:\d\D)|(?:[01]\d)|(?:2[0-8])))))([-.\/])(0?[1-9]|[12]\d|3[01])\2(?!0000)((?=(?:00(?:4[0-5]|[0-3]?\d)\x20BC)|(?:\d{4}(?!\x20BC)))\d{4}(?:\x20BC)?)(?:$|(?=\x20\d)\x20))?((?:(?:0?[1-9]|1[012])(?::[0-5]\d){0,2}(?:\x20[aApP][mM]))|(?:[01]\d|2[0-3])(?::[0-5]\d){1,2})?$
 SDVA($bi_DateFmtRE,array('/\//'=>'\/','/%d|%e/'=>'(0?[1-9]|[12][0-9]|3[01])', '/%m/'=>'(0?[1-9]|1[012])', '/%g|%G|%y|%Y/'=>'(19\d\d|20\d\d)',
 	'/%H|%I|%l/'=>'([0-1]?\d|2[0-3])', '/%M/'=>'([0-5]\d)'));  #additional RE/date combinations can be added, but ordering of separator, day, month, year, hour, min must remain
 SDVA($SearchPatterns['blogit-comments'], array('comments' => $bi_CommentPattern));  #Used in pagelists
@@ -189,7 +181,6 @@ SDVA($HTMLHeaderFmt, array(
 	'awesomplete.css' => '<link rel="stylesheet" href="' .$FarmPubDirUrl .'/blogit/awesomplete.css" type="text/css" />',
 	'blogit.css' => '<link rel="stylesheet" href="' .$FarmPubDirUrl .'/blogit/blogit.css" type="text/css" />'));
 SDVA($HTMLFooterFmt, array(
-	//TODO: Use replacement string rather than repeating script tags
 	'jquery.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jquery.min.js"></script>',
 	'validate.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jquery.validate.min.js"></script>',
 	'jbox.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jbox.min.js"></script>',
@@ -236,9 +227,7 @@ include_once($bi_Paths['pmform']);
 $PmFormPostPatterns['/\r/'] = '';  #fixes a bug in pmforms where multi-line entries/comments are stored across multiple lines in the base page
 $PmFormTemplatesFmt = (isset($PmFormTemplatesFmt) ?$PmFormTemplatesFmt :array());
 array_unshift ($PmFormTemplatesFmt,	($bi_Skin!='pmwiki' ?'{$SiteGroup}.BlogIt-SkinTemplate-'.$bi_Skin : ''), '{$SiteGroup}.BlogIt-CoreTemplate');
-#TODO: Big issue if group has a hyphen (note, spaced group names are auto-converted to include hyphen)
 $bi_CommentPage=(preg_match($bi_CommentPattern,$bi_Pagename) ?$bi_Pagename :$bi_CommentGroup .'.' .$bi_Group .'-' .$bi_Name .'-' .date('Ymd\THms'));
-#TODO: Can remove successpage, since redirect goes to bi_AjaxRedirect, call from pmform handler
 SDV($PmForm['blogit-entry'], 'form=#blog-form-control fmt=#blog-post-control' .($FmtPV['$bi_Mode']=='ajax' ?' successpage=""' :''));  #PmForm does a redirect browse if successpage is set
 #if page is an existing comment (ie, has a comment page name) then use it, otherwise create it
 SDV($PmForm['blogit-comments'], 'saveto="'. $bi_CommentPage. '" '. 'form=#comment-form-control fmt=#comment-post-control');
@@ -297,7 +286,6 @@ if(function_exists('Markup_e')) {  #PmWiki 2.2.58+ / PHP5
 
 $SaveAttrPatterns['/\\(:includesection\\s.*?:\\)/i'] = ' ';  #prevents include sections becoming part of page targets list
 if (IsEnabled($EnableGUIButtons) && $FmtPV['$bi_Mode']!='ajax'){
-	//TODO: Use bi_Frm_Action
 	if ($action=='bi_be' || $action=='bi_ne' || ($action=='pmform' && $_REQUEST['target']=='blogit-entry'))
 		include_once($bi_Paths['guiedit']);  #PmWiki only includes this automatically if action=edit.
 }else  Markup('e_guibuttons', 'directives','/\(:e_guibuttons:\)/','');  #Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
@@ -334,7 +322,6 @@ global $bi_ResetPmFormField,$bi_OriginalFn,$bi_GroupFooterFmt,$bi_CommentGroup,$
 	if ($FmtPV['$bi_Mode'] == 'ajax'){ bi_AjaxRedirect(); return; }
 
 	$entrytype = PageTextVar($src,'entrytype');
-	//TODO: Use bi_Frm_Action
 	if ($action=='pmform' && $_REQUEST['target']=='blogit-entry'){
 		if (isset($bi_ResetPmFormField))
 			foreach ($bi_ResetPmFormField  as $k => $v) {
@@ -366,8 +353,7 @@ function bi_HandleEdit($src, $auth='blog-edit'){  #action=(bi_be|bi_ne|bi_ce|bi_
 global $action,$HandleActions,$bi_OriginalFn,$GroupHeaderFmt,$bi_Pages,$bi_Hooks,$FmtPV;
 	$entrytype = PageTextVar($src,'entrytype');
 	bi_debugLog('HandleEdit: '.$action.' - '.$entrytype);
-	//TODO: Why is admin-page check key here? ne can occur anywhere.
-	$type=( ($action=='bi_be' && $entrytype=='blog') || ($action=='bi_ne'&&$src==$bi_Pages['admin']) ?'blog' :'comment');
+	$type=( ($action=='bi_be' && $entrytype=='blog') || $action=='bi_ne' ?'blog' :'comment');
 	if ( ($entrytype==$type || $action=='bi_ne' || $action=='bi_cr') && bi_Auth($auth) ){
 		bi_ProcessHooks($type, 'pre-entry', $src, $auth);
 		if ($FmtPV['$bi_Mode']=='ajax'){
@@ -465,13 +451,11 @@ global $bi_ResetPmFormField,$_POST,$_REQUEST,$ROSPatterns,$CategoryGroup,
 		if (IsEnabled($EnablePostAuthorRequired,0))  $Author=$_POST['ptv_entryauthor'];
 		bi_ProcessHooks('blog', 'post-save', $src, $auth);
 
-	#TODO: Seems to be used on comment edit as well, since comment edit passes target of blogit-comments
-	#only set defaults if we're not editing the comment -- reply or add
 	}elseif ($bi_CommentsEnabled=='open' && $_POST['target']=='blogit-comments'){
 		bi_decodeUTF8($_POST);  #ajax posts from jquery are always utf8
 		bi_ProcessHooks('comment', 'pre-save', $src, $auth);
-		//TODO: Set in javascript -- BUT potential could be maliciously ovrriden with nonsense
-		$_POST['ptv_blogit_basepage'] = (empty($_POST['ptv_blogit_basepage']) ?$src :$_POST['ptv_blogit_basepage']);  //for bi_cr, required since older versions didn't get this set, and won't have it
+		//for bi_cr, required since older versions didn't get this set, and won't have it
+		$_POST['ptv_blogit_basepage'] = MakePageName($src, (empty($_POST['ptv_blogit_basepage']) ?$src :$_POST['ptv_blogit_basepage']));
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_commenttext'] = rtrim($_POST['ptv_commenttext'],"\n\r\x0B")."\n";  #ensures markup is closed correctly (eg, links at end of comment)
 		$_POST['ptv_website'] = (!empty($_POST['ptv_website']) && substr($_POST['ptv_website'],0,4)!='http' ?'http://'.$_POST['ptv_website'] :$_POST['ptv_website']);
@@ -764,17 +748,15 @@ function bi_AjaxRedirect($result=''){
 global $bi_Pagename,$_REQUEST,$bi_CommentPage,$EnablePost,$MessagesFmt,$action,$bi_Name,$bi_Group,$bi_Pages,$bi_SkinClasses,$bi_FrmAction,$_POST;
 bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']. '::'. $_REQUEST['target']. '::'. $action);
 	if ($EnablePost && count($MessagesFmt)==0){  #set to 0 if pmform failed (invalid captcha, etc)
-		//TODO: Should blogit-comments be hardcoded, or refer to skinclasses?
 		//Translate the class of the html element being updated (bi_context) to the template to be used to generate new data on includesection from pmwiki
-		//bi_context: includesection template
+		//bi_context: class determines which includesection template to use
 		//$bi_SkinClasses['comment-admin-list'] - '.blogit-comment-admin-list': '#unapproved-comments'
 		//otherwise: '#comments-pagelist'
 		//$bi_SkinClasses['blog-entry-summary'] - '.blogit-post-summary': '#blog-summary-pagelist
 		//$bi_SkinClasses['blog-list-row'] - '.blogit-blog-list-row': '#blog-grid
 		// otherwise ('.blogit-post'): '#single-entry-view'
-		if ($_REQUEST['target']=='blogit-comments'){
+		if ($_REQUEST['target']=='blogit-comments'){  //determine which pmform is requested
 			bi_SendAjax(
-				//TODO: Use blogitSkinMU() based on $bi_FrmAction
 				'(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['comment-admin-list'] ?'#unapproved-comments' :'#comments-pagelist')
 				.' commentid=' .$bi_CommentPage.' entrycomments=readonly base='. IsEnabled($_POST['ptv_blogit_basepage']). '":)',
 				($bi_FrmAction=='bi_ce'
@@ -785,9 +767,7 @@ bi_debugLog('AjaxRedirect: '.$_REQUEST['bi_context']. '::'. $_REQUEST['target'].
 			);
 		}elseif ($_REQUEST['target']=='blogit-entry'){
 			bi_SendAjax((isset($_REQUEST['bi_context'])  #might have clicked from many places. We only care about a few.
-				//TODO: Use blogitSkinMU() based on $bi_FrmAction
 				?'(:includesection "' .($_REQUEST['bi_context']==$bi_SkinClasses['blog-entry-summary']
-				//TODO: Should these be hardcoded, or lookup to skinClasses?
 					?'#blog-summary-pagelist group=' .$bi_Group .' name='.$bi_Name  #main blog summary page
 					:($_REQUEST['bi_context']==$bi_SkinClasses['blog-list-row']  #blog list from admin page
 						?'#blog-grid group=' .$bi_Group .' name='.$bi_Name

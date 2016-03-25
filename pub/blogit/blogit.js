@@ -2,45 +2,43 @@
 jQuery.noConflict();
 jQuery(document).ready(function($){
 	//show error messages set by pmwiki in .wikimessage
-	//TODO: Hide original message in .wikimessage?
 	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['blog-form']+' .wikimessage').html(), result:'error'});
 	BlogIt.fn.showMsg({msg:$(BlogIt.pm['skin-classes']['comment-form']+' .wikimessage').html(), result:'success'}); //default to success, since no way to tell if error.
-
 	BlogIt.fn.addValidation();
 	BlogIt.fn.addAutocomplete();
 
 	//Classes are added by bi_Link(), so can be hard-coded.
-	$(document).on('click', '.bi-link-comment-unapproved[href*="bi_mode=ajax"],.bi-Comment-Approve', function(e){ BlogIt.fn.commentApprove(e, 'approve'); });  //action approve
-	$(document).on('click', '.bi-link-comment-approved[href*="bi_mode=ajax"],.bi-Comment-Unapprove', function(e){ BlogIt.fn.commentApprove(e, 'unapprove'); });  //action unapprove
+	$(document).on('click', '.bi-link-comment-unapproved[href*="bi_mode=ajax"],.bi-Comment-Approve', function(e){ BlogIt.fn.adminAction(e, 'approve'); });  //action approve
+	$(document).on('click', '.bi-link-comment-approved[href*="bi_mode=ajax"],.bi-Comment-Unapprove', function(e){ BlogIt.fn.adminAction(e, 'unapprove'); });  //action unapprove
 	//TODO: Due to pmwiki bug where classes on last link override earlier links on the same line, need to check 'bi_mode=ajax' (ref php.bi_Link())
 	$(document).on('click', '.bi-link-blog-new[href*="bi_mode=ajax"],.bi-link-blog-edit[href*="bi_mode=ajax"],'+
 		'.bi-link-comment-edit[href*="bi_mode=ajax"],.bi-link-comment-reply', function(e){ BlogIt.fn.showEdit(e); });
-	$(document).on('click', '.bi-link-comment-delete[href*="bi_mode=ajax"],.bi-link-blog-delete[href*="bi_mode=ajax"],.bi-Comment-Delete', function(e){ BlogIt.fn.showDelete(e); });  //delete comments and blogs
-	$(document).on("click", '.bi-link-comment-block,.bi-Comment-Block', function(e){ BlogIt.fn.showBlockIP(e); });  //block comment IP addresses
+	$(document).on('click', '.bi-link-comment-delete[href*="bi_mode=ajax"],.bi-link-blog-delete[href*="bi_mode=ajax"],.bi-Comment-Delete', function(e){ BlogIt.fn.adminAction(e,'delete'); });  //delete comments and blogs
+	$(document).on("click", '.bi-link-comment-block,.bi-Comment-Block', function(e){ BlogIt.fn.adminAction(e,'block'); });  //block comment IP addresses
 	$(document).on("click", '.bi-Comment-AllNone', function(e){ BlogIt.fn.toggleCheckboxes(e); });
 	$(document).on("click", 'li.comment.blogit-admin', function(e){ if ( !$(e.target).is('a,input') )  BlogIt.fn.commentAdminCheckbox(this, 'flip'); });
 	$(document).on({  //hover doesn't cope with dynamically added elements
 		mouseenter: function(){ BlogIt.fn.commentAdminCheckbox(this, 'show', false)},
 		mouseleave: function(){BlogIt.fn.commentAdminCheckbox(this, 'hide', true)}},
 		'li.comment.blogit-admin');
-	var $bi_menu = $(BlogIt.pm['skin-classes']['comment-summary-title']+','+BlogIt.pm['skin-classes']['comment-block-title']+'.blogit-admin');
-  //add down arrow character to serve as menu marker, both on admin-page, page titles and on single page Comment header -- only for admin user
-	$bi_menu.append($('<span class="blogit-cam-marker" />').html('&#9660'));
-	$bi_menu.jBox('Tooltip', {
-		trigger: 'mouseenter',
-		//TODO: Better than hardcoding
-		content:'<ul class="blogit-comment-admin-menu">'+
-			'<li class="bi-Comment-AllNone">All</li>'+
-			'<li class="bi-Comment-Approve">Approve</li><li class="bi-Comment-Unapprove">Unapprove</li>'+
-			'<li class="bi-Comment-Block">Block</li>'+
-			'<li class="bi-Comment-Delete">Delete</li>',
-		pointer: 'left',
-		position: {x: 'left', y: 'bottom'},
-		offset:{x:50,y:-5},
-		closeOnMouseleave: true,
-		onOpen: function(){ this.source.addClass('bi-menu-hover'); },
-		onClose: function(){ this.source.removeClass('bi-menu-hover'); }
-	});
+	//add admin-user functions on admin-page page titles and on single page Comment header
+	$(BlogIt.pm['skin-classes']['comment-summary-title']+','+BlogIt.pm['skin-classes']['comment-block-title']+'.blogit-admin')
+		.append($('<span class="blogit-cam-marker" />').html('&#9660'))  //add down arrow character to serve as menu marker,
+		.jBox('Tooltip', {  //add admin menu
+			trigger: 'mouseenter',
+			//TODO: Better than hardcoding
+			content:'<ul class="blogit-comment-admin-menu">'+
+				'<li class="bi-Comment-AllNone">All</li>'+
+				'<li class="bi-Comment-Approve">Approve</li><li class="bi-Comment-Unapprove">Unapprove</li>'+
+				'<li class="bi-Comment-Block">Block</li>'+
+				'<li class="bi-Comment-Delete">Delete</li>',
+			pointer: 'left',
+			position: {x: 'left', y: 'bottom'},
+			offset:{x:50,y:-5},
+			closeOnMouseleave: true,
+			onOpen: function(){ this.source.addClass('bi-menu-hover'); },
+			onClose: function(){ this.source.removeClass('bi-menu-hover'); }
+		});
 	$(BlogIt.pm['skin-classes']['blog-form']+' form :input:not(:submit)').on('change',   //if any field (not a submit button) changes...
 		function(){	$(window).on('beforeunload', function(){ return BlogIt.fn.xl('You have unsaved changes.'); }); });
 });
@@ -64,7 +62,7 @@ BlogIt.fn = function($){
 	var dialog;  //global dialog reference so we can close from ajaxSubmit()
 	function updateCommentCount(approvedCC, unapprovedCC){
 		function updateCC(e, c){
-			var e_txt = e.text().replace(/\n/ig, '');  //remove extraneous \n as it messes up the replacing
+			var e_txt = e.text().replace(/\n/g, '');  //remove extraneous \n as it messes up the replacing
 			var cc = e_txt.match(/\d+/).join('');  //parse out the number from the link text (assume the only number there is the comment count)
 			e.text( e_txt.replace(cc, (parseInt(cc)+c)));
 		}
@@ -157,7 +155,7 @@ BlogIt.fn = function($){
 	};
 	$.validator.addMethod('datetime', function(v, e, fmt){
 		return this.optional(e) ||	RegExp(BlogIt.fmt['entry-date']).test(v);
-	},	BlogIt.xl['Must be a datetime.']);  //TODO: Can't BlogIt.fn.xl since not yet declared at this point.
+	},	BlogIt.xl['Must be a datetime.']);  //TODO: Can't BlogIt.fn.xl() since fn not yet declared at this point.
 	//Direct copy from jquery.validate/additional-methods.min.js, so we don't have to include entire file for single function
 	$.validator.addMethod( "require_from_group", function( value, element, options ) {
 		var $fields = $( options[ 1 ], element.form ),
@@ -299,38 +297,32 @@ BlogIt.fn = function($){
 			console.log(e);
 			return {rc:rc, url:url, e:e};
 		},
-		//TODO: Consolidate duplicative functionality from commentApprove/showDelete/showBlockIP possibly into fn.ajax?
-		commentApprove: function(e, action){
+		adminAction: function(e, action){
 			url=BlogIt.fn.createURL(e, action);
 			if (url.rc>0){
-				BlogIt.fn.ajax({
-					url: url.url,
-					success: function(data){ if (data.result=='error')  BlogIt.fn.showMsg(data); flipCommentStatus(url.e, action); }
-				});
-			}
-		},
-		showDelete: function(e){  //e is either the delete link click event, or delete admin menu
-			url=BlogIt.fn.createURL(e, 'delete');
-			if (url.rc>0){
-				dialogShow(BlogIt.fn.xl('Are you sure you want to delete ')+ url.rc+ BlogIt.fn.xl(' row'+ (url.rc>1 ?'s' :'')+ '?'), 'Yes', 'No', 300, {
-					url: url.url,
-					success:function(data){ objectRemove(url.e, data); }
-				});
-			}
-		},
-		showBlockIP: function(e){  //based on url in block link
-			url=BlogIt.fn.createURL(e, 'block');
-			if (url.rc>0){
-				BlogIt.fn.ajax({  //perform ajax call on block link, which retrieves the IP
-					url: url.url,
-					success: function(data){ if (data.ip)  //success returns IP
-						dialogShow(
-							BlogIt.fn.xl('Enter the IP to block:')+ '<textarea id="blogit_ip" type="text">'+ data.ip+ '</textarea>', 'Submit', 'Cancel', 200, {
-								url: function(){ return url.url+ encodeURI( '&bi_ip='+ $("#blogit_ip").val().replace(/\n/g,',') ); },
-								success: function(data){ BlogIt.fn.showMsg(data); }
-							});
-					}
-				});
+				if (action=='delete'){
+					dialogShow(BlogIt.fn.xl('Are you sure you want to delete ')+ url.rc+ BlogIt.fn.xl(' row'+ (url.rc>1 ?'s' :'')+ '?'), 'Yes', 'No', 300, {
+						url: url.url,
+						success:function(data){ objectRemove(url.e, data); }
+					});
+				}else if (action=='block'){
+					BlogIt.fn.ajax({  //perform ajax call on block link, which retrieves the IP
+						url: url.url,
+						success: function(data){
+							if (data.ip)  //success returns IP
+								dialogShow(
+									BlogIt.fn.xl('Enter the IP to block:')+ '<textarea id="blogit_ip" type="text">'+ data.ip+ '</textarea>', 'Submit', 'Cancel', 200, {
+										url: function(){ return url.url+ encodeURI( '&bi_ip='+ $("#blogit_ip").val().replace(/\n/g,',') ); },
+										success: function(data){ BlogIt.fn.showMsg(data); }
+									});
+						}
+					});
+				}else{
+					BlogIt.fn.ajax({
+						url: url.url,
+						success: function(data){ if (data.result=='error')  BlogIt.fn.showMsg(data); flipCommentStatus(url.e, action); }
+					});
+				}
 			}
 		},
 		//ajax editing opens a dialog with content from PmWiki, calls addValidation(), and then on submit calls ajaxSubmit(), which calls updateBlog/updateComment
@@ -339,8 +331,7 @@ BlogIt.fn = function($){
 			BlogIt.fn.ajax({
 				url:e.currentTarget.href,  //get the comment form from pmwiki; not .target, because actual target might be an image wrapped in an anchor
 				success: function(data){
-					//TODO: Need to show error msg if no data.out
-					if (data.out){  //form content returned in data.out
+					if (data.result=='success'){  //form content returned in data.out
 						var blog=$(e.currentTarget).is('.bi-link-blog-edit,.bi-link-blog-new');  //are we doing some blog related action?
 						console.log('blog action: '+blog);
 						dialog = new jBox('Confirm', {  //uses gloabal dialog var
@@ -358,7 +349,7 @@ BlogIt.fn = function($){
 						}).open();
 						BlogIt.fn.addAutocomplete();
 						BlogIt.fn.addValidation(e);  //adds submit handler for button in dialog
-					}
+					}else  BlogIt.fn.showMsg(data || {msg:'Error on edit return.',result:'error'});
 				}
 			});
 		},
