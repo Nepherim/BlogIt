@@ -486,8 +486,7 @@ global $WikiDir,$LastModFile;
 		&& (bi_Auth( ($entrytype=='comment' ?'comment-edit' :'blog-edit') .' ' .$src) && RetrieveAuthPage($src,'read',false, READPAGE_CURRENT)) ){
 		$pages=bi_GetPages($src);
 		foreach ($pages as $p)
-			//TODO: UNCOMMENT
-//			$WikiDir->delete( $p );
+			$WikiDir->delete( $p );
 			bi_debugLog( 'DELETED: '. $p, true);
 		if ($LastModFile) { touch($LastModFile); fixperms($LastModFile); }
 		$result = array('msg'=>XL('Delete successful.'), 'result'=>'success');
@@ -514,8 +513,7 @@ global $bi_Pages;
 					}else
 						$already[]=$key;
 				}
-				#TODO: Uncomment pre-production
-				#if (!empty($blocked))  PostPage($bi_Pages['blocklist'],$old,$new);
+				if (!empty($blocked))  PostPage($bi_Pages['blocklist'],$old,$new);
 				$result = array(
 					'msg'=>(!empty($blocked) ?XL('Blocked IP address: '). implode(',', $blocked) :'').
 						(!empty($blocked) && !empty($already) ?'<br />':''). (!empty($already) ?XL('IP address is already being blocked: '). implode(',', $already) :''),
