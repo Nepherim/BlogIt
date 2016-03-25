@@ -849,7 +849,7 @@ global $bi_Pagename,$bi_DisplayFuture;
 function bi_JXL(){  #create javascript array holding all XL translations of text used client-side
 	$a=array('Are you sure you want to delete?', 'Yes', 'No', 'approve', 'unapprove', 'Unapproved Comments:',
 			'Enter the IP to block:', 'Submit', 'Post', 'Cancel', 'Either enter a Blog Title or a Pagename.', 'You have unsaved changes.','Website:',
-			'Parsing JSON request failed.','Request timeout.','Error: ','No data returned.', 'Must be a datetime.');
+			'Parsing JSON request failed.','Request timeout.','Error: ','No data returned.', 'Must be a datetime.','Error on edit return.');
 	foreach ($a as $k)  $t .= ($k!=XL($k) ?'BlogIt.xl["' .$k .'"]="' .XL($k) ."\";\n" :'');
 	return ($t);
 }
