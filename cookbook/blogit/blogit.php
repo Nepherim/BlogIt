@@ -7,7 +7,7 @@ License as published by the Free Software Foundation; either version 2 of the Li
 
 For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '20160326'; //1.9.1
+$RecipeInfo['BlogIt']['Version'] = '20160326'; //1.9.2
 if ($VersionNum < 2001950)
 	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
 
@@ -204,7 +204,7 @@ $bi_Forms = array(
 	'blogit-comments'
 ); //needs to be before cookies
 //disable comments after a period of time, to reduce spam
-if ($bi_CommentsAutoClose > '' && PageTextVar($pagename, '$:entrydate') < strtotime($bi_CommentsAutoClose))
+if ($bi_CommentsAutoClose > '' && PageVar($pagename, '$:entrydate') < strtotime($bi_CommentsAutoClose))
 	$bi_CommentsEnabled = 'read-only';
 //when $action='pmform' need to know what the user is doing, which is in bi_frm_action
 $bi_FrmAction = bi_Clean('action', 'bi_' . @$_REQUEST['bi_frm_action']);
