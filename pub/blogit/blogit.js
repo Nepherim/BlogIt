@@ -7,6 +7,7 @@ jQuery(document).ready(function($){
 	BlogIt.fn.addValidation();
 	BlogIt.fn.addAutocomplete();
 
+	if (window.location.href.match(/action=bi_admin/))  BlogIt.pm['skin-classes']['comment-tag']='li';  //assume admin page is always LI
 	//Classes are added by bi_Link(), so can be hard-coded.
 	$(document).on('click', '.bi-link-comment-unapproved[href*="bi_mode=ajax"],.bi-Comment-Approve', function(e){ BlogIt.fn.adminAction(e, 'approve'); });  //action approve
 	$(document).on('click', '.bi-link-comment-approved[href*="bi_mode=ajax"],.bi-Comment-Unapprove', function(e){ BlogIt.fn.adminAction(e, 'unapprove'); });  //action unapprove
@@ -16,11 +17,11 @@ jQuery(document).ready(function($){
 	$(document).on('click', '.bi-link-comment-delete[href*="bi_mode=ajax"],.bi-link-blog-delete[href*="bi_mode=ajax"],.bi-Comment-Delete', function(e){ BlogIt.fn.adminAction(e,'delete'); });  //delete comments and blogs
 	$(document).on("click", '.bi-link-comment-block,.bi-Comment-Block', function(e){ BlogIt.fn.adminAction(e,'block'); });  //block comment IP addresses
 	$(document).on("click", '.bi-Comment-AllNone', function(e){ BlogIt.fn.toggleCheckboxes(e); });
-	$(document).on("click", 'li.comment.blogit-admin', function(e){ if ( !$(e.target).is('a,input') )  BlogIt.fn.commentAdminCheckbox(this, 'flip'); });
+	$(document).on("click", BlogIt.pm['skin-classes']['comment']+'.blogit-admin', function(e){ if ( !$(e.target).is('a,input') )  BlogIt.fn.commentAdminCheckbox(this, 'flip'); });
 	$(document).on({  //hover doesn't cope with dynamically added elements
 		mouseenter: function(){ BlogIt.fn.commentAdminCheckbox(this, 'show', false)},
 		mouseleave: function(){BlogIt.fn.commentAdminCheckbox(this, 'hide', true)}},
-		'li.comment.blogit-admin');
+		BlogIt.pm['skin-classes']['comment']+'.blogit-admin');
 	//add admin-user functions on admin-page page titles and on single page Comment header
 	$(BlogIt.pm['skin-classes']['comment-summary-title']+','+BlogIt.pm['skin-classes']['comment-block-title']+'.blogit-admin')
 		.append($('<span class="blogit-cam-marker" />').html('&#9660'))  //add down arrow character to serve as menu marker,
@@ -74,9 +75,9 @@ BlogIt.fn = function($){
 		var found=$(target).closest('[id^="bi_ID"]');
 		return (found.length ?found :null);
 	}
-	function getCommentBlock(){
-		var src = $('.bi-menu-hover').next('ol.blogit-comment-admin-list');
-		return ( src.length>0 ?src :$('#wikitext ol.blogit-comment-list') );  //get comment block for title admin is on
+	function getCommentBlock(){  //Returns the block of comments for the hovered heading.
+		var src = $('.bi-menu-hover').next('ol.blogit-comment-admin-list');  //TODO: assumes admin list is always OL
+		return ( src.length>0 ?src :$(BlogIt.pm['skin-classes']['comment-list-block']) );  //get comment block for title admin is on
 	}
 	function closestTemplateObject($target){
 		//Find the class which represents the pagelist template we should use, based on where user clicked
@@ -130,18 +131,18 @@ BlogIt.fn = function($){
 			onCloseComplete: function () { this.destroy(); },
 			width: w, minWidth: w, maxWidth: w  //needed to override jbox default
 		}).open();
-	};
+	}
 	function flash($e){
-		var bg = $e.parent().css('background-color');
-		$e.animate(
-			{backgroundColor: '#BBFFB6'},
-			{duration: 750, complete: function(){
-				$(this).animate(
-					{backgroundColor: bg },
-					{duration:750, complete: function(){ $(this).css('background-color','') } }
-			)}}
-		);
-	};
+		$e.delay(100).css("-webkit-transition","all 0.6s ease")
+		.css("backgroundColor","white")
+		.css("-moz-transition","all 0.6s ease")
+		.css("-o-transition","all 0.6s ease")
+		.css("-ms-transition","all 0.6s ease")
+		.css("backgroundColor","#ACACAC").delay(200).queue(function() {
+			$(this).css("backgroundColor","white");
+			$(this).dequeue(); //Prevents box from holding color with no fadeOut on second click.
+		});
+	}
 	//add this to jquery: need to find objects at same level, or below. So do a find() followed by a filter()
 	$.fn.bi_seek = function(seek){
 		var $found;
@@ -152,7 +153,7 @@ BlogIt.fn = function($){
 			if ($found.length==1)  return false;
 		});
 		return $found;
-	};
+	}
 	$.validator.addMethod('datetime', function(v, e, fmt){
 		return this.optional(e) ||	RegExp(BlogIt.fmt['entry-date']).test(v);
 	},	BlogIt.xl['Must be a datetime.']);  //TODO: Can't BlogIt.fn.xl() since fn not yet declared at this point.
@@ -258,7 +259,7 @@ BlogIt.fn = function($){
 		toggleCheckboxes: function(e){  //e is the clicked menu item event
 			var $src=$(e.target);
 			var $blk=getCommentBlock();
-			$blk.children('li').each(function(){
+			$blk.children(BlogIt.pm['skin-classes']['comment-tag']).each(function(){
 				($src.html()==BlogIt.fn.xl('All') ?BlogIt.fn.commentAdminCheckbox(this, 'show', true) :BlogIt.fn.commentAdminCheckbox(this, 'hide', false) );
 			});
 			$src.html( $src.html()==BlogIt.fn.xl('All') ?BlogIt.fn.xl('None'): BlogIt.fn.xl('All') );
@@ -290,7 +291,8 @@ BlogIt.fn = function($){
 					if (action=='approve'||action=='unapprove')
 						url=url.replace(/action=bi_c(a|ua)/,(action=='approve' ?'action=bi_ca': 'action=bi_cua'));
 					console.log(action+ ': '+ url);
-					e = $('[name="bi_CommentID[]"]:checked', src).closest('li.comment').find(actionLink);  //find admin links on the row corresponding to action
+					//find admin links on the row corresponding to action
+					e = $('[name="bi_CommentID[]"]:checked', src).closest(BlogIt.pm['skin-classes']['comment-tag']+BlogIt.pm['skin-classes']['comment']).find(actionLink);
 				}
 			}
 			console.log('URL Element');

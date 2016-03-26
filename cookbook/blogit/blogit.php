@@ -34,9 +34,10 @@ SDV($bi_DateStyle, 'dmy');  #if you change the date entry format, then indicate 
 # - Skin settings
 SDV($bi_Skin, ($Skin>'' ?$Skin :'pmwiki'));  #Needed if skin is set in group config, which is processed after main config
 SDV($PageCSSListFmt,array(  #Auto-load BlogIt PmWiki css file
-	'pub/css/local.css' => '$PubDirUrl/css/local.css',
-	'pub/blogit/blogit-pmwiki.css' => '$FarmPubDirUrl/blogit/blogit-pmwiki.css'
+	'pub/css/local.css' => '$PubDirUrl/css/local.css'
 ));
+if ($bi_Skin=='pmwiki')  #Auto-load BlogIt PmWiki css file
+	SDV($PageCSSListFmt,array( 'pub/blogit/blogit-pmwiki.css' => '$FarmPubDirUrl/blogit/blogit-pmwiki.css' ));
 SDV($bi_AjaxMsgTimer, 3000);  #Number of milli-seconds that the top ajax message is displayed for
 #key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
 #Used to define how admin links are displayed and handled
@@ -51,11 +52,13 @@ SDVA($bi_SkinClasses, array(  #provide CSS selector path as the value, which tel
 	'comment-admin-list' => '.blogit-comment-admin-list',  #surrounds the unapproved-comment list section (in #comment-view-admin)
 	'comment-list' => '.blogit-comment-list',  #pointer to the entire comment list, excluding headers, and comment form. Contained in #comments-pagelist, usually not changed.
 	'comment-list-wrapper' => '#blogit-comment-list',  #pointer to a wrapper around the comment-list; used for the first comment, where 'comment-list' may not exist. Should not include headers or form.
+	'comment-list-block' => '#wikitext ol.blogit-comment-list',  //pointer to direct wrapper containing all comments
 	'comment-form' => '#wikitext .blogit-comment-form',  #pointer to the wrapper containing the comment-entry FORM object (both ajax and normal entry)
 	'blog-form' => '#wikiedit.blogit-blog-form',  #pointer to the wrapper containing the blog-entry FORM object
 	'comment-submit' => '#wikitext .blogit-submit-row',  #pointer to the wrapper containing the captcha and comment Submit
 	'comment-summary-title' => '#wikitext .blogit-comment-summary h3',  #pointer to each page title on the unapproved comment admin page
-	'comment-block-title' => '.blogit-commentblock h2'  #pointer to each page title on the unapproved comment admin page
+	'comment-block-title' => '.blogit-commentblock h2',  #pointer to each page title on the unapproved comment admin page
+	'comment-tag' => 'li'  #tag used for each comment in single view mode
 ));
 SDVA($bi_SkinSettings, array(
 	'ajax_textarea_rows' => '18'  #make sure whole ajax dialog fits on low res monitors
