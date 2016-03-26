@@ -133,12 +133,12 @@ BlogIt.fn = function($){
 		}).open();
 	}
 	function flash($e){
-		$e.delay(100).css("-webkit-transition","all 0.6s ease")
-		.css("backgroundColor","white")
-		.css("-moz-transition","all 0.6s ease")
-		.css("-o-transition","all 0.6s ease")
-		.css("-ms-transition","all 0.6s ease")
-		.css("backgroundColor","#ACACAC").delay(200).queue(function() {
+		$e.delay(100).css("-webkit-transition","all 0.7s ease")
+		.css("backgroundColor", "white")
+		.css("-moz-transition","all 0.7s ease")
+		.css("-o-transition","all 0.7s ease")
+		.css("-ms-transition","all 0.7s ease")
+		.css("backgroundColor","#ACACAC").delay(300).queue(function() {
 			$(this).css("backgroundColor","white");
 			$(this).dequeue(); //Prevents box from holding color with no fadeOut on second click.
 		});

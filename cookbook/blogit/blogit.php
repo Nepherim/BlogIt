@@ -671,7 +671,8 @@ function bi_BasePage($pn, $base=''){  //$pn should be a comment page
 global $bi_CommentPattern,$SiteGroup;
 	//Use ptv_blogit_basepage if the page has it (comments post 1.9.0), otherwise try work out basepage using pattern.
 	// The pattern match will return the wrong result when Group has a space or hyphen, converting Test-Page.Page-Name into Test.Page-Page-Name.
-	return ( ($base>'' && $base!=$SiteGroup. '.BlogIt-Admin') ?$base :IsEnabled(PageTextVar($pn, 'blogit_basepage'), preg_replace($bi_CommentPattern,'${1}.${2}',$pn)) );
+	$ptv = PageTextVar($pn, 'blogit_basepage');
+	return ( ($base>'' && $base!=$SiteGroup. '.BlogIt-Admin') ?$base :IsEnabled($ptv, preg_replace($bi_CommentPattern,'${1}.${2}',$pn)) );
 }
 # 0:fullname 1:param 2:val
 function bi_URL($args){
