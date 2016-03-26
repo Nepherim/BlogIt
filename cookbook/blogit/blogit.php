@@ -182,13 +182,13 @@ if ( $bi_AuthUser )  $EnablePostCaptchaRequired = 0;  #disable captcha for any B
 SDVA($HTMLHeaderFmt, array(
 	'jbox.css' => '<link rel="stylesheet" href="' .$FarmPubDirUrl .'/blogit/jbox.css" type="text/css" />',
 	'awesomplete.css' => '<link rel="stylesheet" href="' .$FarmPubDirUrl .'/blogit/awesomplete.css" type="text/css" />',
-	'blogit.css' => '<link rel="stylesheet" href="' .$FarmPubDirUrl .'/blogit/blogit.css" type="text/css" />'));
+	'blogit.css' => '<link rel="stylesheet" href="' .$FarmPubDirUrl .'/blogit/blogit.min.css" type="text/css" />'));
 SDVA($HTMLFooterFmt, array(
 	'jquery.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jquery.min.js"></script>',
 	'validate.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jquery.validate.min.js"></script>',
 	'jbox.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/jbox.min.js"></script>',
 	'awesomplete.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/awesomplete.min.js"></script>',
-	'blogit.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/blogit.js"></script>',
+	'blogit.js' => '<script type="text/javascript" src="' .$FarmPubDirUrl .'/blogit/blogit.min.js"></script>',
 	'blogit-core' => '<script type="text/javascript">'.
 		'BlogIt.pm["pubdirurl"]="'.$FarmPubDirUrl.'/blogit";'.
 		'BlogIt.pm["categories"]="' .bi_CategoryList() .'";'.
