@@ -264,7 +264,8 @@ if ($action == 'blogitupgrade' && bi_Auth('blogit-admin'))
 	include_once($bi_Paths['convert']);
 $bi_AuthUser = bi_Auth('*');
 
-if ( $bi_FrmAction != 'cp' || ($bi_FrmAction == 'cp' && ($bi_AuthUser && !$bi_Dev)) )
+//Disable captcha for admins and ajax type calls
+if ( ($bi_AuthUser && (!$bi_Dev || $FmtPV['$bi_Mode'] == 'ajax')) )
 	$rc_Settings['enabled'] = $bi_ReCaptchaEnabled = $EnablePostCaptchaRequired = 0; //only use captcha for comment post, and for any BlogIt user not in dev mode
 
 // ----------------------------------------
