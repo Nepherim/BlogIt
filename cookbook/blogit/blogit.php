@@ -26,7 +26,7 @@ SDV($bi_AuthorGroup, 'Profiles');
 SDV($bi_CommentGroup, 'Comments');
 SDV($bi_CommentsEnabled, 'open');
 SDV($bi_CommentsAutoClose, ''); //disable comments after a period of time, to reduce spam (overrides bi_CommentsEnabled. '1 month ago', '-1 week', etc.
-SDV($bi_DefaultCommentStatus, (IsEnabled($EnablePostCaptchaRequired) || IsEnabled($bi_ReCaptchaEnabled) ? 'true' : 'false')); //auto-approve comments only if captcha is enabled
+SDV($bi_DefaultCommentStatus, ($EnablePostCaptchaRequired || $bi_ReCaptchaEnabled ? 'true' : 'false')); //auto-approve comments only if captcha is enabled
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_EntriesPerPage, 10);
 SDV($bi_DisplayFuture, 'false');
@@ -206,11 +206,7 @@ SDV($PmFormRedirectFunction, 'bi_Redirect');
 $bi_Forms = array(
 	'blogit-entry',
 	'blogit-comments'
-); //needs to be before cookies
-//disable comments after a period of time, to reduce spam
-//TODO: Causes entrytype to be set to null, and ajax returns 'captcha input'
-//if ($bi_CommentsAutoClose > '' && PageVar($pagename, '$:entrydate') < strtotime($bi_CommentsAutoClose))
-//	$bi_CommentsEnabled = 'read-only';
+);
 //when $action='pmform' need to know what the user is doing, which is in bi_frm_action
 $bi_FrmAction = bi_Clean('action', 'bi_' . @$_REQUEST['bi_frm_action']);
 
@@ -366,7 +362,6 @@ if (function_exists('Markup_e')) { //PmWiki 2.2.58+ / PHP5
 	Markup('blogit-skin', 'fulltext', '/\(:blogit-skin ' . '(date|intro|author|tags|edit|newentry|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentreply|commentblock|commenttext|commentid)' . '\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi', "blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
 	Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei', "PRR(bi_includeSection(\$GLOBALS['bi_Pagename'], PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
 }
-
 $SaveAttrPatterns['/\\(:includesection\\s.*?:\\)/i'] = ' '; //prevents include sections becoming part of page targets list
 if (IsEnabled($EnableGUIButtons) && $FmtPV['$bi_Mode'] != 'ajax') {
 	if ($action == 'bi_be' || $action == 'bi_ne' || ($action == 'pmform' && $_REQUEST['target'] == 'blogit-entry'))
@@ -400,7 +395,7 @@ $MarkupExpr['bi_url'] = 'bi_URL($args)';
 // ----------------------------------------
 // Display of blogit forms is handled by page browse; when user clicks Submit, then pmforms takes over which then calls this function
 function bi_HandleBrowse($src, $auth = 'read') {
-	global $bi_ResetPmFormField, $bi_OriginalFn, $bi_GroupFooterFmt, $bi_CommentGroup, $action, $Now, $bi_Name, $FmtPV, $HandleActions, $GroupPrintHeaderFmt, $GroupPrintFooterFmt, $GroupHeaderFmt, $GroupFooterFmt, $bi_Group, $CategoryGroup, $AsSpacedFunction;
+	global $bi_ResetPmFormField, $bi_OriginalFn, $bi_GroupFooterFmt, $bi_CommentGroup, $action, $Now, $bi_Name, $FmtPV, $HandleActions, $GroupPrintHeaderFmt, $GroupPrintFooterFmt, $GroupHeaderFmt, $GroupFooterFmt, $bi_Group, $CategoryGroup, $AsSpacedFunction, $bi_CommentsEnabled, $bi_CommentsAutoClose, $bi_CommentsAutoClose;
 	bi_debugLog('HandleBrowse: ' . $action . '[' . $FmtPV['$bi_Mode'] . '] ' . $_REQUEST['target']);
 	if ($bi_Group == $bi_CommentGroup) {
 		bi_Redirect();
@@ -410,9 +405,13 @@ function bi_HandleBrowse($src, $auth = 'read') {
 		bi_AjaxRedirect();
 		return;
 	}
-
 	$entrytype = PageTextVar($src, 'entrytype');
 	bi_debugLog('entrytype: '.$entrytype);
+
+	//disable comments after a period of time, to reduce spam
+	if ($entrytype=='blog' && $bi_CommentsAutoClose > '' && PageTextVar($src, 'entrydate') < strtotime($bi_CommentsAutoClose))
+		$bi_CommentsEnabled = 'read-only';
+
 	if ($action == 'pmform' && $_REQUEST['target'] == 'blogit-entry') {
 		if (isset($bi_ResetPmFormField))
 			foreach ($bi_ResetPmFormField as $k => $v) {
