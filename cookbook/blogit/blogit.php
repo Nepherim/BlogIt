@@ -18,6 +18,7 @@ SDV($bi_BlogIt_Enabled, 1);
 if (!IsEnabled($bi_BlogIt_Enabled))
 	return;
 SDV($EnablePostCaptchaRequired, 0);
+SDV($bi_ReCaptchaEnabled, @$rc_Settings['enabled'] || 0);
 SDV($bi_DefaultGroup, 'Blog'); //Pre-populates the Pagename field; blogs can exist in *any* group, not simply the default defined here.
 SDV($bi_BlogGroups, $bi_DefaultGroup); //OPTIONAL: Pipe separated list of Blog groups, may include regex. If you define it then only those groups are searched for entries. If set to null all groups are searched.
 SDV($CategoryGroup, 'Tags'); //[1]
@@ -25,7 +26,7 @@ SDV($bi_AuthorGroup, 'Profiles');
 SDV($bi_CommentGroup, 'Comments');
 SDV($bi_CommentsEnabled, 'open');
 SDV($bi_CommentsAutoClose, ''); //disable comments after a period of time, to reduce spam (overrides bi_CommentsEnabled. '1 month ago', '-1 week', etc.
-SDV($bi_DefaultCommentStatus, (IsEnabled($EnablePostCaptchaRequired) ? 'true' : 'false')); //auto-approve comments only if captcha is enabled
+SDV($bi_DefaultCommentStatus, (IsEnabled($EnablePostCaptchaRequired) || IsEnabled($bi_ReCaptchaEnabled) ? 'true' : 'false')); //auto-approve comments only if captcha is enabled
 SDV($bi_LinkToCommentSite, 'true');
 SDV($bi_EntriesPerPage, 10);
 SDV($bi_DisplayFuture, 'false');
@@ -59,13 +60,15 @@ if ($bi_Skin == 'pmwiki') //Auto-load BlogIt PmWiki css file
 SDV($bi_AjaxMsgTimer, 3000); //Number of milli-seconds that the top ajax message is displayed for
 //key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
 //Used to define how admin links are displayed and handled
+//TODO: Comment reply?
 SDVA($bi_Ajax, array(
 	'bi_ce' => 'ajax',
 	'bi_ca' => 'ajax',
 	'bi_cua' => 'ajax',
 	'bi_be' => 'normal-ajax',
 	'bi_ne' => 'normal-ajax',
-	'bi_del' => 'ajax'
+	'bi_del' => 'ajax',
+	'bi_cp' => 'normal'  //TODO: Allow ajax/normal for comment post
 ));
 SDVA($bi_SkinClasses, array( //provide CSS selector path as the value, which tells blogit where to find content used for dynamic ajax page updates
 	'blog-entry' => '.blogit-post', //container for entry in single-entry view, which should include the ajax edit-link.
@@ -105,6 +108,7 @@ SDV($bi_Cookie, $CookiePrefix . 'blogit-');
 SDV($bi_UnstyleFn, '');
 SDV($bi_CharsetFn, 'bi_CharsetFn'); //Possibly replace with fn using mb_convert_encoding($v,$Charset,'UTF-8');
 SDV($HTMLHeaderFmt['blogit-meta-tag'], '<meta name="generator" content="BlogIt ' . $RecipeInfo['BlogIt']['Version'] . '" />');
+SDV($bi_Dev, 0);
 bi_SDVSA($bi_StatusType, array(
 	'draft',
 	'publish',
@@ -204,8 +208,9 @@ $bi_Forms = array(
 	'blogit-comments'
 ); //needs to be before cookies
 //disable comments after a period of time, to reduce spam
-if ($bi_CommentsAutoClose > '' && PageVar($pagename, '$:entrydate') < strtotime($bi_CommentsAutoClose))
-	$bi_CommentsEnabled = 'read-only';
+//TODO: Causes entrytype to be set to null, and ajax returns 'captcha input'
+//if ($bi_CommentsAutoClose > '' && PageVar($pagename, '$:entrydate') < strtotime($bi_CommentsAutoClose))
+//	$bi_CommentsEnabled = 'read-only';
 //when $action='pmform' need to know what the user is doing, which is in bi_frm_action
 $bi_FrmAction = bi_Clean('action', 'bi_' . @$_REQUEST['bi_frm_action']);
 
@@ -219,6 +224,7 @@ bi_setFmtPV(array(
 	'Now',
 	'bi_CommentGroup',
 	'EnablePostCaptchaRequired',
+	'bi_ReCaptchaEnabled',
 	'bi_DisplayFuture',
 	'bi_EntriesPerPage',
 	'bi_StatAction'
@@ -257,8 +263,9 @@ if ($bi_Pagename == $bi_Pages['blog_list'])
 if ($action == 'blogitupgrade' && bi_Auth('blogit-admin'))
 	include_once($bi_Paths['convert']);
 $bi_AuthUser = bi_Auth('*');
-if ($bi_AuthUser)
-	$EnablePostCaptchaRequired = 0; //disable captcha for any BlogIt user
+
+if ( $bi_FrmAction != 'cp' || ($bi_FrmAction == 'cp' && ($bi_AuthUser && !$bi_Dev)) )
+	$rc_Settings['enabled'] = $bi_ReCaptchaEnabled = $EnablePostCaptchaRequired = 0; //only use captcha for comment post, and for any BlogIt user not in dev mode
 
 // ----------------------------------------
 // - Javascript - [1]
@@ -272,7 +279,7 @@ SDVA($HTMLFooterFmt, array(
 	'validate.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/jquery.validate.min.js"></script>',
 	'jbox.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/jbox.min.js"></script>',
 	'awesomplete.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/awesomplete.min.js"></script>',
-	'blogit.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/blogit.min.js"></script>',
+	'blogit.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/blogit.'. ($bi_Dev ?'' :'min.'). 'js"></script>',
 	'blogit-core' => '<script type="text/javascript">' . 'BlogIt.pm["pubdirurl"]="' . $FarmPubDirUrl . '/blogit";' . 'BlogIt.pm["categories"]="' . bi_CategoryList() . '";' . 'BlogIt.fmt["entry-date"]=/^' . bi_DateFmtRE(XL('%d-%m-%Y %H:%M')) . '$/;' . 'BlogIt.pm["skin-classes"]=' . bi_json_encode($bi_SkinClasses) . ';' . 'BlogIt.pm["charset"]="' . $Charset . '";' . 'BlogIt.pm["ajax-message-timer"]=' . $bi_AjaxMsgTimer . ';' . bi_JXL() . '</script>'
 ));
 
@@ -320,29 +327,19 @@ SDV($PmForm['blogit-comments'], 'saveto="' . $bi_CommentPage . '" ' . 'form=#com
 // ----------------------------------------
 // - Handle Actions
 $bi_OriginalFn['HandleActions'] = $HandleActions;
-$HandleActions['pmform'] = 'bi_HandleProcessForm'; //occurs when a form is submitted
+$HandleActions['pmform'] = 'bi_HandleProcessForm'; //Occurs when a form is submitted.
 $HandleActions['browse'] = 'bi_HandleBrowse';
 $HandleActions['print'] = 'bi_HandleBrowse';
-SDV($HandleActions['bi_admin'], 'bi_HandleAdmin');
-SDV($HandleAuth['bi_admin'], 'blogit-admin');
-SDV($HandleActions['bi_ca'], 'bi_HandleCommentApprove');
-SDV($HandleAuth['bi_ca'], 'comment-approve');
-SDV($HandleActions['bi_cua'], 'bi_HandleCommentUnapprove');
-SDV($HandleAuth['bi_cua'], 'comment-approve');
-SDV($HandleActions['bi_be'], 'bi_HandleEdit');
-SDV($HandleAuth['bi_be'], 'blog-edit');
-SDV($HandleActions['bi_ne'], 'bi_HandleEdit');
-SDV($HandleAuth['bi_ne'], 'blog-new');
-SDV($HandleActions['bi_ce'], 'bi_HandleEdit');
-SDV($HandleAuth['bi_ce'], 'comment-edit');
-SDV($HandleActions['bi_cr'], 'bi_HandleEdit');
-SDV($HandleAuth['bi_cr'], 'comment-edit'); //comment-reply
-SDV($HandleActions['bi_del'], 'bi_HandleDelete');
-SDV($HandleAuth['bi_del'], 'comment-edit');
-SDV($HandleActions['bi_bip'], 'bi_HandleBlockIP');
-SDV($HandleAuth['bi_bip'], 'comment-approve');
-SDV($HandleActions['bi_upgrade'], 'bi_HandleUpgrade');
-SDV($HandleAuth['bi_upgrade'], 'admin');
+SDV($HandleActions['bi_admin'], 'bi_HandleAdmin'); SDV($HandleAuth['bi_admin'], 'blogit-admin');
+SDV($HandleActions['bi_ca'], 'bi_HandleCommentApprove'); SDV($HandleAuth['bi_ca'], 'comment-approve');
+SDV($HandleActions['bi_cua'], 'bi_HandleCommentUnapprove');  SDV($HandleAuth['bi_cua'], 'comment-approve');
+SDV($HandleActions['bi_be'], 'bi_HandleEdit'); SDV($HandleAuth['bi_be'], 'blog-edit');
+SDV($HandleActions['bi_ne'], 'bi_HandleEdit'); SDV($HandleAuth['bi_ne'], 'blog-new');
+SDV($HandleActions['bi_ce'], 'bi_HandleEdit'); SDV($HandleAuth['bi_ce'], 'comment-edit');
+SDV($HandleActions['bi_cr'], 'bi_HandleEdit'); SDV($HandleAuth['bi_cr'], 'comment-edit'); //comment-reply
+SDV($HandleActions['bi_del'], 'bi_HandleDelete'); SDV($HandleAuth['bi_del'], 'comment-edit');
+SDV($HandleActions['bi_bip'], 'bi_HandleBlockIP'); SDV($HandleAuth['bi_bip'], 'comment-approve');
+SDV($HandleActions['bi_upgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['bi_upgrade'], 'admin');
 
 // ----------------------------------------
 // - Pagination
@@ -384,6 +381,7 @@ $Conditions['bi_auth'] = 'bi_Auth($condparm)';
 $Conditions['bi_isnull'] = 'bi_IsNull($condparm)==\'\'';
 $Conditions['bi_lt'] = 'bi_LT($condparm)';
 $Conditions['bi_baseptv'] = 'bi_BasePTV($condparm)';
+$Conditions['bi_dev'] = "(boolean)\$GLOBALS['bi_Dev']==1";
 
 // ----------------------------------------
 // - Markup Expressions
@@ -413,13 +411,16 @@ function bi_HandleBrowse($src, $auth = 'read') {
 	}
 
 	$entrytype = PageTextVar($src, 'entrytype');
+	bi_debugLog('entrytype: '.$entrytype);
 	if ($action == 'pmform' && $_REQUEST['target'] == 'blogit-entry') {
 		if (isset($bi_ResetPmFormField))
 			foreach ($bi_ResetPmFormField as $k => $v) {
 				$_REQUEST["$k"] = $v; //Reset form variables that have errors captured outside the PmForms mechanism
 				$FmtPV['$bi_Default_' . $k] = '"' . bi_Clean('alpha', $v) . '"'; //Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
 			}
-	} elseif ($entrytype == 'blog' && ($action == 'browse' || $action == 'print')) {
+//TODO: check for action = pmform for comment post  frm_action=cp
+	} elseif ($entrytype == 'blog' && ($action == 'pmform' || $action == 'browse' || $action == 'print')) {
+//	} elseif ($entrytype == 'blog' && ($action == 'browse' || $action == 'print')) {
 		bi_storeCookie();
 		$bi_EntryStatus = PageTextVar($src, 'entrystatus');
 		$bi_AuthEditAdmin = bi_Auth('blog-edit,blog-new,blogit-admin');
@@ -568,7 +569,7 @@ function bi_HandleProcessForm($src, $auth = 'read') { //performs submit action f
 	} elseif ($bi_CommentsEnabled == 'open' && $_POST['target'] == 'blogit-comments') {
 		bi_decodeUTF8($_POST); //ajax posts from jquery are always utf8
 		bi_ProcessHooks('comment', 'pre-save', $src, $auth);
-		//for bi_cr, required since older versions didn't get this set, and won't have it
+		//for bi_cr and add, required since older versions didn't get this set, and won't have it
 		$_POST['ptv_blogit_basepage'] = MakePageName($src, (empty($_POST['ptv_blogit_basepage']) ? $src : $_POST['ptv_blogit_basepage']));
 		$_POST['ptv_entrytype'] = 'comment';
 		$_POST['ptv_commenttext'] = rtrim($_POST['ptv_commenttext'], "\n\r\x0B") . "\n"; //ensures markup is closed correctly (eg, links at end of comment)
@@ -595,6 +596,7 @@ function bi_GetPages($src) { //handle bulk deletes
 }
 function bi_HandleDelete($src, $auth = 'comment-edit') { //action=bi_del
 	global $WikiDir, $LastModFile;
+	bi_debugLog('delete: '.$src);
 	$result = array(
 		'msg' => XL('Unable to perform delete operation.'),
 		'result' => 'error'
@@ -975,6 +977,7 @@ function bi_storeCookie($url = '') {
 	}
 }
 // Used to create a URL parameter string from an array, removing ?n= parameter.
+//TODO: use http_build_query() php5+
 function bi_Implode($a, $p = '&', $s = '=', $ignore = array('n' => '')) {
 	foreach ($a as $k => $v)
 		if (!isset($ignore[$k]) !== false)
@@ -1074,7 +1077,7 @@ function bi_Clean($m, $v) {
 		return ($v == 'ajax' ? 'ajax' : '');
 	//ensure action is one of this set when coming through pmform
 	elseif ($m == 'action')
-		return (preg_match('/(bi_ce|bi_cr|bi_ca|bi_ne|bi_be)/', $v, $f) ? $f[1] : '');
+		return (preg_match('/(bi_cp|bi_ce|bi_cr|bi_ca|bi_ne|bi_be)/', $v, $f) ? $f[1] : '');
 	elseif ($m == 'word')
 		return preg_replace("/\\W+/", "", $v); //remove all non-alpha-numerics
 	elseif ($m == 'alpha')

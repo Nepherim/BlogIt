@@ -1,19 +1,19 @@
-// blogit.js 2016-03-26 1.9.1
+// blogit.js 2016-03-26 1.9.2
 jQuery.noConflict();
 jQuery(document).ready(function($) {
-	//show error messages set by pmwiki in .wikimessage
-	BlogIt.fn.showMsg({ msg: $(BlogIt.pm['skin-classes']['blog-form'] + ' .wikimessage').html(), result: 'error' });
-	BlogIt.fn.showMsg({ msg: $(BlogIt.pm['skin-classes']['comment-form'] + ' .wikimessage').html(), result: 'success' }); //default to success, since no way to tell if error.
+	//show error messages set by pmwiki in .wikimessage, and move message source to top
+	if ($('.wikimessage').length)  $('html,body').scrollTop( $(".wikimessage").first().offset().top-175 );
+	BlogIt.fn.showMsg({ msg: $('.wikimessage').html(), result: 'error' });
 	BlogIt.fn.addValidation();
 	BlogIt.fn.addAutocomplete();
 
 	if (window.location.href.match(/action=bi_admin/)) BlogIt.pm['skin-classes']['comment-tag'] = 'li'; //assume admin page is always LI
 	//Classes are added by bi_Link(), so can be hard-coded.
+	//Comment post is handled from form action, not jquery
 	$(document).on('click', '.bi-link-comment-unapproved[href*="bi_mode=ajax"],.bi-Comment-Approve', function(e) { BlogIt.fn.adminAction(e, 'approve'); }); //action approve
 	$(document).on('click', '.bi-link-comment-approved[href*="bi_mode=ajax"],.bi-Comment-Unapprove', function(e) { BlogIt.fn.adminAction(e, 'unapprove'); }); //action unapprove
 	//TODO: Due to pmwiki bug where classes on last link override earlier links on the same line, need to check 'bi_mode=ajax' (ref php.bi_Link())
-	$(document).on('click', '.bi-link-blog-new[href*="bi_mode=ajax"],.bi-link-blog-edit[href*="bi_mode=ajax"],' +
-		'.bi-link-comment-edit[href*="bi_mode=ajax"],.bi-link-comment-reply',
+	$(document).on('click', '.bi-link-blog-new[href*="bi_mode=ajax"],.bi-link-blog-edit[href*="bi_mode=ajax"],.bi-link-comment-edit[href*="bi_mode=ajax"],.bi-link-comment-reply',
 		function(e) { BlogIt.fn.showEdit(e); });
 	$(document).on('click', '.bi-link-comment-delete[href*="bi_mode=ajax"],.bi-link-blog-delete[href*="bi_mode=ajax"],.bi-Comment-Delete', function(e) { BlogIt.fn.adminAction(e, 'delete'); }); //delete comments and blogs
 	$(document).on("click", '.bi-link-comment-block,.bi-Comment-Block', function(e) { BlogIt.fn.adminAction(e, 'block'); }); //block comment IP addresses
@@ -202,20 +202,24 @@ BlogIt.fn = function($) {
 	//defines the ajax actions when clicking Submit from dialogs, and Submit from comment entry
 	function ajaxSubmit($frm, submitFn, e) {
 		//$context is a JQ object we're going to replace; templateClass is used in php.bi_AjaxRedirect to determine which includesection template to use
+		console.log('ajaxSubmit');
 		var $context, templateClass, target;
 		dialogWait();
-		//trigger ajax mode; prevent duplicates which could occur if multiple comments submitted
-		if (!$('[name="bi_mode"]', $frm).length) $frm.prepend('<input type="hidden" name="bi_mode" value="ajax">');
-		if (e) target = ($(e.target).is('img') ? e.currentTarget : e.target); //if user clicked img, bubble out to currentTarget to find href link
+		//TODO: What about non-ajax ne or be?
+		if (e)
+			target = ($(e.target).is('img') ? e.currentTarget : e.target); //if user clicked img, bubble out to currentTarget to find href link
 		if ($('[name="action"]', $frm).val() == 'pmform' && (!e || target.href.match(/action=bi_(cr|ce|be|ne)/)) && !$('[name="bi_frm_action"]', $frm).length)
-			$frm.prepend('<input type="hidden" name="bi_frm_action" value="' + (!e ? 'ca' : target.href.match(/action=bi_(cr|ce|be|ne)/)[1]) + '">')
+			$frm.prepend('<input type="hidden" name="bi_frm_action" value="' + (!e ? 'cp' : target.href.match(/action=bi_(cr|ce|be|ne)/)[1]) + '">')
+		console.log ('frmAction: '+(!e ? 'ca' : target.href.match(/action=bi_(cr|ce|be|ne)/)[1]));
+
 		if (e) { //e is null for user clicking comment add Post button
 			var $closest = closestTemplateObject($(target));
 			//Clicking reply from admin list templateClass is ".blogit-comment-list blogit-comment-admin-list" since container has two classes, use only the first
 			templateClass = ($closest ? '.' + $closest.attr("class").split(' ')[0] : ''); //no closest when adding new entry from ajax link
 			//tell pmwiki which template to use, based on class
-			if (!$('[name="bi_context"]', $frm).length) $frm.prepend('<input type="hidden" name="bi_context" value="' + templateClass + '">')
-				//Find the blog/comment entry that the action relates to, which is either something with an ID of bi_ID, or an element with a template class
+			if (!$('[name="bi_context"]', $frm).length)
+				$frm.prepend('<input type="hidden" name="bi_context" value="' + templateClass + '">')
+			//Find the blog/comment entry that the action relates to, which is either something with an ID of bi_ID, or an element with a template class
 			$context = $(getIDWrapper(target) || $closest);
 		}
 		BlogIt.fn.ajax({
@@ -385,7 +389,7 @@ BlogIt.fn = function($) {
 				}
 			});
 		},
-		addValidation: function(e) {
+		addValidation: function(e) {  //e is null when called from script init
 			$(BlogIt.pm['skin-classes']['blog-form'] + ' form').each(function() {
 				$(this).validate({
 					submitHandler: function(form) { //Only if the form validates
@@ -393,6 +397,7 @@ BlogIt.fn = function($) {
 							ajaxSubmit($(form), updateBlog, e);
 						} else {
 							$(window).off('beforeunload');
+							//TODO: Will auto submit for -- no need to force
 							form.submit();
 						}
 					},
@@ -409,12 +414,24 @@ BlogIt.fn = function($) {
 			$('.jBox-content form,' + BlogIt.pm['skin-classes']['comment-list-wrapper'] + '+form').each(function() {
 				$(this).validate({
 					submitHandler: function(form) {
+						console.log('submit handler');
+						//TODO: Better way to find current page
 						//populate ptv_blogit_basepage in comments, as a pointer back to parent page
-						if (/action=bi_ce/.test(e.target.href)) { //cr is handled in bi_HandleProcessForm()
+						if (e && /action=bi_ce/.test(e.target.href)) { //cr and add are handled in bi_HandleProcessForm()
 							$m = e.target.href.match(/bi_base=(.*\..*)&/);
-							if ($m) $('[name="ptv_blogit_basepage"][value=""]', form).val($m[1]);
+							if ($m)
+								$('[name="ptv_blogit_basepage"][value=""]', form).val($m[1]);
 						}
-						ajaxSubmit($(form), updateComment, e); //mode is undefined when normal comment add, since no onclick handler defined
+						//TODO: Change to allow non-ajax on comment post
+						if ($(form).parents('.jBox-content').length){
+							if (!$('[name="bi_mode"]', form).length)
+								$(form).prepend('<input type="hidden" name="bi_mode" value="ajax">');
+							ajaxSubmit($(form), updateComment, e);
+						} else {
+							//TODO: Will auto submit for -- no need to force
+							form.submit();
+						}
+
 					},
 					//TODO: Only require when class class="blogit-required""
 					rules: {
