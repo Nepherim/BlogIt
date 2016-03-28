@@ -406,7 +406,6 @@ function bi_HandleBrowse($src, $auth = 'read') {
 		return;
 	}
 	$entrytype = PageTextVar($src, 'entrytype');
-	bi_debugLog('entrytype: '.$entrytype);
 
 	//disable comments after a period of time, to reduce spam
 	if ($entrytype=='blog' && $bi_CommentsAutoClose > '' && PageTextVar($src, 'entrydate') < strtotime($bi_CommentsAutoClose))
