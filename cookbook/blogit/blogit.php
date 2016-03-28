@@ -59,8 +59,7 @@ if ($bi_Skin == 'pmwiki') //Auto-load BlogIt PmWiki css file
 	));
 SDV($bi_AjaxMsgTimer, 3000); //Number of milli-seconds that the top ajax message is displayed for
 //key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
-//Used to define how admin links are displayed and handled
-//TODO: Comment reply?
+//Used to define how admin links are displayed and handled. Comment reply is always ajax.
 SDVA($bi_Ajax, array(
 	'bi_ce' => 'ajax',
 	'bi_ca' => 'ajax',
@@ -68,7 +67,7 @@ SDVA($bi_Ajax, array(
 	'bi_be' => 'normal-ajax',
 	'bi_ne' => 'normal-ajax',
 	'bi_del' => 'ajax',
-	'bi_cp' => 'normal'  //TODO: Allow ajax/normal for comment post
+	'bi_cp' => 'normal'
 ));
 SDVA($bi_SkinClasses, array( //provide CSS selector path as the value, which tells blogit where to find content used for dynamic ajax page updates
 	'blog-entry' => '.blogit-post', //container for entry in single-entry view, which should include the ajax edit-link.
@@ -88,7 +87,7 @@ SDVA($bi_SkinClasses, array( //provide CSS selector path as the value, which tel
 	'comment-block-title' => '.blogit-commentblock h2', //pointer to each page title on the unapproved comment admin page
 	'comment-tag' => 'li' //tag used for each comment in single view mode
 ));
-SDVA($bi_SkinSettings, array(
+SDVA($bi_SkinSettings, array( //usable as {$bi_SkinSettings_AJAX_TEXTAREA_ROWS}
 	'ajax_textarea_rows' => '18' //make sure whole ajax dialog fits on low res monitors
 ));
 
@@ -417,9 +416,7 @@ function bi_HandleBrowse($src, $auth = 'read') {
 				$_REQUEST["$k"] = $v; //Reset form variables that have errors captured outside the PmForms mechanism
 				$FmtPV['$bi_Default_' . $k] = '"' . bi_Clean('alpha', $v) . '"'; //Always set, but used where values are stored in formats that don't handle errors (like Unix timestamps).
 			}
-//TODO: check for action = pmform for comment post  frm_action=cp
 	} elseif ($entrytype == 'blog' && ($action == 'pmform' || $action == 'browse' || $action == 'print')) {
-//	} elseif ($entrytype == 'blog' && ($action == 'browse' || $action == 'print')) {
 		bi_storeCookie();
 		$bi_EntryStatus = PageTextVar($src, 'entrystatus');
 		$bi_AuthEditAdmin = bi_Auth('blog-edit,blog-new,blogit-admin');
