@@ -107,7 +107,6 @@ SDV($bi_Cookie, $CookiePrefix . 'blogit-');
 SDV($bi_UnstyleFn, '');
 SDV($bi_CharsetFn, 'bi_CharsetFn'); //Possibly replace with fn using mb_convert_encoding($v,$Charset,'UTF-8');
 SDV($HTMLHeaderFmt['blogit-meta-tag'], '<meta name="generator" content="BlogIt ' . $RecipeInfo['BlogIt']['Version'] . '" />');
-SDV($bi_Dev, 0);
 bi_SDVSA($bi_StatusType, array(
 	'draft',
 	'publish',
@@ -156,7 +155,11 @@ SDVA($bi_FixPageTitlePatterns, array(
 // ----------------------------------------
 // - Internal Use Only
 // ----------------------------------------
-SDV($BlogIt['debug'], false);
+SDVA($bi_Internal, array(
+	'debug' => false,
+	'dev' => false
+));
+
 bi_debugLog('====== action: ' . $action . '    Target: ' . $_REQUEST['target'] . '   Save: ' . @$_REQUEST['save']);
 SDVA($bi_Pages, array(
 	'admin' => $SiteGroup . '.BlogIt-Admin',
@@ -260,7 +263,7 @@ if ($action == 'blogitupgrade' && bi_Auth('blogit-admin'))
 $bi_AuthUser = bi_Auth('*');
 
 //Disable captcha for admins and ajax type calls
-if ( ($bi_AuthUser && (!$bi_Dev || $FmtPV['$bi_Mode'] == 'ajax')) )
+if ( $bi_AuthUser && (!$bi_Internal['dev'] || $FmtPV['$bi_Mode']=='ajax' || $action=='bi_ne' || $action=='bi_be' || $action == 'pmform') )
 	$rc_Settings['enabled'] = $bi_ReCaptchaEnabled = $EnablePostCaptchaRequired = 0; //only use captcha for comment post, and for any BlogIt user not in dev mode
 
 // ----------------------------------------
@@ -275,7 +278,7 @@ SDVA($HTMLFooterFmt, array(
 	'validate.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/jquery.validate.min.js"></script>',
 	'jbox.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/jbox.min.js"></script>',
 	'awesomplete.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/awesomplete.min.js"></script>',
-	'blogit.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/blogit.'. ($bi_Dev ?'' :'min.'). 'js"></script>',
+	'blogit.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/blogit.'. ($bi_Internal['dev'] ?'' :'min.'). 'js"></script>',
 	'blogit-core' => '<script type="text/javascript">' . 'BlogIt.pm["pubdirurl"]="' . $FarmPubDirUrl . '/blogit";' . 'BlogIt.pm["categories"]="' . bi_CategoryList() . '";' . 'BlogIt.fmt["entry-date"]=/^' . bi_DateFmtRE(XL('%d-%m-%Y %H:%M')) . '$/;' . 'BlogIt.pm["skin-classes"]=' . bi_json_encode($bi_SkinClasses) . ';' . 'BlogIt.pm["charset"]="' . $Charset . '";' . 'BlogIt.pm["ajax-message-timer"]=' . $bi_AjaxMsgTimer . ';' . bi_JXL() . '</script>'
 ));
 
@@ -376,7 +379,7 @@ $Conditions['bi_auth'] = 'bi_Auth($condparm)';
 $Conditions['bi_isnull'] = 'bi_IsNull($condparm)==\'\'';
 $Conditions['bi_lt'] = 'bi_LT($condparm)';
 $Conditions['bi_baseptv'] = 'bi_BasePTV($condparm)';
-$Conditions['bi_dev'] = "(boolean)\$GLOBALS['bi_Dev']==1";
+$Conditions['bi_dev'] = "(boolean)\$GLOBALS[bi_Internal]['dev']==1";
 
 // ----------------------------------------
 // - Markup Expressions
@@ -394,7 +397,7 @@ $MarkupExpr['bi_url'] = 'bi_URL($args)';
 // ----------------------------------------
 // Display of blogit forms is handled by page browse; when user clicks Submit, then pmforms takes over which then calls this function
 function bi_HandleBrowse($src, $auth = 'read') {
-	global $bi_ResetPmFormField, $bi_OriginalFn, $bi_GroupFooterFmt, $bi_CommentGroup, $action, $Now, $bi_Name, $FmtPV, $HandleActions, $GroupPrintHeaderFmt, $GroupPrintFooterFmt, $GroupHeaderFmt, $GroupFooterFmt, $bi_Group, $CategoryGroup, $AsSpacedFunction, $bi_CommentsEnabled, $bi_CommentsAutoClose, $bi_CommentsAutoClose;
+	global $bi_ResetPmFormField, $bi_OriginalFn, $bi_GroupFooterFmt, $bi_CommentGroup, $action, $Now, $bi_Name, $FmtPV, $HandleActions, $GroupPrintHeaderFmt, $GroupPrintFooterFmt, $GroupHeaderFmt, $GroupFooterFmt, $bi_Group, $CategoryGroup, $AsSpacedFunction, $bi_CommentsEnabled, $bi_CommentsAutoClose;
 	bi_debugLog('HandleBrowse: ' . $action . '[' . $FmtPV['$bi_Mode'] . '] ' . $_REQUEST['target']);
 	if ($bi_Group == $bi_CommentGroup) {
 		bi_Redirect();
@@ -510,7 +513,7 @@ function bi_HandleProcessForm($src, $auth = 'read') { //performs submit action f
 	global $bi_ResetPmFormField, $_POST, $_REQUEST, $ROSPatterns, $CategoryGroup, $bi_DefaultGroup, $bi_CommentsEnabled, $Now, $bi_OriginalFn, $GroupHeaderFmt, $bi_Forms, $bi_EnablePostDirectives, $PmFormPostPatterns, $AutoCreate, $bi_DefaultCommentStatus, $bi_FixPageTitlePatterns, $bi_CommentPattern, $Author, $EnablePostAuthorRequired, $bi_Hooks, $bi_MakePageNamePatterns;
 
 	$bi_Mode = bi_Clean('mode', $_POST['bi_mode']);
-	bi_debugLog('HandleProcessForm: ' . $bi_Mode);
+	bi_debugLog('HandleProcessForm: ' . $bi_Mode. '::'. @$_POST['target']);
 
 	if ($_POST['cancel'] && in_array($_REQUEST['target'], $bi_Forms))
 		bi_Redirect(); //ajax cancel is handled client-side
@@ -1106,7 +1109,7 @@ function bi_addPageStore($n = 'wikilib.d') {
 	));
 }
 function bi_debugLog($msg, $out = false) {
-	if ($out || (!$out && $GLOBALS['BlogIt']['debug']))
+	if ($out || (!$out && $GLOBALS['bi_Internal']['debug']))
 		error_log(date('r') . ' [blogit]: ' . (is_array($msg) ? "array\n\t" . implode("\n\t", $msg) : $msg));
 }
 function bi_echo_json_encode($a = false) {

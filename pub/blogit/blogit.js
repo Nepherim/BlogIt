@@ -210,8 +210,9 @@ BlogIt.fn = function($) {
 			target = ($(e.target).is('img') ? e.currentTarget : e.target); //if user clicked img, bubble out to currentTarget to find href link
 		if ($('[name="action"]', $frm).val() == 'pmform' && (!e || target.href.match(/action=bi_(cr|ce|be|ne)/)) && !$('[name="bi_frm_action"]', $frm).length)
 			$frm.prepend('<input type="hidden" name="bi_frm_action" value="' + (!e ? 'cp' : target.href.match(/action=bi_(cr|ce|be|ne)/)[1]) + '">')
+		if (!$('[name="bi_mode"]', $frm).length)
+			$frm.prepend('<input type="hidden" name="bi_mode" value="ajax">');
 		console.log ('frmAction: '+(!e ? 'ca' : target.href.match(/action=bi_(cr|ce|be|ne)/)[1]));
-
 		if (e) { //e is null for user clicking comment add Post button
 			var $closest = closestTemplateObject($(target));
 			//Clicking reply from admin list templateClass is ".blogit-comment-list blogit-comment-admin-list" since container has two classes, use only the first
@@ -424,8 +425,6 @@ BlogIt.fn = function($) {
 						}
 						//TODO: Change to allow non-ajax on comment post
 						if ($(form).parents('.jBox-content').length){
-							if (!$('[name="bi_mode"]', form).length)
-								$(form).prepend('<input type="hidden" name="bi_mode" value="ajax">');
 							ajaxSubmit($(form), updateComment, e);
 						} else {
 							//TODO: Will auto submit for -- no need to force
