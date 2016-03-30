@@ -663,7 +663,6 @@ function bi_HandleBlockIP($src, $auth = 'comment-approve') { //action=bi_bip
 			foreach ($pages as $p) {
 				$page = RetrieveAuthPage($p, 'read', false);
 				if ($page) {
-					//TODO: Use $page['host']?
 					$x = preg_grep_keys('/^host:.*$/', $page, -1); //find the last occurence of host: which stores creator IP
 					$ip[$x] = $x; //store as key/value to ensure we don't store same IP multiple times
 				}
@@ -889,6 +888,7 @@ function bi_Auth($condparm) { //condparm: comma separated list of actions, and o
 // ----------------------------------------
 // - Internal Functions
 // ----------------------------------------
+// Search array keys for $patern, returning the $length occurence, from $offset
 function preg_grep_keys($pattern, $input, $offset, $length = NULL) {
 	$m = array_intersect_key($input, array_flip(preg_grep($pattern, array_keys($input)))); //find keys matching pattern
 	return array_pop((array_slice($m, $offset, $length))); //find specific element; extra parenthesis is required
@@ -1006,7 +1006,7 @@ function bi_SaveTags($body, $user_tags, $mode = 'save') {
 	// Concatenate the tag-field tags, with those in the body, PPRA removes all non-pagename chars
 	$allTags = PPRA($bi_MakePageNamePatterns, array_unique(array_merge((array) $fieldTags, (array) $bodyTags)));
 	sort($allTags);
-	return (!$allTags ? '[[!' . implode(']]' . $bi_TagSeparator . '[[!', $allTags) . ']]' :'');
+	return ($allTags ? '[[!' . implode(']]' . $bi_TagSeparator . '[[!', $allTags) . ']]' :'');
 }
 function bi_GetPmMarkup($body, $tags, $title) { //stores specific pmmarkup to ensure it's processed,  since isn't if stored in $: pvt due to processing order 'fulltext'.
 	return bi_SaveTags($body, $tags) . '(:title ' . $title . ':)';
