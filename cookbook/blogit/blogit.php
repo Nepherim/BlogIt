@@ -480,7 +480,7 @@ function bi_HandleCommentApprove($src, $auth = 'comment-approve', $approve = tru
 	if (bi_Auth($auth)) {
 		$pages = bi_GetPages($src);
 		foreach ($pages as $p) {
-			$old = RetrieveAuthPage($p, 'read', false);
+			$old = RetrieveAuthPage($p, 'read', false, READPAGE_CURRENT);
 			if ($old) {
 				$new = $old;
 				$new['csum'] = $new['csum:' . $Now] = $ChangeSummary = $m;
@@ -562,7 +562,7 @@ function bi_HandleProcessForm($src, $auth = 'read') { //performs submit action f
 		$_POST['ptv_entrytitle'] = (empty($title) ? $pg : $_POST['ptv_entrytitle']); //use either the url or the original title (not the clean title)
 		$_POST['ptv_entryurl'] = (empty($title) && empty($pg) ? $_POST['ptv_entryurl'] : MakePageName($src, (empty($gr) ? $bi_DefaultGroup : $gr) . '.' . (empty($pg) ? $title : $pg)));
 		$_POST['ptv_entrytags'] = implode(', ', PPRA($bi_MakePageNamePatterns, array_unique(explode(', ', $_POST['ptv_entrytags'])))); //remove duplicates
-		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $_POST['ptv_entrytitle']); //stores markup to ensure it's processed
+		$_POST['ptv_pmmarkup'] = bi_GetPmMarkup($_POST['ptv_entrybody'], $_POST['ptv_entrytags'], $src, $_POST['ptv_entrytitle']); //stores markup to ensure it's processed
 		if (IsEnabled($EnablePostAuthorRequired, 0))
 			$Author = $_POST['ptv_entryauthor'];
 		bi_ProcessHooks('blog', 'post-save', $src, $auth);
@@ -628,7 +628,7 @@ function bi_HandleBlockIP($src, $auth = 'comment-approve') { //action=bi_bip
 	if (PageTextVar($src, 'entrytype') == 'comment' && bi_Auth($auth . ' ' . $src)) {
 		if ($_GET['bi_ip'] > '') { //either we have an IP, or need to find one
 			Lock(2);
-			$old = RetrieveAuthPage($bi_Pages['blocklist'], 'edit', false);
+			$old = RetrieveAuthPage($bi_Pages['blocklist'], 'edit', false, READPAGE_CURRENT);
 			if ($old) {
 				$ip = explode(',', $_GET['bi_ip']);
 				$blocked = array();
@@ -663,7 +663,7 @@ function bi_HandleBlockIP($src, $auth = 'comment-approve') { //action=bi_bip
 			$ip = array();
 			$pages = bi_GetPages($src);
 			foreach ($pages as $p) {
-				$page = RetrieveAuthPage($p, 'read', false);
+				$page = RetrieveAuthPage($p, 'read', false); //read history
 				if ($page) {
 					$x = preg_grep_keys('/^host:.*$/', $page, -1); //find the last occurence of host: which stores creator IP
 					$ip[$x] = $x; //store as key/value to ensure we don't store same IP multiple times
@@ -724,6 +724,7 @@ function blogitSkinMU($fn, $opt, $txt) {
 		'entry' => '%d-%m-%Y %H:%M'
 	);
 	//Can't use {$x} below because markup is processed on 'fulltext', before FmtPV are processed. Thus, parameters need to be passed in.
+	//Need to pass in pagename, since may be running from a pagelist, so pagename would be Blog.Blog, etc.
 	switch ($fn) {
 		case 'date':
 			return ME_ftime(XL(array_key_exists($args['fmt'], $dateFmt) ? $dateFmt[$args['fmt']] : $args['fmt']), '@' . $txt);
@@ -751,7 +752,7 @@ function blogitSkinMU($fn, $opt, $txt) {
 		case 'commentblock':
 			return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve ' . bi_BasePage($txt)) ? bi_Link($args['pre_text'], $txt, 'bi_bip', '$[block]', $args['post_text'], 'bi-link-comment-block') : '');
 		case 'tags':
-			return ($txt > '' ? $args['pre_text'] . bi_SaveTags('', $txt, 'display') . $args['post_text'] : '');
+			return ($txt > '' ? $args['pre_text'] . bi_SaveTags('', $txt, $args['page'], 'display') . $args['post_text'] : '');
 		case 'commentcount':
 			return ($args['status'] != 'none' && $bi_CommentsEnabled != 'none' ? $args['pre_text'] . '[[' . $args['group'] . '.' . $args['name'] . '#blogit-comment-list | ' . '(:includesection "#comments-count-pagelist entrygroup=\'' . $args['group'] . '\' entryname=\'' . $args['name'] . '\' commentstatus=true":)' . $txt . ']]' . $args['post_text'] : '');
 		case 'commentauthor':
@@ -993,11 +994,11 @@ function bi_AddMarkup() {
 }
 // Combines categories in body [[!...]] with separated tag list in tag-field.
 // Stores combined list in tag-field in PmWiki format [[!...]][[!...]].
-function bi_SaveTags($body, $user_tags, $mode = 'save') {
-	global $bi_TagSeparator, $bi_MakePageNamePatterns, $bi_Pagename;
+function bi_SaveTags($body, $user_tags, $pn, $mode = 'save') {
+	global $bi_TagSeparator, $bi_MakePageNamePatterns;
 	if ($mode=='display'){
-		$page = RetrieveAuthPage($bi_Pagename, 'read', false);
-		return '(:includesection "#tag-commalist-pagelist links='. @$page['targets']. '":)';
+		$page = @RetrieveAuthPage($pn, 'read', false, READPAGE_CURRENT);
+		return ($page['targets'] ?'(:includesection "#tag-commalist-pagelist links='. $page['targets']. '":)' :'');
 	}
 	// Read tags from body, strip [[!...]]
 	if ($body)
@@ -1010,8 +1011,8 @@ function bi_SaveTags($body, $user_tags, $mode = 'save') {
 	sort($allTags);
 	return ($allTags ? '[[!' . implode(']]' . $bi_TagSeparator . '[[!', $allTags) . ']]' :'');
 }
-function bi_GetPmMarkup($body, $tags, $title) { //stores specific pmmarkup to ensure it's processed,  since isn't if stored in $: pvt due to processing order 'fulltext'.
-	return bi_SaveTags($body, $tags) . '(:title ' . $title . ':)';
+function bi_GetPmMarkup($body, $tags, $pn, $title) { //stores specific pmmarkup to ensure it's processed,  since isn't if stored in $: pvt due to processing order 'fulltext'.
+	return bi_SaveTags($body, $tags, $pn) . '(:title ' . $title . ':)';
 }
 function bi_setMakePageNamePatterns() {
 	global $MakePageNamePatterns, $bi_MakePageNamePatterns;
