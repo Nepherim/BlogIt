@@ -325,6 +325,8 @@ SDV($PmForm['blogit-comments'], 'saveto="' . $bi_CommentPage . '" ' . 'form=#com
 
 // ----------------------------------------
 // - Handle Actions
+SDV($HandleAuth['source'], 'edit');
+SDV($HandleAuth['diff'], 'edit');
 $bi_OriginalFn['HandleActions'] = $HandleActions;
 $HandleActions['pmform'] = 'bi_HandleProcessForm'; //Occurs when a form is submitted.
 $HandleActions['browse'] = 'bi_HandleBrowse';
