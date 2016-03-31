@@ -431,7 +431,7 @@ function bi_HandleBrowse($src, $auth = 'read') {
 	} else
 		bi_storeCookie();
 	if ($bi_Group == $CategoryGroup) {
-		if (@$entrytype != 'blog')
+		if (@$entrytype != 'blog') //title for blog is already part of $:pmmarkup
 			$GroupHeaderFmt .= '(:title ' . $AsSpacedFunction($bi_Name) . ':)';
 		$GroupFooterFmt .= $bi_GroupFooterFmt;
 	}
@@ -1047,7 +1047,9 @@ function bi_JXL() { //create javascript array holding all XL translations of tex
 		'Request timeout.',
 		'Error: ',
 		'No data returned.',
-		'Must be a datetime.',
+		'Must be a datetime (dd-mm-yyyy hh:mm).',
+		'Please enter a valid email address.',
+		'Please enter a valid URL.',
 		'Error on edit return.'
 	);
 	foreach ($a as $k)

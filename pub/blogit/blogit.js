@@ -407,7 +407,10 @@ BlogIt.fn = function($) {
 						ptv_entrydate: { datetime: true },
 						ptv_entryurl: { require_from_group: [1, 'input[name="ptv_entrytitle"],input[name="ptv_entryurl"]'] },
 						ptv_entrytitle: { require_from_group: [1, 'input[name="ptv_entrytitle"],input[name="ptv_entryurl"]'] }
-					}
+					},
+					messages: {
+    					ptv_entrydate: BlogIt.fn.xl('Must be a datetime (dd-mm-yyyy hh:mm).')
+    				}
 				});
 			});
 
@@ -437,6 +440,10 @@ BlogIt.fn = function($) {
 						ptv_commentauthor: { required: true },
 						ptv_email: { required: true, email: true },
 						ptv_website: { url: true }
+					},
+					messages: {
+						ptv_email: BlogIt.fn.xl('Please enter a valid email address.'),
+						ptv_website: BlogIt.fn.xl('Please enter a valid URL.')
 					}
 				});
 			});
