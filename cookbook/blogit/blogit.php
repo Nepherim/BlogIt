@@ -7,7 +7,7 @@ License as published by the Free Software Foundation; either version 2 of the Li
 
 For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookbook/BlogIt
 */
-$RecipeInfo['BlogIt']['Version'] = '20160326'; //1.9.2
+$RecipeInfo['BlogIt']['Version'] = '20160330'; //1.9.5
 if ($VersionNum < 2001950)
 	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
 

@@ -1,4 +1,4 @@
-// blogit.js 2016-03-26 1.9.2
+// blogit.js 2016-03-30 1.9.5
 jQuery.noConflict();
 jQuery(document).ready(function($) {
 	//show error messages set by pmwiki in .wikimessage, and move message source to top
