@@ -753,6 +753,7 @@ function blogitSkinMU($fn, $opt, $txt) {
 			return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve ' . bi_BasePage($txt)) ? bi_Link($args['pre_text'], $txt, 'bi_bip', '$[block]', $args['post_text'], 'bi-link-comment-block') : '');
 		case 'tags':
 			return ($txt > '' ? $args['pre_text'] . bi_SaveTags('', $txt, $args['page'], 'display') . $args['post_text'] : '');
+		//TODO: Why is this split by name/group? So #comments-count-pagelist can create group-name-* wildcard. Better to use basepage?
 		case 'commentcount':
 			return ($args['status'] != 'none' && $bi_CommentsEnabled != 'none' ? $args['pre_text'] . '[[' . $args['group'] . '.' . $args['name'] . '#blogit-comment-list | ' . '(:includesection "#comments-count-pagelist entrygroup=\'' . $args['group'] . '\' entryname=\'' . $args['name'] . '\' commentstatus=true":)' . $txt . ']]' . $args['post_text'] : '');
 		case 'commentauthor':
