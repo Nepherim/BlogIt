@@ -707,7 +707,7 @@ function bi_Link($pre, $page, $action, $txt, $post, $cls = '', $base = '') { //v
 		(substr($bi_Ajax[$action], strpos($bi_Ajax[$action], '-') + 1) == 'ajax' ? '&amp;bi_mode=ajax' : '')
 	);
 	return $pre . str_replace('$$mode$$', ($ajax[0] > '' ? 'bi-ajax-mode ' : ''), $lnk) . $ajax[0] . ' | ' . $txt . ']]' //text link
-		. ($ajax[1] > '' ? str_replace('$$mode$$', 'bi-ajax-mode ', $lnk) . $ajax[1] . ' | $FarmPubDirUrl/blogit/link.gif]]' : '') //optional second image link
+		. ($ajax[1] > '' ? str_replace('$$mode$$', 'bi-ajax-mode ', $lnk) . $ajax[1] . " | $FarmPubDirUrl/blogit/link.gif]]" : '') //optional second image link
 		. $post;
 }
 function blogitSkinMU($m) {
