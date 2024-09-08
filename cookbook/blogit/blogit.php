@@ -9,7 +9,7 @@ For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookboo
 
 Updated for recent PHP versions by Petko Yotov pmwiki.org/petko
 */
-$RecipeInfo['BlogIt']['Version'] = '2024-09-06'; //1.9.6?
+$RecipeInfo['BlogIt']['Version'] = '2024-09-08'; //1.9.6?
 if ($VersionNum < 2003036)
 	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.3.36 or later.</h3>");
 
@@ -52,13 +52,10 @@ SDV($bi_DateStyle, 'dmy'); //if you change the date entry format, then indicate 
 // ----------------------------------------
 // - Skin settings
 SDV($bi_Skin, ($Skin > '' ? $Skin : 'pmwiki')); //Needed if skin is set in group config, which is processed after main config
-SDV($PageCSSListFmt, array( //Auto-load BlogIt PmWiki css file
-	'pub/css/local.css' => '$PubDirUrl/css/local.css'
-));
 if ($bi_Skin == 'pmwiki') //Auto-load BlogIt PmWiki css file
-	SDV($PageCSSListFmt, array(
-		'pub/blogit/blogit-pmwiki.css' => '$FarmPubDirUrl/blogit/blogit-pmwiki.css'
-	));
+  SDVA($HTMLHeaderFmt, array(
+    'blogit-pmwiki.css' => '<link rel="stylesheet" href="$FarmPubDirUrl/blogit/blogit-pmwiki.css" />',
+  ));
 SDV($bi_AjaxMsgTimer, 3000); //Number of milli-seconds that the top ajax message is displayed for
 //key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
 //Used to define how admin links are displayed and handled. Comment reply is always ajax.
@@ -268,17 +265,17 @@ if ( $bi_AuthUser && (!$bi_Internal['dev'] || $FmtPV['$bi_Mode']=='ajax' || $act
 // ----------------------------------------
 // - Javascript - [1]
 SDVA($HTMLHeaderFmt, array(
-	'jbox.css' => '<link rel="stylesheet" href="' . $FarmPubDirUrl . '/blogit/jbox.css" type="text/css" />',
-	'awesomplete.css' => '<link rel="stylesheet" href="' . $FarmPubDirUrl . '/blogit/awesomplete.css" type="text/css" />',
-	'blogit.css' => '<link rel="stylesheet" href="' . $FarmPubDirUrl . '/blogit/blogit.min.css" type="text/css" />'
+	'jbox.css' => '<link rel="stylesheet" href="$FarmPubDirUrl/blogit/jbox.css" type="text/css" />',
+	'awesomplete.css' => '<link rel="stylesheet" href="$FarmPubDirUrl/blogit/awesomplete.css" type="text/css" />',
+	'blogit.css' => '<link rel="stylesheet" href="$FarmPubDirUrl/blogit/blogit.min.css" type="text/css" />'
 ));
 SDVA($HTMLFooterFmt, array(
-	'jquery.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/jquery.min.js"></script>',
-	'validate.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/jquery.validate.min.js"></script>',
-	'jbox.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/jbox.min.js"></script>',
-	'awesomplete.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/awesomplete.min.js"></script>',
-	'blogit.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/blogit.'. ($bi_Internal['dev'] ?'' :'min.'). 'js"></script>',
-	'blogit-core' => '<script type="text/javascript">' . 'BlogIt.pm["pubdirurl"]="' . $FarmPubDirUrl . '/blogit";' . 'BlogIt.pm["categories"]="' . bi_CategoryList() . '";' . 'BlogIt.fmt["entry-date"]=/^' . bi_DateFmtRE(XL('%d-%m-%Y %H:%M')) . '$/;' . 'BlogIt.pm["skin-classes"]=' . bi_json_encode($bi_SkinClasses) . ';' . 'BlogIt.pm["charset"]="' . $Charset . '";' . 'BlogIt.pm["ajax-message-timer"]=' . $bi_AjaxMsgTimer . ';' . bi_JXL() . '</script>'
+	'jquery.js' => '<script type="text/javascript" src="$FarmPubDirUrl/blogit/jquery.min.js"></script>',
+	'validate.js' => '<script type="text/javascript" src="$FarmPubDirUrl/blogit/jquery.validate.min.js"></script>',
+	'jbox.js' => '<script type="text/javascript" src="$FarmPubDirUrl/blogit/jbox.min.js"></script>',
+	'awesomplete.js' => '<script type="text/javascript" src="$FarmPubDirUrl/blogit/awesomplete.min.js"></script>',
+	'blogit.js' => '<script type="text/javascript" src="$FarmPubDirUrl/blogit/blogit.'. ($bi_Internal['dev'] ?'' :'min.'). 'js"></script>',
+	'blogit-core' => '<script type="text/javascript">' . 'BlogIt.pm["pubdirurl"]="$FarmPubDirUrl/blogit";' . 'BlogIt.pm["categories"]="' . bi_CategoryList() . '";' . 'BlogIt.fmt["entry-date"]=/^' . bi_DateFmtRE(XL('%d-%m-%Y %H:%M')) . '$/;' . 'BlogIt.pm["skin-classes"]=' . bi_json_encode($bi_SkinClasses) . ';' . 'BlogIt.pm["charset"]="' . $Charset . '";' . 'BlogIt.pm["ajax-message-timer"]=' . $bi_AjaxMsgTimer . ';' . bi_JXL() . '</script>'
 ));
 
 // ----------------------------------------
@@ -710,7 +707,7 @@ function bi_Link($pre, $page, $action, $txt, $post, $cls = '', $base = '') { //v
 		(substr($bi_Ajax[$action], strpos($bi_Ajax[$action], '-') + 1) == 'ajax' ? '&amp;bi_mode=ajax' : '')
 	);
 	return $pre . str_replace('$$mode$$', ($ajax[0] > '' ? 'bi-ajax-mode ' : ''), $lnk) . $ajax[0] . ' | ' . $txt . ']]' //text link
-		. ($ajax[1] > '' ? str_replace('$$mode$$', 'bi-ajax-mode ', $lnk) . $ajax[1] . ' | ' . $FarmPubDirUrl . '/blogit/link.gif]]' : '') //optional second image link
+		. ($ajax[1] > '' ? str_replace('$$mode$$', 'bi-ajax-mode ', $lnk) . $ajax[1] . ' | $FarmPubDirUrl/blogit/link.gif]]' : '') //optional second image link
 		. $post;
 }
 function blogitSkinMU($m) {
