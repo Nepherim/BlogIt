@@ -162,7 +162,7 @@ SDVA($bi_Pages, array(
 	'blog_list' => $SiteGroup . '.BlogList',
 	'blocklist' => $SiteAdminGroup . '.Blocklist'
 ));
-SDV($bi_TemplateList, (isset($bi_Skin) ? $SiteGroup . '.BlogIt-SkinTemplate-' . $bi_Skin . ' ' : '') . $SiteGroup . '.BlogIt-CoreTemplate');
+SDV($bi_TemplateList, (isset($bi_Skin) ? $SiteGroup . '.BlogIt-SkinTemplate-' . $bi_Skin . ' ' : '') . " " . $SiteGroup . '.BlogIt-CoreTemplate');
 SDVA($bi_PageType, array(
 	'blog'
 )); //Comment is not in PageType list, since we don't want bloggers to be able to select 'comment' types.
@@ -381,7 +381,7 @@ $Conditions['bi_dev'] = "(boolean)\$GLOBALS[bi_Internal]['dev']==1";
 // ----------------------------------------
 // - Markup Expressions
 // if [0] is null or {$... then returns [1]; if [0] != null then returns ([2] or [0] if [2] is null)
-$MarkupExpr['bi_ifnull'] = '( bi_IsNull($args[0])!="" ?( bi_IsNull($args[2])=="" ?$args[0] :$args[2]) :$args[1])';
+$MarkupExpr['bi_ifnull'] = '( bi_IsNull($args[0])!="" ?( bi_IsNull(@$args[2])=="" ?$args[0] :@$args[2]) :$args[1])';
 // Calls to bi_encode should NOT be quoted: {(bi_encode {*$Title})} NOT {(bi_encode '{*$Title}')}, as titles with ' will terminate early.
 $MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull($params), ENT_QUOTES)'; //$params contains the full content of the ME before splitting to $args
 // bi_param "group" "group_val"   Returns: group="group_val" if group_val != ""; else returns ""   0:param name; 1:value
@@ -687,6 +687,7 @@ function blogitMU_intro($options, $text) {
 function blogitMU_list($name, $text) {
 	list($var, $label) = explode('/', $text, 2);
 	$i = count($GLOBALS[$var]);
+	$t = '';
 	foreach ($GLOBALS[$var] as $k)
 		$t .= '(:input ' . ($i == 1 ? 'hidden' : 'select') . ' name=' . $name . ' value="' . $k . '" label="' . XL($k) . '" id="' . $var . '" tabindex=1:)';
 	return ($i == 1 ? '' : $label) . $t;
@@ -772,6 +773,7 @@ function bi_includeSection($m) {
   
 	$args = ParseArgs($inclspec); //$inclspec: "params"
 	$anc = array_shift($args['']); //$anc: parameters for include; $args: include-paths
+	
 	if ($anc > '' && $anc[0] != "#")
 		return '';
 	foreach ($args[''] as $v) {
@@ -785,6 +787,7 @@ function bi_includeSection($m) {
 // - Condition Functions
 // ----------------------------------------
 function bi_IsNull($e) {
+  $e = strval(@$e);
 	$e = trim($e, '\'\" ');
 	return (!empty($e) && substr($e, 0, 3) != '{*$' && substr($e, 0, 2) != '{$' && substr($e, 0, 3) != '{=$' ? $e : '');
 }
@@ -813,7 +816,7 @@ function bi_IsDate($d, $f = '%d-%m-%Y %H:%M', $z = '') { //accepts a date, and a
 	if (empty($d))
 		return true; //false causes two date invalid messages.
 	if (preg_match('|\d{5,}|', $d))
-		$d = strftime($f, $d); //Convert Unix timestamp to a std format (must not include regular expressions)
+		$d = PSFT($f, $d); //Convert Unix timestamp to a std format (must not include regular expressions)
 	$std = bi_StdDateFormat($d, $f, $z);
 	list($mon, $day, $yr) = explode('/', substr($std, 0, strpos($std, ' ')), 3); //remove time portion, ASSUME date and time are separated by space
 	return (preg_match('!^' . bi_DateFmtRE($f) . '$!', $d) && checkdate($mon, $day, $yr) ? true : false); //does %d match the regular expression version of $f, and chech the date
@@ -1078,7 +1081,7 @@ function bi_ProcessHooks($type, $stage, $src, $auth) {
 function bi_GetPageVar($pagename, &$page, $tag) {
 	global $TimeISOZFmt, $RSSTimeFmt;
 	$d = (int) PageTextVar($pagename, 'entrydate');
-	return "<$tag>" . ($tag == 'dc:date' ? gmstrftime($TimeISOZFmt, $d) : ($tag == 'pubDate' ? gmdate($RSSTimeFmt, $d) : ($tag == 'author' ? PageTextVar($pagename, 'entryauthor') : ''))) . "</$tag>\n";
+	return "<$tag>" . ($tag == 'dc:date' ? PSFT($TimeISOZFmt, $d, null, 'GMT') : ($tag == 'pubDate' ? gmdate($RSSTimeFmt, $d) : ($tag == 'author' ? PageTextVar($pagename, 'entryauthor') : ''))) . "</$tag>\n";
 }
 function bi_FeedText($pagename, &$page, $tag) {
 	return '<' . $tag . '><![CDATA[' . MarkupToHTML($pagename, '{' . $pagename . '$:entrybody}') . ']]></' . $tag . '>';
