@@ -363,8 +363,11 @@ Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/i', "bi_include
 
 $SaveAttrPatterns['/\\(:includesection\\s.*?:\\)/i'] = ' '; //prevents include sections becoming part of page targets list
 if (IsEnabled($EnableGUIButtons, IsEnabled($EnableCommonEnhancements)) && $FmtPV['$bi_Mode'] != 'ajax') {
-	if ($action == 'bi_be' || $action == 'bi_ne' || ($action == 'pmform' && $_REQUEST['target'] == 'blogit-entry'))
+	if ($action == 'bi_be' || $action == 'bi_ne' || ($action == 'pmform' && $_REQUEST['target'] == 'blogit-entry')) {
+    SDV($EnableGUIButtons, IsEnabled($EnableCommonEnhancements, 0));
 		include_once($bi_Paths['guiedit']); //PmWiki only includes this automatically if action=edit.
+	}
+
 } else
 	Markup('e_guibuttons', 'directives', '/\(:e_guibuttons:\)/', ''); //Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
 
@@ -376,7 +379,7 @@ $Conditions['bi_auth'] = 'bi_Auth($condparm)';
 $Conditions['bi_isnull'] = 'bi_IsNull($condparm)==\'\'';
 $Conditions['bi_lt'] = 'bi_LT($condparm)';
 $Conditions['bi_baseptv'] = 'bi_BasePTV($condparm)';
-$Conditions['bi_dev'] = "(boolean)\$GLOBALS[bi_Internal]['dev']==1";
+$Conditions['bi_dev'] = "(boolean)\$GLOBALS['bi_Internal']['dev']==1";
 
 // ----------------------------------------
 // - Markup Expressions
@@ -732,22 +735,22 @@ function blogitSkinMU($m) {
 		//PmWiki will apply the last class in a line to all links, regardless of the class requested for each link.
 		//So putting a class on a link means we need to ensure links are on separate lines either with (:nl:) or using LI lists
 		case 'edit':
-			return (bi_Auth('blog-edit ' . $args['page']) ? bi_Link($args['pre_text'], $args['page'], 'bi_be', $txt, $args['post_text'], 'bi-link-blog-edit') : '');
+			return (bi_Auth('blog-edit ' . $args['page']) ? bi_Link(@$args['pre_text'], $args['page'], 'bi_be', $txt, $args['post_text'], 'bi-link-blog-edit') : '');
 		case 'newentry':
-			return (bi_Auth('blog-new ' . $bi_Pages['auth']) ? bi_Link($args['pre_text'], $bi_Pages['admin'], 'bi_ne', $txt, $args['post_text'], 'bi-link-blog-new') : '');
+			return (bi_Auth('blog-new ' . $bi_Pages['auth']) ? bi_Link(@$args['pre_text'], $bi_Pages['admin'], 'bi_ne', $txt, $args['post_text'], 'bi-link-blog-new') : '');
 		//blog delete function on blog-grid
 		case 'delete':
-			return (bi_Auth('blog-edit ' . $args['page']) ? bi_Link($args['pre_text'], $args['page'], 'bi_del', $txt, $args['post_text'], 'bi-link-blog-delete') : '');
+			return (bi_Auth('blog-edit ' . $args['page']) ? bi_Link(@$args['pre_text'], $args['page'], 'bi_del', $txt, @$args['post_text'], 'bi-link-blog-delete') : '');
 		case 'commentedit':
-			return (bi_Auth('comment-edit ' . $txt) ? bi_Link($args['pre_text'], $txt, 'bi_ce', '$[edit]', $args['post_text'], 'bi-link-comment-edit', bi_BasePage($txt, $args['base'])) : '');
+			return (bi_Auth('comment-edit ' . $txt) ? bi_Link(@$args['pre_text'], $txt, 'bi_ce', '$[edit]', @$args['post_text'], 'bi-link-comment-edit', bi_BasePage($txt, @$args['base'])) : '');
 		case 'commentdelete':
-			return (bi_Auth('comment-edit ' . bi_BasePage($txt)) ? bi_Link($args['pre_text'], $txt, 'bi_del', '$[delete]', $args['post_text'], 'bi-link-comment-delete') : '');
+			return (bi_Auth('comment-edit ' . bi_BasePage($txt)) ? bi_Link(@$args['pre_text'], $txt, 'bi_del', '$[delete]', @$args['post_text'], 'bi-link-comment-delete') : '');
 		case 'commentreply':
-			return (bi_Auth('comment-edit ' . bi_BasePage($txt, $args['base'])) ? bi_Link($args['pre_text'], bi_BasePage($txt, $args['base']), 'bi_cr', '$[reply]', $args['post_text'], 'bi-link-comment-reply') : '');
+			return (bi_Auth('comment-edit ' . bi_BasePage($txt, @$args['base'])) ? bi_Link(@$args['pre_text'], bi_BasePage($txt, $args['base']), 'bi_cr', '$[reply]', @$args['post_text'], 'bi-link-comment-reply') : '');
 		case 'commentapprove':
-			return (bi_Auth('comment-approve ' . bi_BasePage($txt)) ? bi_Link($args['pre_text'], $txt, 'bi_' . ($args['status'] == 'true' ? 'cua' : 'ca'), '$[' . ($args['status'] == 'true' ? 'un' : '') . 'approve]', $args['post_text'], 'bi-link-comment-' . ($args['status'] == 'true' ? '' : 'un') . 'approved') : '');
+			return (bi_Auth('comment-approve ' . bi_BasePage($txt)) ? bi_Link(@$args['pre_text'], $txt, 'bi_' . (@$args['status'] == 'true' ? 'cua' : 'ca'), '$[' . (@$args['status'] == 'true' ? 'un' : '') . 'approve]', @$args['post_text'], 'bi-link-comment-' . ($args['status'] == 'true' ? '' : 'un') . 'approved') : '');
 		case 'commentblock':
-			return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve ' . bi_BasePage($txt)) ? bi_Link($args['pre_text'], $txt, 'bi_bip', '$[block]', $args['post_text'], 'bi-link-comment-block') : '');
+			return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve ' . bi_BasePage($txt)) ? bi_Link(@$args['pre_text'], $txt, 'bi_bip', '$[block]', @$args['post_text'], 'bi-link-comment-block') : '');
 		case 'tags':
 			return ($txt > '' ? $args['pre_text'] . bi_SaveTags('', $txt, $args['page'], 'display') . $args['post_text'] : '');
 		//TODO: Why is this split by name/group? So #comments-count-pagelist can create group-name-* wildcard. Better to use basepage?
@@ -932,7 +935,7 @@ function bi_SendAjax($markup, $msg = '', $dom = '') {
 }
 function bi_AjaxRedirect($result = '') {
 	global $bi_Pagename, $_REQUEST, $bi_CommentPage, $EnablePost, $MessagesFmt, $action, $bi_Name, $bi_Group, $bi_Pages, $bi_SkinClasses, $bi_FrmAction, $_POST;
-	bi_debugLog('AjaxRedirect: ' . $_REQUEST['bi_context'] . '::' . $_REQUEST['target'] . '::' . $action);
+	bi_debugLog('AjaxRedirect: ' . @$_REQUEST['bi_context'] . '::' . @$_REQUEST['target'] . '::' . $action);
 	if ($EnablePost && count($MessagesFmt) == 0) { //set to 0 if pmform failed (invalid captcha, etc)
 		//Translate the class of the html element being updated (bi_context) to the template to be used to generate new data on includesection from pmwiki
 		//bi_context: class determines which includesection template to use
@@ -941,12 +944,12 @@ function bi_AjaxRedirect($result = '') {
 		//$bi_SkinClasses['blog-entry-summary'] - '.blogit-post-summary': '#blog-summary-pagelist
 		//$bi_SkinClasses['blog-list-row'] - '.blogit-blog-list-row': '#blog-grid
 		// otherwise ('.blogit-post'): '#single-entry-view'
-		if ($_REQUEST['target'] == 'blogit-comments') { //determine which pmform is requested
-			bi_SendAjax('(:includesection "' . ($_REQUEST['bi_context'] == $bi_SkinClasses['comment-admin-list'] ? '#unapproved-comments' : '#comments-pagelist') . ' commentid=' . $bi_CommentPage . ' entrycomments=readonly base=' . IsEnabled($_POST['ptv_blogit_basepage']) . '":)', ($bi_FrmAction == 'bi_ce' ? XL('Successfully updated comment.') : XL('Successfully added new comment.') . (PageTextVar($bi_CommentPage, 'commentapproved') == 'false' ? '<br />' . XL('All comments are reviewed before being displayed.') : '')), MarkupToHTML($bi_Pagename, '{$Captcha} (:input captcha tabindex=1:)'));
-		} elseif ($_REQUEST['target'] == 'blogit-entry') {
+		if (@$_REQUEST['target'] == 'blogit-comments') { //determine which pmform is requested
+			bi_SendAjax('(:includesection "' . (@$_REQUEST['bi_context'] == $bi_SkinClasses['comment-admin-list'] ? '#unapproved-comments' : '#comments-pagelist') . ' commentid=' . $bi_CommentPage . ' entrycomments=readonly base=' . IsEnabled($_POST['ptv_blogit_basepage']) . '":)', ($bi_FrmAction == 'bi_ce' ? XL('Successfully updated comment.') : XL('Successfully added new comment.') . (PageTextVar($bi_CommentPage, 'commentapproved') == 'false' ? '<br />' . XL('All comments are reviewed before being displayed.') : '')), MarkupToHTML($bi_Pagename, '{$Captcha} (:input captcha tabindex=1:)'));
+		} elseif (@$_REQUEST['target'] == 'blogit-entry') {
 			bi_SendAjax((isset($_REQUEST['bi_context']) //might have clicked from many places. We only care about a few.
-				? '(:includesection "' . ($_REQUEST['bi_context'] == $bi_SkinClasses['blog-entry-summary'] ? '#blog-summary-pagelist group=' . $bi_Group . ' name=' . $bi_Name //main blog summary page
-				: ($_REQUEST['bi_context'] == $bi_SkinClasses['blog-list-row'] //blog list from admin page
+				? '(:includesection "' . (@$_REQUEST['bi_context'] == $bi_SkinClasses['blog-entry-summary'] ? '#blog-summary-pagelist group=' . $bi_Group . ' name=' . $bi_Name //main blog summary page
+				: (@$_REQUEST['bi_context'] == $bi_SkinClasses['blog-list-row'] //blog list from admin page
 				? '#blog-grid group=' . $bi_Group . ' name=' . $bi_Name : '#single-entry-view') //single entry blog view
 				) . '":)' : 'No context set on comment submit.'), 'Successfully ' . ($bi_FrmAction == 'bi_ne' ? 'added' : 'updated') . ' blog entry.');
 		} else
