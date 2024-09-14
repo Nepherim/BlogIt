@@ -362,7 +362,7 @@ Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/i', "bi_include
 
 
 $SaveAttrPatterns['/\\(:includesection\\s.*?:\\)/i'] = ' '; //prevents include sections becoming part of page targets list
-if (IsEnabled($EnableGUIButtons) && $FmtPV['$bi_Mode'] != 'ajax') {
+if (IsEnabled($EnableGUIButtons, IsEnabled($EnableCommonEnhancements)) && $FmtPV['$bi_Mode'] != 'ajax') {
 	if ($action == 'bi_be' || $action == 'bi_ne' || ($action == 'pmform' && $_REQUEST['target'] == 'blogit-entry'))
 		include_once($bi_Paths['guiedit']); //PmWiki only includes this automatically if action=edit.
 } else
