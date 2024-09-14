@@ -9,7 +9,7 @@ For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookboo
 
 Updated for recent PHP versions by Petko Yotov pmwiki.org/petko
 */
-$RecipeInfo['BlogIt']['Version'] = '2024-09-08'; //1.9.6?
+$RecipeInfo['BlogIt']['Version'] = '2024-09-14'; //1.9.6?
 if ($VersionNum < 2003036)
 	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.3.36 or later.</h3>");
 
@@ -507,12 +507,12 @@ function bi_HandleAdmin($src, $auth = 'blogit-admin') {
 	HandleDispatch($src, 'browse');
 }
 function bi_HandleProcessForm($src, $auth = 'read') { //performs submit action for comments and blogs
-	global $bi_ResetPmFormField, $_POST, $_REQUEST, $ROSPatterns, $CategoryGroup, $bi_DefaultGroup, $bi_CommentsEnabled, $Now, $bi_OriginalFn, $GroupHeaderFmt, $bi_Forms, $bi_EnablePostDirectives, $PmFormPostPatterns, $AutoCreate, $bi_DefaultCommentStatus, $bi_FixPageTitlePatterns, $bi_CommentPattern, $Author, $EnablePostAuthorRequired, $bi_Hooks, $bi_MakePageNamePatterns;
+	global $bi_ResetPmFormField, $ROSPatterns, $CategoryGroup, $bi_DefaultGroup, $bi_CommentsEnabled, $Now, $bi_OriginalFn, $GroupHeaderFmt, $bi_Forms, $bi_EnablePostDirectives, $PmFormPostPatterns, $AutoCreate, $bi_DefaultCommentStatus, $bi_FixPageTitlePatterns, $bi_CommentPattern, $Author, $EnablePostAuthorRequired, $bi_Hooks, $bi_MakePageNamePatterns;
 
-	$bi_Mode = bi_Clean('mode', $_POST['bi_mode']);
+	$bi_Mode = bi_Clean('mode', @$_POST['bi_mode']);
 	bi_debugLog('HandleProcessForm: ' . $bi_Mode. '::'. @$_POST['target']);
 
-	if ($_POST['cancel'] && in_array($_REQUEST['target'], $bi_Forms))
+	if (@$_POST['cancel'] && in_array(@$_REQUEST['target'], $bi_Forms))
 		bi_Redirect(); //ajax cancel is handled client-side
 	$bi_ResetPmFormField = array();
 	//Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
@@ -541,7 +541,7 @@ function bi_HandleProcessForm($src, $auth = 'read') { //performs submit action f
 		else
 			list($gr, $pg) = explode('.', $_POST['ptv_entryurl']);
 
-		$title = preg_replace(array_keys($bi_FixPageTitlePatterns), array_values($bi_FixPageTitlePatterns), $_POST['ptv_entrytitle']);
+		$title = PPRA($bi_FixPageTitlePatterns, $_POST['ptv_entrytitle']);
 
 		// If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
 		// NB: If page subsequently fails to post (due to incorrect p/w or captcha) then entrydate is already in unix time format.
@@ -826,7 +826,7 @@ function bi_IsDate($d, $f = '%d-%m-%Y %H:%M', $z = '') { //accepts a date, and a
 // - Date Helper Functions
 function bi_DateFmtRE($f = '%d-%m-%Y %H:%M') { //converts a date format into a regular expression
 	global $bi_DateFmtRE;
-	return preg_replace(array_keys($bi_DateFmtRE), array_values($bi_DateFmtRE), $f);
+	return PPRA($bi_DateFmtRE, $f);
 }
 function bi_StdDateFormat($d, $f = '%d-%m-%Y %H:%M', $z = 'mdy') { //converts date format into a standard US m/d/y format usable by PHP functions
 	global $bi_DateSequences;
@@ -966,8 +966,11 @@ function bi_Redirect($src = '', $result = '') {
 	} //don't redirect ajax requests, just send back json object
 	$history = ($_POST['cancel'] && in_array($_REQUEST['target'], $bi_Forms) ? @$_COOKIE[$bi_Cookie . 'back-2'] : @$_COOKIE[$bi_Cookie . 'back-1']);
 	//use $src if provided, or history is empty; use pagename if $src and history are empty; use history if no $src and history exists.
-	$r = ($src > '' || empty($history) ? FmtPageName('$PageUrl', bi_BasePage($src > '' ? $src : $bi_Pagename)) : $history);
+	if($src > '') $r = FmtPageName('$PageUrl', $src);
+	elseif(empty($history)) $r = FmtPageName('$PageUrl', $bi_Pagename);
+	else $r = $history;
 	bi_debugLog('Redirecting: ' . $r);
+	
 	header("Location: $r");
 	header("Content-type: text/html");
 	echo "<html><head><meta http-equiv='Refresh' Content='URL=$r' /><title>Redirect</title></head><body></body></html>";
@@ -1012,9 +1015,11 @@ function bi_SaveTags($body, $user_tags, $pn, $mode = 'save') {
 	// Read tags from body, strip [[!...]]
 	if ($body)
 		$bodyTags = (preg_match_all('/\[\[\!(.*?)\]\]/', $body, $match) ? $match[1] : array()); //array of tags contained in [[!...]] markup.
+  else $bodyTags = array();
 	// Make sure tag-field entries are in standard separated format, and place in array
 	if ($user_tags)
 		$fieldTags = explode($bi_TagSeparator, preg_replace('/' . trim($bi_TagSeparator) . '\s*/', $bi_TagSeparator, trim($user_tags)));
+  else $fieldTags= array();
 	// Concatenate the tag-field tags, with those in the body, PPRA removes all non-pagename chars
 	$allTags = PPRA($bi_MakePageNamePatterns, array_unique(array_merge((array) $fieldTags, (array) $bodyTags)));
 	sort($allTags);
@@ -1072,6 +1077,7 @@ function bi_JXL() { //create javascript array holding all XL translations of tex
 // Functions processed for different entry $types (blog, comment), at different $stages (pre-entry, pre-save, post-save)
 function bi_ProcessHooks($type, $stage, $src, $auth) {
 	global $bi_Hooks;
+	if(!isset($bi_Hooks[$type]) || !is_array($bi_Hooks[$type])) return;
 	foreach ((array) $bi_Hooks[$type][$stage] as $fn)
 		$fn($src, $auth);
 }
@@ -1142,7 +1148,7 @@ function bi_CharsetFn($val, $src = '', $tgt = 'UTF-8') {
 //jQuery will always POST with UTF8, even if charset parameter is set, since it uses encodeURIComponent() ref: http://stackoverflow.com/questions/657871/another-jquery-encoding-problem-on-ie
 function bi_decodeUTF8(&$a, $p = 'ptv_') {
 	global $Charset, $bi_CharsetFn;
-	if (bi_Clean('mode', $_POST['bi_mode']) == 'ajax' && $Charset != 'UTF-8') //Conversion only required is submitted from jquery ajax request
+	if (bi_Clean('mode', @$_POST['bi_mode']) == 'ajax' && $Charset != 'UTF-8') //Conversion only required is submitted from jquery ajax request
 		foreach ($a as $k => $v)
 			if (substr($k, 0, strlen($p)) == $p)
 				$a[$k] = $bi_CharsetFn($v);
