@@ -731,22 +731,22 @@ function blogitSkinMU($m) {
 		case 'intro':
 			return '(:div999991 class="' . $args['class'] . '":)' . blogitMU_intro('', $txt) . '%blogit-more%' . blogitMU_more($args['page'], $txt) . "%%\n(:div99991end:)";
 		case 'author':
-			return ($txt > '' ? $args['pre_text'] . (PageExists(MakePageName($bi_Pagename, "$bi_AuthorGroup/$txt")) ? "[[$bi_AuthorGroup/$txt]]" : $txt) . $args['post_text'] : '');
+			return ($txt > '' ? @$args['pre_text'] . (PageExists(MakePageName($bi_Pagename, "$bi_AuthorGroup/$txt")) ? "[[$bi_AuthorGroup/$txt]]" : $txt) . $args['post_text'] : '');
 		//PmWiki will apply the last class in a line to all links, regardless of the class requested for each link.
 		//So putting a class on a link means we need to ensure links are on separate lines either with (:nl:) or using LI lists
 		case 'edit':
-			return (bi_Auth('blog-edit ' . $args['page']) ? bi_Link(@$args['pre_text'], $args['page'], 'bi_be', $txt, $args['post_text'], 'bi-link-blog-edit') : '');
+			return (bi_Auth('blog-edit ' . $args['page']) ? bi_Link(@$args['pre_text'], $args['page'], 'bi_be', $txt, @$args['post_text'], 'bi-link-blog-edit') : '');
 		case 'newentry':
-			return (bi_Auth('blog-new ' . $bi_Pages['auth']) ? bi_Link(@$args['pre_text'], $bi_Pages['admin'], 'bi_ne', $txt, $args['post_text'], 'bi-link-blog-new') : '');
+			return (bi_Auth('blog-new ' . $bi_Pages['auth']) ? bi_Link(@$args['pre_text'], $bi_Pages['admin'], 'bi_ne', $txt, @$args['post_text'], 'bi-link-blog-new') : '');
 		//blog delete function on blog-grid
 		case 'delete':
-			return (bi_Auth('blog-edit ' . $args['page']) ? bi_Link(@$args['pre_text'], $args['page'], 'bi_del', $txt, @$args['post_text'], 'bi-link-blog-delete') : '');
+			return (bi_Auth('blog-edit ' . @$args['page']) ? bi_Link(@$args['pre_text'], $args['page'], 'bi_del', $txt, @$args['post_text'], 'bi-link-blog-delete') : '');
 		case 'commentedit':
 			return (bi_Auth('comment-edit ' . $txt) ? bi_Link(@$args['pre_text'], $txt, 'bi_ce', '$[edit]', @$args['post_text'], 'bi-link-comment-edit', bi_BasePage($txt, @$args['base'])) : '');
 		case 'commentdelete':
 			return (bi_Auth('comment-edit ' . bi_BasePage($txt)) ? bi_Link(@$args['pre_text'], $txt, 'bi_del', '$[delete]', @$args['post_text'], 'bi-link-comment-delete') : '');
 		case 'commentreply':
-			return (bi_Auth('comment-edit ' . bi_BasePage($txt, @$args['base'])) ? bi_Link(@$args['pre_text'], bi_BasePage($txt, $args['base']), 'bi_cr', '$[reply]', @$args['post_text'], 'bi-link-comment-reply') : '');
+			return (bi_Auth('comment-edit ' . bi_BasePage($txt, @$args['base'])) ? bi_Link(@$args['pre_text'], bi_BasePage($txt, @$args['base']), 'bi_cr', '$[reply]', @$args['post_text'], 'bi-link-comment-reply') : '');
 		case 'commentapprove':
 			return (bi_Auth('comment-approve ' . bi_BasePage($txt)) ? bi_Link(@$args['pre_text'], $txt, 'bi_' . (@$args['status'] == 'true' ? 'cua' : 'ca'), '$[' . (@$args['status'] == 'true' ? 'un' : '') . 'approve]', @$args['post_text'], 'bi-link-comment-' . ($args['status'] == 'true' ? '' : 'un') . 'approved') : '');
 		case 'commentblock':
