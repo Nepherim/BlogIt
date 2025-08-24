@@ -6,10 +6,12 @@ This file is blogit.php; you can redistribute it and/or modify it under the term
 License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
 For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookbook/BlogIt
+
+Updated for recent PHP versions by Petko Yotov pmwiki.org/petko
 */
-$RecipeInfo['BlogIt']['Version'] = '20160330'; //1.9.5
-if ($VersionNum < 2001950)
-	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.2.1 or later.</h3>");
+$RecipeInfo['BlogIt']['Version'] = '2024-09-14'; //1.9.6?
+if ($VersionNum < 2003036)
+	Abort("<h3>You are running PmWiki version {$Version}. In order to use BlogIt please update to 2.3.36 or later.</h3>");
 
 // ----------------------------------------
 // - User settings
@@ -50,13 +52,10 @@ SDV($bi_DateStyle, 'dmy'); //if you change the date entry format, then indicate 
 // ----------------------------------------
 // - Skin settings
 SDV($bi_Skin, ($Skin > '' ? $Skin : 'pmwiki')); //Needed if skin is set in group config, which is processed after main config
-SDV($PageCSSListFmt, array( //Auto-load BlogIt PmWiki css file
-	'pub/css/local.css' => '$PubDirUrl/css/local.css'
-));
 if ($bi_Skin == 'pmwiki') //Auto-load BlogIt PmWiki css file
-	SDV($PageCSSListFmt, array(
-		'pub/blogit/blogit-pmwiki.css' => '$FarmPubDirUrl/blogit/blogit-pmwiki.css'
-	));
+  SDVA($HTMLHeaderFmt, array(
+    'blogit-pmwiki.css' => '<link rel="stylesheet" href="$FarmPubDirUrl/blogit/blogit-pmwiki.css" />',
+  ));
 SDV($bi_AjaxMsgTimer, 3000); //Number of milli-seconds that the top ajax message is displayed for
 //key: action; value: ajax style. Determines how an operation is handled, either ajax, normal (page reload), or by providing an option with normal-ajax, and ajax-normal
 //Used to define how admin links are displayed and handled. Comment reply is always ajax.
@@ -102,7 +101,7 @@ SDV($bi_CommentSideBarLen, 60);
 SDV($bi_TagSeparator, ', ');
 SDV($bi_TitleSeparator, '-');
 SDV($bi_EnablePostDirectives, true); //Set to true to allow posting of directives of form (: :) in blog entries.
-SDV($bi_StatAction, $TotalCounterAction); //set by TotalCounter cookbook
+SDV($bi_StatAction, @$TotalCounterAction); //set by TotalCounter cookbook
 SDV($bi_Cookie, $CookiePrefix . 'blogit-');
 SDV($bi_UnstyleFn, '');
 SDV($bi_CharsetFn, 'bi_CharsetFn'); //Possibly replace with fn using mb_convert_encoding($v,$Charset,'UTF-8');
@@ -123,7 +122,7 @@ bi_SDVSA($bi_CommentApprovalType, array(
 ));
 bi_SDVSA($bi_Hooks, array()); //processing hooks, pointers to a function(). Format: $bi_Hooks[$type][$stage][] $type=blog,comment $stage=pre-entry, pre-save, post-save
 SDVA($bi_Paths, array(
-	'pmform' => "$FarmD/cookbook/pmform.php",
+	'pmform' => "$FarmD/scripts/pmform.php",
 	'guiedit' => "$FarmD/scripts/guiedit.php",
 	'convert' => "$FarmD/cookbook/blogit/blogit_upgrade.php",
 	'feeds' => "$FarmD/scripts/feeds.php"
@@ -136,18 +135,15 @@ SDVA($bi_MakePageNamePatterns, array(
 	"/'/" => '', //strip single-quotes
 	"/[^" . $PageNameChars . "]+/" => $bi_TitleSeparator, //convert everything else to hyphen
 	"/(^\\" . $bi_TitleSeparator . "+)|(\\" . $bi_TitleSeparator . "+\$)/" => '', //trim hyphens front and back
-	"/\\" . $bi_TitleSeparator . "{2,}/" => $bi_TitleSeparator //trim duplicate hyphens
+	"/\\" . $bi_TitleSeparator . "{2,}/" => $bi_TitleSeparator, //trim duplicate hyphens
+	'/^([a-z])/' => 'cb_toupper', //uppercase first letter
 ));
-if (function_exists('Markup_e'))
-	SDVA($bi_MakePageNamePatterns, array(
-		($Charset == 'UTF-8' ? "/^([\\xc0-\\xdf].)/" : '//') => ($Charset == 'UTF-8' ? PCCF("return utf8toupper(\$m[1]);") : ''), //uppercase first letter
-		"/^([a-z])/" => PCCF("return strtoupper(\$m[1]);")
-	));
-else
-	SDVA($bi_MakePageNamePatterns, array(
-		($Charset == 'UTF-8' ? "/^([\\xc0-\\xdf].)/e" : '//') => ($Charset == 'UTF-8' ? "utf8toupper('$1')" : ''), //uppercase first letter
-		"/^([a-z])/e" => "strtoupper('$1')"
-	));
+if ($Charset == 'UTF-8') {
+  SDVA($bi_MakePageNamePatterns, array(
+    '/^([\\xc0-\\xdf].)/' => 'utf8toupper',
+  ));
+}
+
 SDVA($bi_FixPageTitlePatterns, array(
 	'/[.\\/#]/' => '' //remove dots, forward and backslashes in page titles as MakePageName returns '' when these characters are present
 ));
@@ -160,13 +156,13 @@ SDVA($bi_Internal, array(
 	'dev' => false
 ));
 
-bi_debugLog('====== action: ' . $action . '    Target: ' . $_REQUEST['target'] . '   Save: ' . @$_REQUEST['save']);
+bi_debugLog('====== action: ' . $action . '    Target: ' . @$_REQUEST['target'] . '   Save: ' . @$_REQUEST['save']);
 SDVA($bi_Pages, array(
 	'admin' => $SiteGroup . '.BlogIt-Admin',
 	'blog_list' => $SiteGroup . '.BlogList',
 	'blocklist' => $SiteAdminGroup . '.Blocklist'
 ));
-SDV($bi_TemplateList, (isset($bi_Skin) ? $SiteGroup . '.BlogIt-SkinTemplate-' . $bi_Skin . ' ' : '') . $SiteGroup . '.BlogIt-CoreTemplate');
+SDV($bi_TemplateList, (isset($bi_Skin) ? $SiteGroup . '.BlogIt-SkinTemplate-' . $bi_Skin . ' ' : '') . " " . $SiteGroup . '.BlogIt-CoreTemplate');
 SDVA($bi_PageType, array(
 	'blog'
 )); //Comment is not in PageType list, since we don't want bloggers to be able to select 'comment' types.
@@ -233,7 +229,7 @@ bi_setFmtPVA(array(
 bi_setFmtPVA(array(
 	'$bi_SkinSettings' => $bi_SkinSettings
 ));
-$FmtPV['$bi_Mode'] = bi_Clean('mode', $_REQUEST['bi_mode']);
+$FmtPV['$bi_Mode'] = bi_Clean('mode', @$_REQUEST['bi_mode']);
 
 // ----------------------------------------
 // - PmWiki Config
@@ -269,17 +265,17 @@ if ( $bi_AuthUser && (!$bi_Internal['dev'] || $FmtPV['$bi_Mode']=='ajax' || $act
 // ----------------------------------------
 // - Javascript - [1]
 SDVA($HTMLHeaderFmt, array(
-	'jbox.css' => '<link rel="stylesheet" href="' . $FarmPubDirUrl . '/blogit/jbox.css" type="text/css" />',
-	'awesomplete.css' => '<link rel="stylesheet" href="' . $FarmPubDirUrl . '/blogit/awesomplete.css" type="text/css" />',
-	'blogit.css' => '<link rel="stylesheet" href="' . $FarmPubDirUrl . '/blogit/blogit.min.css" type="text/css" />'
+	'jbox.css' => '<link rel="stylesheet" href="$FarmPubDirUrl/blogit/jbox.css" type="text/css" />',
+	'awesomplete.css' => '<link rel="stylesheet" href="$FarmPubDirUrl/blogit/awesomplete.css" type="text/css" />',
+	'blogit.css' => '<link rel="stylesheet" href="$FarmPubDirUrl/blogit/blogit.min.css" type="text/css" />'
 ));
 SDVA($HTMLFooterFmt, array(
-	'jquery.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/jquery.min.js"></script>',
-	'validate.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/jquery.validate.min.js"></script>',
-	'jbox.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/jbox.min.js"></script>',
-	'awesomplete.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/awesomplete.min.js"></script>',
-	'blogit.js' => '<script type="text/javascript" src="' . $FarmPubDirUrl . '/blogit/blogit.'. ($bi_Internal['dev'] ?'' :'min.'). 'js"></script>',
-	'blogit-core' => '<script type="text/javascript">' . 'BlogIt.pm["pubdirurl"]="' . $FarmPubDirUrl . '/blogit";' . 'BlogIt.pm["categories"]="' . bi_CategoryList() . '";' . 'BlogIt.fmt["entry-date"]=/^' . bi_DateFmtRE(XL('%d-%m-%Y %H:%M')) . '$/;' . 'BlogIt.pm["skin-classes"]=' . bi_json_encode($bi_SkinClasses) . ';' . 'BlogIt.pm["charset"]="' . $Charset . '";' . 'BlogIt.pm["ajax-message-timer"]=' . $bi_AjaxMsgTimer . ';' . bi_JXL() . '</script>'
+	'jquery.js' => '<script type="text/javascript" src="$FarmPubDirUrl/blogit/jquery.min.js"></script>',
+	'validate.js' => '<script type="text/javascript" src="$FarmPubDirUrl/blogit/jquery.validate.min.js"></script>',
+	'jbox.js' => '<script type="text/javascript" src="$FarmPubDirUrl/blogit/jbox.min.js"></script>',
+	'awesomplete.js' => '<script type="text/javascript" src="$FarmPubDirUrl/blogit/awesomplete.min.js"></script>',
+	'blogit.js' => '<script type="text/javascript" src="$FarmPubDirUrl/blogit/blogit.'. ($bi_Internal['dev'] ?'' :'min.'). 'js"></script>',
+	'blogit-core' => '<script type="text/javascript">' . 'BlogIt.pm["pubdirurl"]="$FarmPubDirUrl/blogit";' . 'BlogIt.pm["categories"]="' . bi_CategoryList() . '";' . 'BlogIt.fmt["entry-date"]=/^' . bi_DateFmtRE(XL('%d-%m-%Y %H:%M')) . '$/;' . 'BlogIt.pm["skin-classes"]=' . bi_json_encode($bi_SkinClasses) . ';' . 'BlogIt.pm["charset"]="' . $Charset . '";' . 'BlogIt.pm["ajax-message-timer"]=' . $bi_AjaxMsgTimer . ';' . bi_JXL() . '</script>'
 ));
 
 // ----------------------------------------
@@ -345,7 +341,7 @@ SDV($HandleActions['bi_upgrade'], 'bi_HandleUpgrade'); SDV($HandleAuth['bi_upgra
 // ----------------------------------------
 // - Pagination
 $bi_CurrentPage = intval(isset($_GET['page']) ? $_GET['page'] : 1);
-$bi_EntryCount = (intval($_GET['count']) > 0 ? intval($_GET['count']) : $bi_EntriesPerPage);
+$bi_EntryCount = (intval(@$_GET['count']) > 0 ? intval($_GET['count']) : $bi_EntriesPerPage);
 $FmtPV['$bi_PageNext'] = $bi_CurrentPage + 1;
 $FmtPV['$bi_PagePrev'] = ($bi_CurrentPage > 0 ? $bi_CurrentPage - 1 : 0);
 $FmtPV['$bi_EntryStart'] = (($bi_CurrentPage - 1) * $bi_EntryCount) + 1;
@@ -357,19 +353,21 @@ function bi_blogitMU_Handler($m) {
 	$func = 'blogitMU_' . $m[1];
 	return $func($m[2], $m[3]);
 }
-if (function_exists('Markup_e')) { //PmWiki 2.2.58+ / PHP5
-	Markup_e('blogit', 'fulltext', '/\(:blogit (list|cleantext)\s?(.*?):\)(.*?)\(:blogitend:\)/si', "bi_blogitMU_Handler(\$m)"); //need to use an interim handler
-	Markup_e('blogit-skin', 'fulltext', '/\(:blogit-skin ' . '(date|intro|author|tags|edit|newentry|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentreply|commentblock|commenttext|commentid)' . '\s?(.*?):\)(.*?)\(:blogit-skinend:\)/si', "blogitSkinMU(\$m[1], \$m[2], \$m[3])");
-	Markup_e('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/i', "PRR(bi_includeSection(\$GLOBALS['bi_Pagename'], \$m[1].' '.\$GLOBALS['bi_TemplateList']))");
-} else { //PmWiki 2.2.58-, pre PHP5
-	Markup('blogit', 'fulltext', '/\(:blogit (list|cleantext)\s?(.*?):\)(.*?)\(:blogitend:\)/esi', "blogitMU_$1(PSS('$2'), PSS('$3'))");
-	Markup('blogit-skin', 'fulltext', '/\(:blogit-skin ' . '(date|intro|author|tags|edit|newentry|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentreply|commentblock|commenttext|commentid)' . '\s?(.*?):\)(.*?)\(:blogit-skinend:\)/esi', "blogitSkinMU('$1', PSS('$2'), PSS('$3'))");
-	Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/ei', "PRR(bi_includeSection(\$GLOBALS['bi_Pagename'], PSS('$1 '.\$GLOBALS['bi_TemplateList'])))");
-}
+
+Markup('blogit', 'fulltext', '/\(:blogit (list|cleantext)\s?(.*?):\)(.*?)\(:blogitend:\)/si', "bi_blogitMU_Handler"); //need to use an interim handler
+
+Markup('blogit-skin', 'fulltext', '/\(:blogit-skin ' . '(date|intro|author|tags|edit|newentry|delete|commentcount|date|commentauthor|commentapprove|commentdelete|commentedit|commentreply|commentblock|commenttext|commentid)' . '\s?(.*?):\)(.*?)\(:blogit-skinend:\)/si', "blogitSkinMU");
+
+Markup('includesection', '>if', '/\(:includesection\s+(\S.*?):\)/i', "bi_includeSection");
+
+
 $SaveAttrPatterns['/\\(:includesection\\s.*?:\\)/i'] = ' '; //prevents include sections becoming part of page targets list
-if (IsEnabled($EnableGUIButtons) && $FmtPV['$bi_Mode'] != 'ajax') {
-	if ($action == 'bi_be' || $action == 'bi_ne' || ($action == 'pmform' && $_REQUEST['target'] == 'blogit-entry'))
+if (IsEnabled($EnableGUIButtons, IsEnabled($EnableCommonEnhancements)) && $FmtPV['$bi_Mode'] != 'ajax') {
+	if ($action == 'bi_be' || $action == 'bi_ne' || ($action == 'pmform' && $_REQUEST['target'] == 'blogit-entry')) {
+    SDV($EnableGUIButtons, IsEnabled($EnableCommonEnhancements, 0));
 		include_once($bi_Paths['guiedit']); //PmWiki only includes this automatically if action=edit.
+	}
+
 } else
 	Markup('e_guibuttons', 'directives', '/\(:e_guibuttons:\)/', ''); //Prevent (:e_guibuttons:) markup appearing if guiedit not enabled.
 
@@ -381,12 +379,12 @@ $Conditions['bi_auth'] = 'bi_Auth($condparm)';
 $Conditions['bi_isnull'] = 'bi_IsNull($condparm)==\'\'';
 $Conditions['bi_lt'] = 'bi_LT($condparm)';
 $Conditions['bi_baseptv'] = 'bi_BasePTV($condparm)';
-$Conditions['bi_dev'] = "(boolean)\$GLOBALS[bi_Internal]['dev']==1";
+$Conditions['bi_dev'] = "(boolean)\$GLOBALS['bi_Internal']['dev']==1";
 
 // ----------------------------------------
 // - Markup Expressions
 // if [0] is null or {$... then returns [1]; if [0] != null then returns ([2] or [0] if [2] is null)
-$MarkupExpr['bi_ifnull'] = '( bi_IsNull($args[0])!="" ?( bi_IsNull($args[2])=="" ?$args[0] :$args[2]) :$args[1])';
+$MarkupExpr['bi_ifnull'] = '( bi_IsNull($args[0])!="" ?( bi_IsNull(@$args[2])=="" ?$args[0] :@$args[2]) :$args[1])';
 // Calls to bi_encode should NOT be quoted: {(bi_encode {*$Title})} NOT {(bi_encode '{*$Title}')}, as titles with ' will terminate early.
 $MarkupExpr['bi_encode'] = 'htmlentities(bi_IsNull($params), ENT_QUOTES)'; //$params contains the full content of the ME before splitting to $args
 // bi_param "group" "group_val"   Returns: group="group_val" if group_val != ""; else returns ""   0:param name; 1:value
@@ -400,7 +398,7 @@ $MarkupExpr['bi_url'] = 'bi_URL($args)';
 // Display of blogit forms is handled by page browse; when user clicks Submit, then pmforms takes over which then calls this function
 function bi_HandleBrowse($src, $auth = 'read') {
 	global $bi_ResetPmFormField, $bi_OriginalFn, $bi_GroupFooterFmt, $bi_CommentGroup, $action, $Now, $bi_Name, $FmtPV, $HandleActions, $GroupPrintHeaderFmt, $GroupPrintFooterFmt, $GroupHeaderFmt, $GroupFooterFmt, $bi_Group, $CategoryGroup, $AsSpacedFunction, $bi_CommentsEnabled, $bi_CommentsAutoClose;
-	bi_debugLog('HandleBrowse: ' . $action . '[' . $FmtPV['$bi_Mode'] . '] ' . $_REQUEST['target']);
+	bi_debugLog('HandleBrowse: ' . $action . '[' . $FmtPV['$bi_Mode'] . '] ' . @$_REQUEST['target']);
 	if ($bi_Group == $bi_CommentGroup) {
 		bi_Redirect();
 		return;
@@ -512,12 +510,12 @@ function bi_HandleAdmin($src, $auth = 'blogit-admin') {
 	HandleDispatch($src, 'browse');
 }
 function bi_HandleProcessForm($src, $auth = 'read') { //performs submit action for comments and blogs
-	global $bi_ResetPmFormField, $_POST, $_REQUEST, $ROSPatterns, $CategoryGroup, $bi_DefaultGroup, $bi_CommentsEnabled, $Now, $bi_OriginalFn, $GroupHeaderFmt, $bi_Forms, $bi_EnablePostDirectives, $PmFormPostPatterns, $AutoCreate, $bi_DefaultCommentStatus, $bi_FixPageTitlePatterns, $bi_CommentPattern, $Author, $EnablePostAuthorRequired, $bi_Hooks, $bi_MakePageNamePatterns;
+	global $bi_ResetPmFormField, $ROSPatterns, $CategoryGroup, $bi_DefaultGroup, $bi_CommentsEnabled, $Now, $bi_OriginalFn, $GroupHeaderFmt, $bi_Forms, $bi_EnablePostDirectives, $PmFormPostPatterns, $AutoCreate, $bi_DefaultCommentStatus, $bi_FixPageTitlePatterns, $bi_CommentPattern, $Author, $EnablePostAuthorRequired, $bi_Hooks, $bi_MakePageNamePatterns;
 
-	$bi_Mode = bi_Clean('mode', $_POST['bi_mode']);
+	$bi_Mode = bi_Clean('mode', @$_POST['bi_mode']);
 	bi_debugLog('HandleProcessForm: ' . $bi_Mode. '::'. @$_POST['target']);
 
-	if ($_POST['cancel'] && in_array($_REQUEST['target'], $bi_Forms))
+	if (@$_POST['cancel'] && in_array(@$_REQUEST['target'], $bi_Forms))
 		bi_Redirect(); //ajax cancel is handled client-side
 	$bi_ResetPmFormField = array();
 	//Include GroupHeader on blog entry errors, as &action= is overriden by PmForms action.
@@ -546,7 +544,7 @@ function bi_HandleProcessForm($src, $auth = 'read') { //performs submit action f
 		else
 			list($gr, $pg) = explode('.', $_POST['ptv_entryurl']);
 
-		$title = preg_replace(array_keys($bi_FixPageTitlePatterns), array_values($bi_FixPageTitlePatterns), $_POST['ptv_entrytitle']);
+		$title = PPRA($bi_FixPageTitlePatterns, $_POST['ptv_entrytitle']);
 
 		// If valid date, then convert from user entered format to Unix format; otherwise force an error to be triggered in PmForms
 		// NB: If page subsequently fails to post (due to incorrect p/w or captcha) then entrydate is already in unix time format.
@@ -692,6 +690,7 @@ function blogitMU_intro($options, $text) {
 function blogitMU_list($name, $text) {
 	list($var, $label) = explode('/', $text, 2);
 	$i = count($GLOBALS[$var]);
+	$t = '';
 	foreach ($GLOBALS[$var] as $k)
 		$t .= '(:input ' . ($i == 1 ? 'hidden' : 'select') . ' name=' . $name . ' value="' . $k . '" label="' . XL($k) . '" id="' . $var . '" tabindex=1:)';
 	return ($i == 1 ? '' : $label) . $t;
@@ -712,10 +711,11 @@ function bi_Link($pre, $page, $action, $txt, $post, $cls = '', $base = '') { //v
 		(substr($bi_Ajax[$action], strpos($bi_Ajax[$action], '-') + 1) == 'ajax' ? '&amp;bi_mode=ajax' : '')
 	);
 	return $pre . str_replace('$$mode$$', ($ajax[0] > '' ? 'bi-ajax-mode ' : ''), $lnk) . $ajax[0] . ' | ' . $txt . ']]' //text link
-		. ($ajax[1] > '' ? str_replace('$$mode$$', 'bi-ajax-mode ', $lnk) . $ajax[1] . ' | ' . $FarmPubDirUrl . '/blogit/link.gif]]' : '') //optional second image link
+		. ($ajax[1] > '' ? str_replace('$$mode$$', 'bi-ajax-mode ', $lnk) . $ajax[1] . " | $FarmPubDirUrl/blogit/link.gif]]" : '') //optional second image link
 		. $post;
 }
-function blogitSkinMU($fn, $opt, $txt) {
+function blogitSkinMU($m) {
+  list($ignore, $fn, $opt, $txt) = $m;
 	global $bi_AuthorGroup, $bi_Pagename, $bi_CommentsEnabled, $bi_LinkToCommentSite, $bi_CommentPattern, $EnableBlocklist, $bi_Pages;
 	$args = ParseArgs($opt); //$args['p'], args[]['s']
 	$dateFmt = array(
@@ -731,26 +731,26 @@ function blogitSkinMU($fn, $opt, $txt) {
 		case 'intro':
 			return '(:div999991 class="' . $args['class'] . '":)' . blogitMU_intro('', $txt) . '%blogit-more%' . blogitMU_more($args['page'], $txt) . "%%\n(:div99991end:)";
 		case 'author':
-			return ($txt > '' ? $args['pre_text'] . (PageExists(MakePageName($bi_Pagename, "$bi_AuthorGroup/$txt")) ? "[[$bi_AuthorGroup/$txt]]" : $txt) . $args['post_text'] : '');
+			return ($txt > '' ? @$args['pre_text'] . (PageExists(MakePageName($bi_Pagename, "$bi_AuthorGroup/$txt")) ? "[[$bi_AuthorGroup/$txt]]" : $txt) . $args['post_text'] : '');
 		//PmWiki will apply the last class in a line to all links, regardless of the class requested for each link.
 		//So putting a class on a link means we need to ensure links are on separate lines either with (:nl:) or using LI lists
 		case 'edit':
-			return (bi_Auth('blog-edit ' . $args['page']) ? bi_Link($args['pre_text'], $args['page'], 'bi_be', $txt, $args['post_text'], 'bi-link-blog-edit') : '');
+			return (bi_Auth('blog-edit ' . $args['page']) ? bi_Link(@$args['pre_text'], $args['page'], 'bi_be', $txt, @$args['post_text'], 'bi-link-blog-edit') : '');
 		case 'newentry':
-			return (bi_Auth('blog-new ' . $bi_Pages['auth']) ? bi_Link($args['pre_text'], $bi_Pages['admin'], 'bi_ne', $txt, $args['post_text'], 'bi-link-blog-new') : '');
+			return (bi_Auth('blog-new ' . $bi_Pages['auth']) ? bi_Link(@$args['pre_text'], $bi_Pages['admin'], 'bi_ne', $txt, @$args['post_text'], 'bi-link-blog-new') : '');
 		//blog delete function on blog-grid
 		case 'delete':
-			return (bi_Auth('blog-edit ' . $args['page']) ? bi_Link($args['pre_text'], $args['page'], 'bi_del', $txt, $args['post_text'], 'bi-link-blog-delete') : '');
+			return (bi_Auth('blog-edit ' . @$args['page']) ? bi_Link(@$args['pre_text'], $args['page'], 'bi_del', $txt, @$args['post_text'], 'bi-link-blog-delete') : '');
 		case 'commentedit':
-			return (bi_Auth('comment-edit ' . $txt) ? bi_Link($args['pre_text'], $txt, 'bi_ce', '$[edit]', $args['post_text'], 'bi-link-comment-edit', bi_BasePage($txt, $args['base'])) : '');
+			return (bi_Auth('comment-edit ' . $txt) ? bi_Link(@$args['pre_text'], $txt, 'bi_ce', '$[edit]', @$args['post_text'], 'bi-link-comment-edit', bi_BasePage($txt, @$args['base'])) : '');
 		case 'commentdelete':
-			return (bi_Auth('comment-edit ' . bi_BasePage($txt)) ? bi_Link($args['pre_text'], $txt, 'bi_del', '$[delete]', $args['post_text'], 'bi-link-comment-delete') : '');
+			return (bi_Auth('comment-edit ' . bi_BasePage($txt)) ? bi_Link(@$args['pre_text'], $txt, 'bi_del', '$[delete]', @$args['post_text'], 'bi-link-comment-delete') : '');
 		case 'commentreply':
-			return (bi_Auth('comment-edit ' . bi_BasePage($txt, $args['base'])) ? bi_Link($args['pre_text'], bi_BasePage($txt, $args['base']), 'bi_cr', '$[reply]', $args['post_text'], 'bi-link-comment-reply') : '');
+			return (bi_Auth('comment-edit ' . bi_BasePage($txt, @$args['base'])) ? bi_Link(@$args['pre_text'], bi_BasePage($txt, @$args['base']), 'bi_cr', '$[reply]', @$args['post_text'], 'bi-link-comment-reply') : '');
 		case 'commentapprove':
-			return (bi_Auth('comment-approve ' . bi_BasePage($txt)) ? bi_Link($args['pre_text'], $txt, 'bi_' . ($args['status'] == 'true' ? 'cua' : 'ca'), '$[' . ($args['status'] == 'true' ? 'un' : '') . 'approve]', $args['post_text'], 'bi-link-comment-' . ($args['status'] == 'true' ? '' : 'un') . 'approved') : '');
+			return (bi_Auth('comment-approve ' . bi_BasePage($txt)) ? bi_Link(@$args['pre_text'], $txt, 'bi_' . (@$args['status'] == 'true' ? 'cua' : 'ca'), '$[' . (@$args['status'] == 'true' ? 'un' : '') . 'approve]', @$args['post_text'], 'bi-link-comment-' . ($args['status'] == 'true' ? '' : 'un') . 'approved') : '');
 		case 'commentblock':
-			return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve ' . bi_BasePage($txt)) ? bi_Link($args['pre_text'], $txt, 'bi_bip', '$[block]', $args['post_text'], 'bi-link-comment-block') : '');
+			return (IsEnabled($EnableBlocklist) && bi_Auth('comment-approve ' . bi_BasePage($txt)) ? bi_Link(@$args['pre_text'], $txt, 'bi_bip', '$[block]', @$args['post_text'], 'bi-link-comment-block') : '');
 		case 'tags':
 			return ($txt > '' ? $args['pre_text'] . bi_SaveTags('', $txt, $args['page'], 'display') . $args['post_text'] : '');
 		//TODO: Why is this split by name/group? So #comments-count-pagelist can create group-name-* wildcard. Better to use basepage?
@@ -769,13 +769,18 @@ function blogitSkinMU($fn, $opt, $txt) {
 			return 'bi_ID' . (preg_match($bi_CommentPattern, $txt, $m) ? $m[3] : $txt); //1-group; 2-name; 3-commentid, OR FullName for blog-list
 	}
 }
-function bi_includeSection($pagename, $inclspec) {
+function bi_includeSection($m) {
+  global $bi_Pagename, $bi_TemplateList;
+  $inclspec = "{$m[1]} $bi_TemplateList";
+  PRR();
+  
 	$args = ParseArgs($inclspec); //$inclspec: "params"
 	$anc = array_shift($args['']); //$anc: parameters for include; $args: include-paths
-	if ($anc > '' && $anc{0} != "#")
+	
+	if ($anc > '' && $anc[0] != "#")
 		return '';
 	foreach ($args[''] as $v) {
-		$x = IncludeText($pagename, "$v$anc");
+		$x = IncludeText($bi_Pagename, "$v$anc");
 		if ($x > '')
 			return $x;
 	}
@@ -785,6 +790,7 @@ function bi_includeSection($pagename, $inclspec) {
 // - Condition Functions
 // ----------------------------------------
 function bi_IsNull($e) {
+  $e = strval(@$e);
 	$e = trim($e, '\'\" ');
 	return (!empty($e) && substr($e, 0, 3) != '{*$' && substr($e, 0, 2) != '{$' && substr($e, 0, 3) != '{=$' ? $e : '');
 }
@@ -813,7 +819,7 @@ function bi_IsDate($d, $f = '%d-%m-%Y %H:%M', $z = '') { //accepts a date, and a
 	if (empty($d))
 		return true; //false causes two date invalid messages.
 	if (preg_match('|\d{5,}|', $d))
-		$d = strftime($f, $d); //Convert Unix timestamp to a std format (must not include regular expressions)
+		$d = PSFT($f, $d); //Convert Unix timestamp to a std format (must not include regular expressions)
 	$std = bi_StdDateFormat($d, $f, $z);
 	list($mon, $day, $yr) = explode('/', substr($std, 0, strpos($std, ' ')), 3); //remove time portion, ASSUME date and time are separated by space
 	return (preg_match('!^' . bi_DateFmtRE($f) . '$!', $d) && checkdate($mon, $day, $yr) ? true : false); //does %d match the regular expression version of $f, and chech the date
@@ -823,7 +829,7 @@ function bi_IsDate($d, $f = '%d-%m-%Y %H:%M', $z = '') { //accepts a date, and a
 // - Date Helper Functions
 function bi_DateFmtRE($f = '%d-%m-%Y %H:%M') { //converts a date format into a regular expression
 	global $bi_DateFmtRE;
-	return preg_replace(array_keys($bi_DateFmtRE), array_values($bi_DateFmtRE), $f);
+	return PPRA($bi_DateFmtRE, $f);
 }
 function bi_StdDateFormat($d, $f = '%d-%m-%Y %H:%M', $z = 'mdy') { //converts date format into a standard US m/d/y format usable by PHP functions
 	global $bi_DateSequences;
@@ -876,11 +882,11 @@ function bi_Auth($condparm) { //condparm: comma separated list of actions, and o
 	@list($bi_actions, $pn) = explode(' ', $condparm, 2);
 	$bi_actions = explode(',', trim($bi_actions, '\'"'));
 	if (!IsEnabled($EnableAuthUser))
-		$pn = (in_array('*', $bi_actions) || in_array('sidebar', $bi_actions) || ($bi_Pagename == $bi_Pages['admin'] && in_array('blogit-admin', $bi_actions)) || ($bi_Pagename == $bi_Pages['admin'] && $action == 'bi_ne' && in_array('blog-new', $bi_actions))) ? $bi_Pages['auth'] : (isset($pn)) ? $pn : $bi_Pagename;
+		$pn = (in_array('*', $bi_actions) || in_array('sidebar', $bi_actions) || ($bi_Pagename == $bi_Pages['admin'] && in_array('blogit-admin', $bi_actions)) || ($bi_Pagename == $bi_Pages['admin'] && $action == 'bi_ne' && in_array('blog-new', $bi_actions))) ? $bi_Pages['auth'] : (isset($pn) ? $pn : $bi_Pagename);
 	foreach ($bi_actions as $a) {
 		foreach ($bi_Auth as $role => $action_list) {
 			if ($a == '*' || in_array($a, $action_list)) { //is the action assigned to a role?
-				if ((IsEnabled($EnableAuthUser) && $AuthList['@' . $role] > 0) //the user is assigned to this role
+				if ((IsEnabled($EnableAuthUser) && @$AuthList['@' . $role] > 0) //the user is assigned to this role
 					|| (!IsEnabled($EnableAuthUser) && $bi_OriginalFn['AuthFunction']($pn, $role, false, READPAGE_CURRENT))) //the user has these role privs on this page
 					return true;
 			}
@@ -901,9 +907,13 @@ function preg_grep_keys($pattern, $input, $offset, $length = NULL) {
 function bi_CategoryList() {
 	global $CategoryGroup;
 	$c = ListPages('/^' . $CategoryGroup . '\./');
-	array_walk($c, create_function('&$v,$k,$l', '$v = substr($v,$l);'), strlen($CategoryGroup) + 1);
+	array_walk($c, 'bi_cbcatlist', strlen($CategoryGroup) + 1);
 	return implode(',', $c);
 }
+function bi_cbcatlist(&$v,$k,$l) {
+  $v = substr($v,$l);
+}
+
 function bi_ClearCache() {
 	global $PCache, $bi_Pagename;
 	if (is_array($PCache[$bi_Pagename])) {
@@ -925,7 +935,7 @@ function bi_SendAjax($markup, $msg = '', $dom = '') {
 }
 function bi_AjaxRedirect($result = '') {
 	global $bi_Pagename, $_REQUEST, $bi_CommentPage, $EnablePost, $MessagesFmt, $action, $bi_Name, $bi_Group, $bi_Pages, $bi_SkinClasses, $bi_FrmAction, $_POST;
-	bi_debugLog('AjaxRedirect: ' . $_REQUEST['bi_context'] . '::' . $_REQUEST['target'] . '::' . $action);
+	bi_debugLog('AjaxRedirect: ' . @$_REQUEST['bi_context'] . '::' . @$_REQUEST['target'] . '::' . $action);
 	if ($EnablePost && count($MessagesFmt) == 0) { //set to 0 if pmform failed (invalid captcha, etc)
 		//Translate the class of the html element being updated (bi_context) to the template to be used to generate new data on includesection from pmwiki
 		//bi_context: class determines which includesection template to use
@@ -934,12 +944,12 @@ function bi_AjaxRedirect($result = '') {
 		//$bi_SkinClasses['blog-entry-summary'] - '.blogit-post-summary': '#blog-summary-pagelist
 		//$bi_SkinClasses['blog-list-row'] - '.blogit-blog-list-row': '#blog-grid
 		// otherwise ('.blogit-post'): '#single-entry-view'
-		if ($_REQUEST['target'] == 'blogit-comments') { //determine which pmform is requested
-			bi_SendAjax('(:includesection "' . ($_REQUEST['bi_context'] == $bi_SkinClasses['comment-admin-list'] ? '#unapproved-comments' : '#comments-pagelist') . ' commentid=' . $bi_CommentPage . ' entrycomments=readonly base=' . IsEnabled($_POST['ptv_blogit_basepage']) . '":)', ($bi_FrmAction == 'bi_ce' ? XL('Successfully updated comment.') : XL('Successfully added new comment.') . (PageTextVar($bi_CommentPage, 'commentapproved') == 'false' ? '<br />' . XL('All comments are reviewed before being displayed.') : '')), MarkupToHTML($bi_Pagename, '{$Captcha} (:input captcha tabindex=1:)'));
-		} elseif ($_REQUEST['target'] == 'blogit-entry') {
+		if (@$_REQUEST['target'] == 'blogit-comments') { //determine which pmform is requested
+			bi_SendAjax('(:includesection "' . (@$_REQUEST['bi_context'] == $bi_SkinClasses['comment-admin-list'] ? '#unapproved-comments' : '#comments-pagelist') . ' commentid=' . $bi_CommentPage . ' entrycomments=readonly base=' . IsEnabled($_POST['ptv_blogit_basepage']) . '":)', ($bi_FrmAction == 'bi_ce' ? XL('Successfully updated comment.') : XL('Successfully added new comment.') . (PageTextVar($bi_CommentPage, 'commentapproved') == 'false' ? '<br />' . XL('All comments are reviewed before being displayed.') : '')), MarkupToHTML($bi_Pagename, '{$Captcha} (:input captcha tabindex=1:)'));
+		} elseif (@$_REQUEST['target'] == 'blogit-entry') {
 			bi_SendAjax((isset($_REQUEST['bi_context']) //might have clicked from many places. We only care about a few.
-				? '(:includesection "' . ($_REQUEST['bi_context'] == $bi_SkinClasses['blog-entry-summary'] ? '#blog-summary-pagelist group=' . $bi_Group . ' name=' . $bi_Name //main blog summary page
-				: ($_REQUEST['bi_context'] == $bi_SkinClasses['blog-list-row'] //blog list from admin page
+				? '(:includesection "' . (@$_REQUEST['bi_context'] == $bi_SkinClasses['blog-entry-summary'] ? '#blog-summary-pagelist group=' . $bi_Group . ' name=' . $bi_Name //main blog summary page
+				: (@$_REQUEST['bi_context'] == $bi_SkinClasses['blog-list-row'] //blog list from admin page
 				? '#blog-grid group=' . $bi_Group . ' name=' . $bi_Name : '#single-entry-view') //single entry blog view
 				) . '":)' : 'No context set on comment submit.'), 'Successfully ' . ($bi_FrmAction == 'bi_ne' ? 'added' : 'updated') . ' blog entry.');
 		} else
@@ -959,8 +969,11 @@ function bi_Redirect($src = '', $result = '') {
 	} //don't redirect ajax requests, just send back json object
 	$history = ($_POST['cancel'] && in_array($_REQUEST['target'], $bi_Forms) ? @$_COOKIE[$bi_Cookie . 'back-2'] : @$_COOKIE[$bi_Cookie . 'back-1']);
 	//use $src if provided, or history is empty; use pagename if $src and history are empty; use history if no $src and history exists.
-	$r = ($src > '' || empty($history) ? FmtPageName('$PageUrl', bi_BasePage($src > '' ? $src : $bi_Pagename)) : $history);
+	if($src > '') $r = FmtPageName('$PageUrl', $src);
+	elseif(empty($history)) $r = FmtPageName('$PageUrl', $bi_Pagename);
+	else $r = $history;
 	bi_debugLog('Redirecting: ' . $r);
+	
 	header("Location: $r");
 	header("Content-type: text/html");
 	echo "<html><head><meta http-equiv='Refresh' Content='URL=$r' /><title>Redirect</title></head><body></body></html>";
@@ -975,7 +988,7 @@ function bi_storeCookie($url = '') {
 		$args = bi_Implode($_GET);
 		$url = FmtPageName('$PageUrl', $bi_Pagename) . (!empty($args) ? '?' . $args : ''); //current
 	}
-	if ($url != $_COOKIE[$bi_Cookie . 'back-1'] && $FmtPV['$bi_Mode'] != 'ajax' && $action != 'pmform') { //don't record if reloading, ajax, or redirected from pmform
+	if ($url != @$_COOKIE[$bi_Cookie . 'back-1'] && $FmtPV['$bi_Mode'] != 'ajax' && $action != 'pmform') { //don't record if reloading, ajax, or redirected from pmform
 		if (!empty($_COOKIE[$bi_Cookie . 'back-1']))
 			setcookie($bi_Cookie . 'back-2', $_COOKIE[$bi_Cookie . 'back-1'], 0, '/');
 		setcookie($bi_Cookie . 'back-1', $url, 0, '/'); //don't replace cookies if user is reloading the current page
@@ -984,6 +997,7 @@ function bi_storeCookie($url = '') {
 // Used to create a URL parameter string from an array, removing ?n= parameter.
 //TODO: use http_build_query() php5+
 function bi_Implode($a, $p = '&', $s = '=', $ignore = array('n' => '')) {
+  $o = '';
 	foreach ($a as $k => $v)
 		if (!isset($ignore[$k]) !== false)
 			$o .= $p . $k . $s . $v;
@@ -1004,9 +1018,11 @@ function bi_SaveTags($body, $user_tags, $pn, $mode = 'save') {
 	// Read tags from body, strip [[!...]]
 	if ($body)
 		$bodyTags = (preg_match_all('/\[\[\!(.*?)\]\]/', $body, $match) ? $match[1] : array()); //array of tags contained in [[!...]] markup.
+  else $bodyTags = array();
 	// Make sure tag-field entries are in standard separated format, and place in array
 	if ($user_tags)
 		$fieldTags = explode($bi_TagSeparator, preg_replace('/' . trim($bi_TagSeparator) . '\s*/', $bi_TagSeparator, trim($user_tags)));
+  else $fieldTags= array();
 	// Concatenate the tag-field tags, with those in the body, PPRA removes all non-pagename chars
 	$allTags = PPRA($bi_MakePageNamePatterns, array_unique(array_merge((array) $fieldTags, (array) $bodyTags)));
 	sort($allTags);
@@ -1056,6 +1072,7 @@ function bi_JXL() { //create javascript array holding all XL translations of tex
 		'Please enter a valid URL.',
 		'Error on edit return.'
 	);
+	$t = "";
 	foreach ($a as $k)
 		$t .= ($k != XL($k) ? 'BlogIt.xl["' . $k . '"]="' . XL($k) . "\";\n" : '');
 	return ($t);
@@ -1063,6 +1080,7 @@ function bi_JXL() { //create javascript array holding all XL translations of tex
 // Functions processed for different entry $types (blog, comment), at different $stages (pre-entry, pre-save, post-save)
 function bi_ProcessHooks($type, $stage, $src, $auth) {
 	global $bi_Hooks;
+	if(!isset($bi_Hooks[$type]) || !is_array($bi_Hooks[$type])) return;
 	foreach ((array) $bi_Hooks[$type][$stage] as $fn)
 		$fn($src, $auth);
 }
@@ -1072,7 +1090,7 @@ function bi_ProcessHooks($type, $stage, $src, $auth) {
 function bi_GetPageVar($pagename, &$page, $tag) {
 	global $TimeISOZFmt, $RSSTimeFmt;
 	$d = (int) PageTextVar($pagename, 'entrydate');
-	return "<$tag>" . ($tag == 'dc:date' ? gmstrftime($TimeISOZFmt, $d) : ($tag == 'pubDate' ? gmdate($RSSTimeFmt, $d) : ($tag == 'author' ? PageTextVar($pagename, 'entryauthor') : ''))) . "</$tag>\n";
+	return "<$tag>" . ($tag == 'dc:date' ? PSFT($TimeISOZFmt, $d, null, 'GMT') : ($tag == 'pubDate' ? gmdate($RSSTimeFmt, $d) : ($tag == 'author' ? PageTextVar($pagename, 'entryauthor') : ''))) . "</$tag>\n";
 }
 function bi_FeedText($pagename, &$page, $tag) {
 	return '<' . $tag . '><![CDATA[' . MarkupToHTML($pagename, '{' . $pagename . '$:entrybody}') . ']]></' . $tag . '>';
@@ -1133,7 +1151,7 @@ function bi_CharsetFn($val, $src = '', $tgt = 'UTF-8') {
 //jQuery will always POST with UTF8, even if charset parameter is set, since it uses encodeURIComponent() ref: http://stackoverflow.com/questions/657871/another-jquery-encoding-problem-on-ie
 function bi_decodeUTF8(&$a, $p = 'ptv_') {
 	global $Charset, $bi_CharsetFn;
-	if (bi_Clean('mode', $_POST['bi_mode']) == 'ajax' && $Charset != 'UTF-8') //Conversion only required is submitted from jquery ajax request
+	if (bi_Clean('mode', @$_POST['bi_mode']) == 'ajax' && $Charset != 'UTF-8') //Conversion only required is submitted from jquery ajax request
 		foreach ($a as $k => $v)
 			if (substr($k, 0, strlen($p)) == $p)
 				$a[$k] = $bi_CharsetFn($v);
